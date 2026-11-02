@@ -5,7 +5,7 @@ import Modal from '../../components/common/Modal';
 import Badge from '../../components/common/Badge';
 import EmptyState from '../../components/common/EmptyState';
 import api from '../../services/api';
-import { Briefcase, Plus, Users, Calendar, RefreshCw } from 'lucide-react';
+import { Briefcase, Plus, Users, Calendar, RefreshCw, Video, MapPin } from 'lucide-react';
 
 export default function Recruitment() {
   const { t } = useTranslation();
@@ -27,6 +27,16 @@ export default function Recruitment() {
     type: 'Full Time',
     status: 'open',
     closingTime: ''
+  });
+
+  // Interview Modal
+  const [interviewModalOpen, setInterviewModalOpen] = useState(false);
+  const [selectedApp, setSelectedApp] = useState(null);
+  const [interviewForm, setInterviewForm] = useState({
+    date: '',
+    type: 'physical',
+    meetingLink: '',
+    note: 'Initial technical competency evaluation'
   });
 
   const fetchData = async () => {
@@ -90,6 +100,20 @@ export default function Recruitment() {
       );
     } catch (err) {
       alert(err.message || 'Status update failed');
+    }
+  };
+
+  const handleScheduleInterview = async (e) => {
+    e.preventDefault();
+    if (!selectedApp) return;
+    try {
+      const response = await api.patch(`/job-applications/${selectedApp._id}/interview`, interviewForm);
+      if (response.success) {
+        setInterviewModalOpen(false);
+        await fetchData();
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to schedule interview');
     }
   };
 
@@ -220,28 +244,125 @@ export default function Recruitment() {
                 <div className="text-[11px] text-primary-500 font-semibold mt-1">
                   Applied for: {app.position?.title || 'Position'}
                 </div>
+                {app.interview?.date && (
+                  <div className="text-[11px] text-emerald-600 font-bold mt-1 flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5" />
+                    <span>Interview: {new Date(app.interview.date).toLocaleDateString()} ({app.interview.type})</span>
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center gap-2">
                 <Badge status={app.status || 'pending'} text={app.status || 'Pending'} />
+
                 {canManage && (
-                  <select
-                    value={app.status || 'pending'}
-                    onChange={(e) => handleStatusChange(app._id, e.target.value)}
-                    className="text-xs px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900"
-                  >
-                    <option value="applied">Applied</option>
-                    <option value="shortlisted">Shortlisted</option>
-                    <option value="interviewed">Interviewed</option>
-                    <option value="accepted">Accepted</option>
-                    <option value="rejected">Rejected</option>
-                  </select>
+                  <>
+                    <button
+                      onClick={() => {
+                        setSelectedApp(app);
+                        setInterviewModalOpen(true);
+                      }}
+                      className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-primary-50 text-primary-600 dark:bg-primary-950/60 dark:text-primary-400 hover:bg-primary-100"
+                    >
+                      Schedule
+                    </button>
+
+                    <select
+                      value={app.status || 'pending'}
+                      onChange={(e) => handleStatusChange(app._id, e.target.value)}
+                      className="text-xs px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900"
+                    >
+                      <option value="applied">Applied</option>
+                      <option value="shortlisted">Shortlisted</option>
+                      <option value="interview">Interview</option>
+                      <option value="accepted">Accepted</option>
+                      <option value="rejected">Rejected</option>
+                    </select>
+                  </>
                 )}
               </div>
             </div>
           ))}
         </div>
       )}
+
+      {/* Schedule Interview Modal */}
+      <Modal
+        isOpen={interviewModalOpen}
+        onClose={() => setInterviewModalOpen(false)}
+        title={selectedApp ? `Schedule Interview: ${selectedApp.candidate?.name}` : 'Schedule Interview'}
+        maxWidth="max-w-md"
+      >
+        <form onSubmit={handleScheduleInterview} className="space-y-3">
+          <div>
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+              Interview Date & Time *
+            </label>
+            <input
+              type="datetime-local"
+              required
+              value={interviewForm.date}
+              onChange={(e) => setInterviewForm({ ...interviewForm, date: e.target.value })}
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+              Interview Type *
+            </label>
+            <select
+              value={interviewForm.type}
+              onChange={(e) => setInterviewForm({ ...interviewForm, type: e.target.value })}
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs"
+            >
+              <option value="physical">Physical (At Factory)</option>
+              <option value="online">Online (Google Meet / Zoom)</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+              Meeting Link / Room Location
+            </label>
+            <input
+              type="text"
+              value={interviewForm.meetingLink}
+              onChange={(e) => setInterviewForm({ ...interviewForm, meetingLink: e.target.value })}
+              placeholder="e.g. Meeting Room 2B or meet.google.com/xyz"
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+              Notes
+            </label>
+            <input
+              type="text"
+              value={interviewForm.note}
+              onChange={(e) => setInterviewForm({ ...interviewForm, note: e.target.value })}
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs"
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+            <button
+              type="button"
+              onClick={() => setInterviewModalOpen(false)}
+              className="px-3 py-1.5 text-xs text-slate-500"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-1.5 bg-primary-500 text-white font-bold text-xs rounded-xl"
+            >
+              Confirm Interview
+            </button>
+          </div>
+        </form>
+      </Modal>
 
       {/* Post Job Modal */}
       <Modal

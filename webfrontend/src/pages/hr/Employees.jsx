@@ -16,7 +16,12 @@ import {
   Briefcase,
   Trash2,
   Edit,
-  RefreshCw
+  RefreshCw,
+  FileText,
+  GraduationCap,
+  Plus,
+  Eye,
+  ShieldCheck
 } from 'lucide-react';
 
 export default function Employees() {
@@ -33,6 +38,24 @@ export default function Employees() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
+
+  // Detail Modal State
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [docModalOpen, setDocModalOpen] = useState(false);
+  const [eduModalOpen, setEduModalOpen] = useState(false);
+
+  const [docForm, setDocForm] = useState({
+    type: 'contract',
+    name: 'Employment Contract',
+    url: 'https://gtprinting.com/docs/contract-sample.pdf'
+  });
+
+  const [eduForm, setEduForm] = useState({
+    educationLevel: 'degree',
+    graduationUniversity: 'Addis Ababa University',
+    graduationYear: 2022
+  });
 
   const [formData, setFormData] = useState({
     fullName: '',
@@ -114,8 +137,39 @@ export default function Employees() {
     try {
       await api.delete(`/employees/${id}`);
       setEmployees((prev) => prev.filter((emp) => emp._id !== id));
+      if (selectedEmployee?._id === id) setIsDetailOpen(false);
     } catch (err) {
       alert(err.message || 'Failed to delete employee');
+    }
+  };
+
+  const handleAddDocument = async (e) => {
+    e.preventDefault();
+    if (!selectedEmployee) return;
+    try {
+      const response = await api.post(`/employees/${selectedEmployee._id}/documents`, docForm);
+      if (response.success) {
+        setDocModalOpen(false);
+        setSelectedEmployee((prev) => ({ ...prev, documents: response.data }));
+        await fetchEmployees();
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to add document');
+    }
+  };
+
+  const handleAddEducation = async (e) => {
+    e.preventDefault();
+    if (!selectedEmployee) return;
+    try {
+      const response = await api.post(`/employees/${selectedEmployee._id}/educations`, eduForm);
+      if (response.success) {
+        setEduModalOpen(false);
+        setSelectedEmployee((prev) => ({ ...prev, educations: response.data }));
+        await fetchEmployees();
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to add education record');
     }
   };
 
@@ -139,7 +193,7 @@ export default function Employees() {
             <span>{t('nav.employees')}</span>
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Section 2.2 • Complete workforce directory, profiles, and contracts.
+            Section 2.2 • Complete workforce directory, profiles, documents, and credentials.
           </p>
         </div>
 
@@ -195,10 +249,7 @@ export default function Employees() {
         </select>
       </div>
 
-      {/* Data Presentation:
-          MOBILE: Card Deck (md:hidden)
-          DESKTOP: Data Table (hidden md:block)
-      */}
+      {/* Data Presentation */}
       {loading ? (
         <div className="p-12 text-center text-xs text-slate-400 animate-pulse">
           Fetching workforce records from backend...
@@ -241,14 +292,21 @@ export default function Employees() {
                     <Phone className="w-3.5 h-3.5 text-slate-400" />
                     <span>{emp.phoneNumber}</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Briefcase className="w-3.5 h-3.5 text-slate-400" />
-                    <span className="capitalize">{emp.type} • {emp.branch || 'Head Office'}</span>
-                  </div>
                 </div>
 
-                {canManage && (
-                  <div className="flex items-center justify-end gap-2 pt-1">
+                <div className="flex items-center justify-between pt-1">
+                  <button
+                    onClick={() => {
+                      setSelectedEmployee(emp);
+                      setIsDetailOpen(true);
+                    }}
+                    className="px-3 py-1.5 rounded-lg text-xs font-semibold text-primary-600 bg-primary-50 dark:bg-primary-950/60 hover:bg-primary-100 transition flex items-center gap-1"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>View Profile</span>
+                  </button>
+
+                  {canManage && (
                     <button
                       onClick={() => handleDeleteEmployee(emp._id)}
                       className="px-3 py-1.5 rounded-lg text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition flex items-center gap-1"
@@ -256,8 +314,8 @@ export default function Employees() {
                       <Trash2 className="w-3.5 h-3.5" />
                       <span>{t('actions.delete')}</span>
                     </button>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             ))}
           </div>
@@ -273,7 +331,7 @@ export default function Employees() {
                   <th className="px-4 py-3">Phone</th>
                   <th className="px-4 py-3">Type</th>
                   <th className="px-4 py-3">Status</th>
-                  {canManage && <th className="px-4 py-3 text-right">Actions</th>}
+                  <th className="px-4 py-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60">
@@ -298,8 +356,17 @@ export default function Employees() {
                     <td className="px-4 py-3">
                       <Badge status={emp.status} text={emp.status} />
                     </td>
-                    {canManage && (
-                      <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3 text-right space-x-1">
+                      <button
+                        onClick={() => {
+                          setSelectedEmployee(emp);
+                          setIsDetailOpen(true);
+                        }}
+                        className="px-2.5 py-1 text-xs font-semibold text-primary-600 bg-primary-50 dark:bg-primary-950/60 hover:bg-primary-100 rounded-lg transition"
+                      >
+                        Profile
+                      </button>
+                      {canManage && (
                         <button
                           onClick={() => handleDeleteEmployee(emp._id)}
                           className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition"
@@ -307,8 +374,8 @@ export default function Employees() {
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
-                      </td>
-                    )}
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -316,6 +383,264 @@ export default function Employees() {
           </div>
         </>
       )}
+
+      {/* Employee Profile Detail Modal */}
+      <Modal
+        isOpen={isDetailOpen}
+        onClose={() => setIsDetailOpen(false)}
+        title={selectedEmployee ? `${selectedEmployee.fullName} - Employee Profile` : 'Employee Details'}
+        maxWidth="max-w-3xl"
+      >
+        {selectedEmployee && (
+          <div className="space-y-6">
+            {/* Header Card */}
+            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-black text-slate-900 dark:text-slate-100">
+                  {selectedEmployee.fullName}
+                </h3>
+                <p className="text-xs text-primary-500 font-bold">
+                  {selectedEmployee.position} • {selectedEmployee.department}
+                </p>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  {selectedEmployee.email} • {selectedEmployee.phoneNumber}
+                </p>
+              </div>
+              <Badge status={selectedEmployee.status} text={selectedEmployee.status} />
+            </div>
+
+            {/* Employment Details */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800">
+                <span className="text-slate-400 text-[10px] uppercase font-bold">Branch</span>
+                <div className="font-bold text-slate-800 dark:text-slate-200 mt-0.5">{selectedEmployee.branch || 'Main Plant'}</div>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800">
+                <span className="text-slate-400 text-[10px] uppercase font-bold">Type</span>
+                <div className="font-bold text-slate-800 dark:text-slate-200 mt-0.5 capitalize">{selectedEmployee.type}</div>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800">
+                <span className="text-slate-400 text-[10px] uppercase font-bold">Base Salary</span>
+                <div className="font-bold text-slate-800 dark:text-slate-200 mt-0.5">{selectedEmployee.baseSalary?.toLocaleString() || '0'} ETB</div>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800">
+                <span className="text-slate-400 text-[10px] uppercase font-bold">Gender</span>
+                <div className="font-bold text-slate-800 dark:text-slate-200 mt-0.5 capitalize">{selectedEmployee.gender || 'Not specified'}</div>
+              </div>
+            </div>
+
+            {/* Documents Section */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+                  <FileText className="w-4 h-4 text-primary-500" />
+                  <span>Contracts & Documents ({selectedEmployee.documents?.length || 0})</span>
+                </h4>
+                {canManage && (
+                  <button
+                    onClick={() => setDocModalOpen(true)}
+                    className="px-2.5 py-1 text-xs font-semibold text-primary-600 bg-primary-50 dark:bg-primary-950/60 rounded-lg hover:bg-primary-100 flex items-center gap-1"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add Document</span>
+                  </button>
+                )}
+              </div>
+
+              {!selectedEmployee.documents || selectedEmployee.documents.length === 0 ? (
+                <div className="p-4 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 text-center text-xs text-slate-400">
+                  No documents on file.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {selectedEmployee.documents.map((doc, idx) => (
+                    <div key={idx} className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs">
+                      <div>
+                        <div className="font-bold text-slate-800 dark:text-slate-200">{doc.name || 'Document'}</div>
+                        <div className="text-[10px] text-slate-400 capitalize">{doc.type}</div>
+                      </div>
+                      {doc.url && (
+                        <a href={doc.url} target="_blank" rel="noreferrer" className="text-primary-500 hover:underline text-[11px] font-semibold">
+                          View
+                        </a>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Educations Section */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+                  <GraduationCap className="w-4 h-4 text-primary-500" />
+                  <span>Educations ({selectedEmployee.educations?.length || 0})</span>
+                </h4>
+                {canManage && (
+                  <button
+                    onClick={() => setEduModalOpen(true)}
+                    className="px-2.5 py-1 text-xs font-semibold text-primary-600 bg-primary-50 dark:bg-primary-950/60 rounded-lg hover:bg-primary-100 flex items-center gap-1"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add Education</span>
+                  </button>
+                )}
+              </div>
+
+              {!selectedEmployee.educations || selectedEmployee.educations.length === 0 ? (
+                <div className="p-4 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 text-center text-xs text-slate-400">
+                  No education records registered.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {selectedEmployee.educations.map((edu, idx) => (
+                    <div key={idx} className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 text-xs">
+                      <div className="font-bold text-slate-800 dark:text-slate-200 capitalize">{edu.educationLevel}</div>
+                      <div className="text-[11px] text-slate-400">{edu.graduationUniversity} ({edu.graduationYear})</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Add Document Submodal */}
+      <Modal
+        isOpen={docModalOpen}
+        onClose={() => setDocModalOpen(false)}
+        title="Add Employee Document / Contract"
+        maxWidth="max-w-md"
+      >
+        <form onSubmit={handleAddDocument} className="space-y-3">
+          <div>
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+              Document Name *
+            </label>
+            <input
+              type="text"
+              required
+              value={docForm.name}
+              onChange={(e) => setDocForm({ ...docForm, name: e.target.value })}
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+              Document Type *
+            </label>
+            <select
+              value={docForm.type}
+              onChange={(e) => setDocForm({ ...docForm, type: e.target.value })}
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs"
+            >
+              <option value="contract">Employment Contract</option>
+              <option value="nationalId">National ID / Passport</option>
+              <option value="certificate">Technical Certification</option>
+              <option value="warranty">Warranty Agreement</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+              Document URL / File Path
+            </label>
+            <input
+              type="text"
+              value={docForm.url}
+              onChange={(e) => setDocForm({ ...docForm, url: e.target.value })}
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs"
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+            <button
+              type="button"
+              onClick={() => setDocModalOpen(false)}
+              className="px-3 py-1.5 text-xs text-slate-500"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-1.5 bg-primary-500 text-white font-bold text-xs rounded-xl"
+            >
+              Save Document
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Add Education Submodal */}
+      <Modal
+        isOpen={eduModalOpen}
+        onClose={() => setEduModalOpen(false)}
+        title="Add Education Qualification"
+        maxWidth="max-w-md"
+      >
+        <form onSubmit={handleAddEducation} className="space-y-3">
+          <div>
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+              Education Level *
+            </label>
+            <select
+              value={eduForm.educationLevel}
+              onChange={(e) => setEduForm({ ...eduForm, educationLevel: e.target.value })}
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs"
+            >
+              <option value="degree">Bachelor Degree</option>
+              <option value="diploma">Technical Diploma (TVET)</option>
+              <option value="master">Master's Degree</option>
+              <option value="highschool">High School Completion</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+              University / Institute *
+            </label>
+            <input
+              type="text"
+              required
+              value={eduForm.graduationUniversity}
+              onChange={(e) => setEduForm({ ...eduForm, graduationUniversity: e.target.value })}
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+              Graduation Year *
+            </label>
+            <input
+              type="number"
+              required
+              value={eduForm.graduationYear}
+              onChange={(e) => setEduForm({ ...eduForm, graduationYear: Number(e.target.value) })}
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs"
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+            <button
+              type="button"
+              onClick={() => setEduModalOpen(false)}
+              className="px-3 py-1.5 text-xs text-slate-500"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-1.5 bg-primary-500 text-white font-bold text-xs rounded-xl"
+            >
+              Save Education
+            </button>
+          </div>
+        </form>
+      </Modal>
 
       {/* Registration Modal */}
       <Modal
