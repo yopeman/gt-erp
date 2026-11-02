@@ -1,0 +1,107 @@
+/**
+ * GT ERP Modular System Navigation & Permissions Matrix
+ * Directly maps to functional requirements in erp-system-main-modules-functional-requirements.pdf
+ */
+
+export const ERP_MODULES = [
+  {
+    id: 'hr',
+    titleKey: 'modules.hr',
+    icon: 'Users',
+    requiredRoles: ['admin', 'hr', 'manager', 'employee'],
+    status: 'active',
+    submodules: [
+      { id: 'dashboard', path: '/hr/dashboard', titleKey: 'nav.hrDashboard', icon: 'LayoutDashboard', requiredRoles: ['admin', 'hr', 'manager', 'employee'], status: 'active' },
+      { id: 'employees', path: '/hr/employees', titleKey: 'nav.employees', icon: 'UserCheck', requiredRoles: ['admin', 'hr', 'manager'], status: 'active' },
+      { id: 'attendance', path: '/hr/attendance', titleKey: 'nav.attendance', icon: 'Clock', requiredRoles: ['admin', 'hr', 'manager', 'employee'], status: 'active' },
+      { id: 'leave-requests', path: '/hr/leave-requests', titleKey: 'nav.leave', icon: 'CalendarDays', requiredRoles: ['admin', 'hr', 'manager', 'employee'], status: 'active' },
+      { id: 'leave-balances', path: '/hr/leave-balances', titleKey: 'nav.leaveBalances', icon: 'Scale', requiredRoles: ['admin', 'hr', 'manager', 'employee'], status: 'active' },
+      { id: 'overtimes', path: '/hr/overtimes', titleKey: 'nav.overtime', icon: 'Timer', requiredRoles: ['admin', 'hr', 'manager', 'employee'], status: 'active' },
+      { id: 'payrolls', path: '/hr/payrolls', titleKey: 'nav.payroll', icon: 'CreditCard', requiredRoles: ['admin', 'hr', 'finance', 'employee'], status: 'active' },
+      { id: 'recruitment', path: '/hr/recruitment', titleKey: 'nav.recruitment', icon: 'Briefcase', requiredRoles: ['admin', 'hr'], status: 'active' },
+      { id: 'internships', path: '/hr/internships', titleKey: 'nav.internships', icon: 'GraduationCap', requiredRoles: ['admin', 'hr', 'manager'], status: 'active' },
+      { id: 'clearances', path: '/hr/clearances', titleKey: 'nav.clearances', icon: 'FileCheck2', requiredRoles: ['admin', 'hr', 'manager', 'employee'], status: 'active' },
+    ]
+  },
+  {
+    id: 'admin',
+    titleKey: 'modules.admin',
+    icon: 'ShieldCheck',
+    requiredRoles: ['admin'],
+    status: 'active',
+    submodules: [
+      { id: 'users', path: '/admin/users', titleKey: 'nav.users', icon: 'Shield', requiredRoles: ['admin'], status: 'active' }
+    ]
+  },
+  {
+    id: 'store',
+    titleKey: 'modules.store',
+    icon: 'Package',
+    requiredRoles: ['admin', 'storekeeper', 'manager'],
+    status: 'upcoming',
+    phase: 'Phase 2',
+    description: 'Inventory, Raw Materials, Stock Movements, Inward GRV, Outward Releases',
+    submodules: [
+      { id: 'store-dashboard', path: '/store/dashboard', titleKey: 'nav.dashboard', icon: 'LayoutDashboard', status: 'upcoming' },
+      { id: 'store-inventory', path: '/store/inventory', titleKey: 'Store Inventory', icon: 'Boxes', status: 'upcoming' },
+      { id: 'store-inward', path: '/store/inward', titleKey: 'Stock Inward (GRV)', icon: 'ArrowDownToLine', status: 'upcoming' },
+      { id: 'store-outward', path: '/store/outward', titleKey: 'Stock Outward', icon: 'ArrowUpFromLine', status: 'upcoming' }
+    ]
+  },
+  {
+    id: 'purchasing',
+    titleKey: 'modules.purchasing',
+    icon: 'ShoppingCart',
+    requiredRoles: ['admin', 'purchaser', 'manager'],
+    status: 'upcoming',
+    phase: 'Phase 2',
+    description: 'Suppliers, Quotations, Purchase Orders (PO), Goods Received Vouchers',
+    submodules: [
+      { id: 'purchasing-dashboard', path: '/purchasing/dashboard', titleKey: 'nav.dashboard', icon: 'LayoutDashboard', status: 'upcoming' },
+      { id: 'purchasing-suppliers', path: '/purchasing/suppliers', titleKey: 'Suppliers', icon: 'Building2', status: 'upcoming' },
+      { id: 'purchasing-orders', path: '/purchasing/orders', titleKey: 'Purchase Orders', icon: 'FileText', status: 'upcoming' }
+    ]
+  },
+  {
+    id: 'production',
+    titleKey: 'modules.production',
+    icon: 'Factory',
+    requiredRoles: ['admin', 'production_manager', 'operator'],
+    status: 'upcoming',
+    phase: 'Phase 4',
+    description: 'Machine Management, Maintenance, Raw Material Requests, Wastage Tracking',
+    submodules: [
+      { id: 'production-dashboard', path: '/production/dashboard', titleKey: 'nav.dashboard', icon: 'LayoutDashboard', status: 'upcoming' },
+      { id: 'production-machines', path: '/production/machines', titleKey: 'Machines & Maintenance', icon: 'Cog', status: 'upcoming' },
+      { id: 'production-jobs', path: '/production/jobs', titleKey: 'Production Jobs & Wastage', icon: 'Workflow', status: 'upcoming' }
+    ]
+  },
+  {
+    id: 'crm',
+    titleKey: 'modules.crm',
+    icon: 'TrendingUp',
+    requiredRoles: ['admin', 'sales', 'manager'],
+    status: 'upcoming',
+    phase: 'Phase 3',
+    description: 'Lead Management, Customer Quotations, Printing Order Workflow, Invoices',
+    submodules: [
+      { id: 'crm-dashboard', path: '/crm/dashboard', titleKey: 'nav.dashboard', icon: 'LayoutDashboard', status: 'upcoming' },
+      { id: 'crm-customers', path: '/crm/customers', titleKey: 'Customers & Leads', icon: 'UserPlus', status: 'upcoming' },
+      { id: 'crm-orders', path: '/crm/orders', titleKey: 'Printing Orders & Proforma', icon: 'Receipt', status: 'upcoming' }
+    ]
+  },
+  {
+    id: 'finance',
+    titleKey: 'modules.finance',
+    icon: 'Landmark',
+    requiredRoles: ['admin', 'finance'],
+    status: 'upcoming',
+    phase: 'Phase 5',
+    description: 'Income, Expenses, Tax, Order Costing & Profitability, Financial Statements',
+    submodules: [
+      { id: 'finance-dashboard', path: '/finance/dashboard', titleKey: 'nav.dashboard', icon: 'LayoutDashboard', status: 'upcoming' },
+      { id: 'finance-expenses', path: '/finance/expenses', titleKey: 'Income & Expenses', icon: 'Wallet', status: 'upcoming' },
+      { id: 'finance-profitability', path: '/finance/profitability', titleKey: 'Cost & Profitability', icon: 'PieChart', status: 'upcoming' }
+    ]
+  }
+];

@@ -2,41 +2,67 @@
   "app": {
     "title": "GT ERP",
     "company": "GT Printing Press",
-    "subtitle": "Enterprise Management System"
+    "subtitle": "Enterprise Management System",
+    "poweredBy": "Modular Enterprise System"
+  },
+  "modules": {
+    "hr": "HR Management",
+    "admin": "Central Admin",
+    "store": "Store & Inventory",
+    "purchasing": "Purchasing & Procurement",
+    "production": "Production & Machine",
+    "crm": "CRM & Sales",
+    "finance": "Finance & Accounting"
   },
   "nav": {
     "dashboard": "Dashboard",
-    "employees": "Employees",
-    "attendance": "Attendance",
+    "hrDashboard": "HR Overview",
+    "employees": "Employees Directory",
+    "attendance": "Attendance & Clock",
     "leave": "Leave Requests",
-    "payroll": "Payroll",
-    "overtime": "Overtime",
-    "recruitment": "Recruitment",
-    "clearance": "Clearance",
-    "users": "User Management",
+    "leaveBalances": "Leave Balances",
+    "overtime": "Overtime Management",
+    "payroll": "Payroll & Payslips",
+    "recruitment": "Recruitment & Jobs",
+    "internships": "Internship Program",
+    "clearances": "Exit Clearances",
+    "users": "System Users & Roles",
     "settings": "Settings",
-    "logout": "Sign Out"
+    "logout": "Sign Out",
+    "login": "Sign In"
   },
   "actions": {
     "create": "Add New",
+    "createEmployee": "Register Employee",
+    "createLeave": "Request Leave",
+    "createOvertime": "Request Overtime",
+    "createPayroll": "Process Payroll",
+    "createJob": "Post Job Vacancy",
+    "createIntern": "Register Intern",
+    "createClearance": "Start Clearance",
+    "createUser": "Add System User",
     "edit": "Edit",
     "delete": "Delete",
     "save": "Save Changes",
     "cancel": "Cancel",
+    "close": "Close",
     "approve": "Approve",
     "reject": "Reject",
+    "markPaid": "Mark as Paid",
     "search": "Search...",
     "filter": "Filter",
     "refresh": "Refresh",
     "clockIn": "Clock In",
     "clockOut": "Clock Out",
     "submit": "Submit",
-    "viewDetails": "View Details"
+    "viewDetails": "View Details",
+    "adjust": "Adjust Days"
   },
   "status": {
     "active": "Active",
     "inactive": "Inactive",
     "pending": "Pending",
+    "accepted": "Accepted",
     "approved": "Approved",
     "rejected": "Rejected",
     "paid": "Paid",
@@ -44,7 +70,11 @@
     "partially": "Partially Paid",
     "late": "Late",
     "onTime": "On Time",
-    "absent": "Absent"
+    "absent": "Absent",
+    "open": "Open",
+    "closed": "Closed",
+    "ongoing": "Ongoing",
+    "completed": "Completed"
   },
   "theme": {
     "light": "Light",
@@ -60,6 +90,17 @@
     "admin": "Administrator",
     "hr": "HR Manager",
     "manager": "Department Manager",
-    "employee": "Employee"
+    "employee": "Employee",
+    "finance": "Finance Manager"
+  },
+  "common": {
+    "loading": "Loading...",
+    "noRecords": "No records found",
+    "connected": "Connected to live API",
+    "offline": "Backend is offline",
+    "total": "Total",
+    "actions": "Actions",
+    "comingSoon": "Modular Expansion (Phase Ready)",
+    "comingSoonDesc": "This module is part of the comprehensive ERP functional roadmap and will activate with the Phase backend service."
   }
 }
