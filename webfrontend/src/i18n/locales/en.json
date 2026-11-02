@@ -1,0 +1,65 @@
+{
+  "app": {
+    "title": "GT ERP",
+    "company": "GT Printing Press",
+    "subtitle": "Enterprise Management System"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "employees": "Employees",
+    "attendance": "Attendance",
+    "leave": "Leave Requests",
+    "payroll": "Payroll",
+    "overtime": "Overtime",
+    "recruitment": "Recruitment",
+    "clearance": "Clearance",
+    "users": "User Management",
+    "settings": "Settings",
+    "logout": "Sign Out"
+  },
+  "actions": {
+    "create": "Add New",
+    "edit": "Edit",
+    "delete": "Delete",
+    "save": "Save Changes",
+    "cancel": "Cancel",
+    "approve": "Approve",
+    "reject": "Reject",
+    "search": "Search...",
+    "filter": "Filter",
+    "refresh": "Refresh",
+    "clockIn": "Clock In",
+    "clockOut": "Clock Out",
+    "submit": "Submit",
+    "viewDetails": "View Details"
+  },
+  "status": {
+    "active": "Active",
+    "inactive": "Inactive",
+    "pending": "Pending",
+    "approved": "Approved",
+    "rejected": "Rejected",
+    "paid": "Paid",
+    "unpaid": "Unpaid",
+    "partially": "Partially Paid",
+    "late": "Late",
+    "onTime": "On Time",
+    "absent": "Absent"
+  },
+  "theme": {
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "language": {
+    "select": "Language",
+    "en": "English",
+    "am": "አማርኛ"
+  },
+  "roles": {
+    "admin": "Administrator",
+    "hr": "HR Manager",
+    "manager": "Department Manager",
+    "employee": "Employee"
+  }
+}

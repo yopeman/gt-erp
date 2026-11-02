@@ -1,0 +1,65 @@
+{
+  "app": {
+    "title": "ጂቲ ኢአርፒ",
+    "company": "ጂቲ ማተሚያ ቤት",
+    "subtitle": "የድርጅት አስተዳደር ሥርዓት"
+  },
+  "nav": {
+    "dashboard": "ዳሽቦርድ",
+    "employees": "ሠራተኞች",
+    "attendance": "የሥራ ክትትል",
+    "leave": "የፈቃድ ጥያቄዎች",
+    "payroll": "የደመወዝ ክፍያ",
+    "overtime": "የትርፍ ሰዓት",
+    "recruitment": "ቅጥርና ማስታወቂያ",
+    "clearance": "ክሊራንስ",
+    "users": "የተጠቃሚዎች አስተዳደር",
+    "settings": "ቅንብሮች",
+    "logout": "ውጣ"
+  },
+  "actions": {
+    "create": "አዲስ አክል",
+    "edit": "አስተካክል",
+    "delete": "አጥፋ",
+    "save": "አስቀምጥ",
+    "cancel": "ሰርዝ",
+    "approve": "አጽድቅ",
+    "reject": "ውድቅ አድርግ",
+    "search": "ፈልግ...",
+    "filter": "አጣራ",
+    "refresh": "አድስ",
+    "clockIn": "ግባ (Clock In)",
+    "clockOut": "ውጣ (Clock Out)",
+    "submit": "አስገባ",
+    "viewDetails": "ዝርዝር ተመልከት"
+  },
+  "status": {
+    "active": "ንቁ",
+    "inactive": "እንቅስቃሴ-አልባ",
+    "pending": "በመጠባበቅ ላይ",
+    "approved": "የጸደቀ",
+    "rejected": "ውድቅ የተደረገ",
+    "paid": "የተከፈለ",
+    "unpaid": "ያልተከፈለ",
+    "partially": "በከፊል የተከፈለ",
+    "late": "የዘገየ",
+    "onTime": "በሰዓቱ",
+    "absent": "ቀሪ"
+  },
+  "theme": {
+    "light": "ብርሃን",
+    "dark": "ጨለማ",
+    "system": "የስርዓት ברירת"
+  },
+  "language": {
+    "select": "ቋንቋ",
+    "en": "English",
+    "am": "አማርኛ"
+  },
+  "roles": {
+    "admin": "ዋና አስተዳዳሪ",
+    "hr": "የሰው ኃይል ሥራ አስኪያጅ",
+    "manager": "የክፍል ኃላፊ",
+    "employee": "ሠራተኛ"
+  }
+}
