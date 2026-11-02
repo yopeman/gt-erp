@@ -2,41 +2,67 @@
   "app": {
     "title": "ጂቲ ኢአርፒ",
     "company": "ጂቲ ማተሚያ ቤት",
-    "subtitle": "የድርጅት አስተዳደር ሥርዓት"
+    "subtitle": "የድርጅት አስተዳደር ሥርዓት",
+    "poweredBy": "ሞዱላር የኢንተርፕራይዝ ሥርዓት"
+  },
+  "modules": {
+    "hr": "የሰው ኃይል አስተዳደር (HR)",
+    "admin": "ዋና አስተዳደር (Admin)",
+    "store": "መጋዘንና ንብረት አስተዳደር",
+    "purchasing": "ግዢና አቅርቦት አስተዳደር",
+    "production": "ማምረቻና ማሽነሪ ኦፕሬሽን",
+    "crm": "የደንበኞችና ሽያጭ አስተዳደር",
+    "finance": "ፋይናንስና ሂሳብ አስተዳደር"
   },
   "nav": {
     "dashboard": "ዳሽቦርድ",
-    "employees": "ሠራተኞች",
-    "attendance": "የሥራ ክትትል",
+    "hrDashboard": "የሰው ኃይል አጠቃላይ እይታ",
+    "employees": "የሠራተኞች ዝርዝር",
+    "attendance": "የሥራ መግቢያ/መውጫ ክትትል",
     "leave": "የፈቃድ ጥያቄዎች",
-    "payroll": "የደመወዝ ክፍያ",
-    "overtime": "የትርፍ ሰዓት",
-    "recruitment": "ቅጥርና ማስታወቂያ",
-    "clearance": "ክሊራንስ",
-    "users": "የተጠቃሚዎች አስተዳደር",
+    "leaveBalances": "የፈቃድ ቀሪ ሂሳብ",
+    "overtime": "የትርፍ ሰዓት አስተዳደር",
+    "payroll": "የደመወዝ ክፍያና ፔይስሊፕ",
+    "recruitment": "ቅጥርና ክፍት የሥራ ቦታዎች",
+    "internships": "የልምምድ ፕሮግራም (Internship)",
+    "clearances": "የሥራ መልቀቂያ (ክሊራንስ)",
+    "users": "የስርዓቱ ተጠቃሚዎችና ሚናዎች",
     "settings": "ቅንብሮች",
-    "logout": "ውጣ"
+    "logout": "ውጣ",
+    "login": "ግባ"
   },
   "actions": {
     "create": "አዲስ አክል",
+    "createEmployee": "አዲስ ሠራተኛ መዝግብ",
+    "createLeave": "ፈቃድ ጠይቅ",
+    "createOvertime": "የትርፍ ሰዓት ጠይቅ",
+    "createPayroll": "ደመወዝ አስላ",
+    "createJob": "ክፍት የሥራ ቦታ ለጥፍ",
+    "createIntern": "ተለማማጅ መዝግብ",
+    "createClearance": "ክሊራንስ ጀምር",
+    "createUser": "ተጠቃሚ ጨምር",
     "edit": "አስተካክል",
     "delete": "አጥፋ",
     "save": "አስቀምጥ",
     "cancel": "ሰርዝ",
+    "close": "ዝጋ",
     "approve": "አጽድቅ",
     "reject": "ውድቅ አድርግ",
+    "markPaid": "እንደተከፈለ ምልክት አድርግ",
     "search": "ፈልግ...",
     "filter": "አጣራ",
     "refresh": "አድስ",
     "clockIn": "ግባ (Clock In)",
     "clockOut": "ውጣ (Clock Out)",
     "submit": "አስገባ",
-    "viewDetails": "ዝርዝር ተመልከት"
+    "viewDetails": "ዝርዝር ተመልከት",
+    "adjust": "ቀን አስተካክል"
   },
   "status": {
     "active": "ንቁ",
     "inactive": "እንቅስቃሴ-አልባ",
     "pending": "በመጠባበቅ ላይ",
+    "accepted": "ተቀባይነት አግኝቷል",
     "approved": "የጸደቀ",
     "rejected": "ውድቅ የተደረገ",
     "paid": "የተከፈለ",
@@ -44,7 +70,11 @@
     "partially": "በከፊል የተከፈለ",
     "late": "የዘገየ",
     "onTime": "በሰዓቱ",
-    "absent": "ቀሪ"
+    "absent": "ቀሪ",
+    "open": "ክፍት",
+    "closed": "የተዘጋ",
+    "ongoing": "በሂደት ላይ",
+    "completed": "የተጠናቀቀ"
   },
   "theme": {
     "light": "ብርሃን",
@@ -60,6 +90,17 @@
     "admin": "ዋና አስተዳዳሪ",
     "hr": "የሰው ኃይል ሥራ አስኪያጅ",
     "manager": "የክፍል ኃላፊ",
-    "employee": "ሠራተኛ"
+    "employee": "ሠራተኛ",
+    "finance": "የፋይናንስ ኃላፊ"
+  },
+  "common": {
+    "loading": "በመጫን ላይ...",
+    "noRecords": "ምንም መረጃ አልተገኘም",
+    "connected": "ከቀጥታ API ጋር ተገናኝቷል",
+    "offline": "ሰርቨሩ አልተገናኘም",
+    "total": "ድምር",
+    "actions": "ተግባራት",
+    "comingSoon": "ሞዱላር ዝግጅት (የሚቀጥለው ምዕራፍ)",
+    "comingSoonDesc": "ይህ ሞዱል በኢአርፒ ፍኖተ-ካርታ ውስጥ የተካተተ ሲሆን ከሚቀጥለው የጀርባ አገልጋይ ጋር በራስ-ሰር ይከፈታል።"
   }
 }
