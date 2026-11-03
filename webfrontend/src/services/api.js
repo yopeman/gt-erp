@@ -7,9 +7,10 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 export async function apiRequest(endpoint, options = {}) {
   const token = localStorage.getItem('gt_erp_token');
+  const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
 
   const headers = {
-    'Content-Type': 'application/json',
+    ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...options.headers,
   };
@@ -46,10 +47,18 @@ export async function apiRequest(endpoint, options = {}) {
   }
 }
 
+const serializeBody = (body) => {
+  if (body === undefined) return undefined;
+  if (typeof FormData !== 'undefined' && body instanceof FormData) return body;
+  if (typeof body === 'string') return body;
+  return JSON.stringify(body);
+};
+
 export const api = {
   get: (endpoint, options) => apiRequest(endpoint, { ...options, method: 'GET' }),
-  post: (endpoint, body, options) => apiRequest(endpoint, { ...options, method: 'POST', body: JSON.stringify(body) }),
-  put: (endpoint, body, options) => apiRequest(endpoint, { ...options, method: 'PUT', body: JSON.stringify(body) }),
+  post: (endpoint, body, options) => apiRequest(endpoint, { ...options, method: 'POST', body: serializeBody(body) }),
+  put: (endpoint, body, options) => apiRequest(endpoint, { ...options, method: 'PUT', body: serializeBody(body) }),
+  patch: (endpoint, body, options) => apiRequest(endpoint, { ...options, method: 'PATCH', body: serializeBody(body) }),
   delete: (endpoint, options) => apiRequest(endpoint, { ...options, method: 'DELETE' }),
 };
 
