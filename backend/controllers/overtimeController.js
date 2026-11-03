@@ -1,4 +1,29 @@
 import Overtime from '../models/Overtime.js';
+import Employee from '../models/Employee.js';
+
+/**
+ * Helper to resolve logged in employee ID safely
+ */
+const resolveUserEmployeeId = async (user) => {
+  if (!user) return null;
+  if (user.employee) {
+    return user.employee._id || user.employee;
+  }
+  const emp = await Employee.findOne({
+    $or: [
+      { user: user._id },
+      { email: user.email?.toLowerCase() }
+    ]
+  });
+  return emp ? emp._id : null;
+};
+
+// Rate mapping from type
+const OVERTIME_TYPE_RATES = {
+  calendar: 1.5,
+  weekend: 2.0,
+  holiday: 2.0
+};
 
 // Create overtime request
 export const createOvertime = async (req, res) => {
@@ -8,32 +33,58 @@ export const createOvertime = async (req, res) => {
       startAt,
       workedHours,
       reason,
-      type,
+      type = 'calendar',
       calculationRate,
       isPreApproved
     } = req.body;
 
-    if (!employee || !startAt || workedHours === undefined) {
+    const userRoles = req.user?.roles || [];
+    const canManage = userRoles.some((r) => ['admin', 'hr', 'manager'].includes(r));
+
+    let targetEmployeeId = employee;
+
+    // Security check: Regular employees cannot submit overtime for other staff members
+    if (!canManage) {
+      const myEmpId = await resolveUserEmployeeId(req.user);
+      if (!myEmpId) {
+        return res.status(400).json({
+          success: false,
+          message: 'No employee profile linked to your user account'
+        });
+      }
+      if (employee && String(employee) !== String(myEmpId)) {
+        return res.status(403).json({
+          success: false,
+          message: 'Employees cannot submit overtime requests for other staff members.'
+        });
+      }
+      targetEmployeeId = myEmpId;
+    }
+
+    if (!targetEmployeeId || !startAt || workedHours === undefined) {
       return res.status(400).json({
         success: false,
         message: 'employee, startAt, and workedHours are required'
       });
     }
 
+    // Auto-select calculation rate from type
+    const finalRate = Number(calculationRate) || OVERTIME_TYPE_RATES[type] || 1.5;
+
     const overtime = await Overtime.create({
-      employee,
+      employee: targetEmployeeId,
       startAt,
-      workedHours,
-      approvedHours: isPreApproved ? workedHours : 0,
+      workedHours: Number(workedHours),
+      approvedHours: isPreApproved ? Number(workedHours) : 0,
       reason,
       type: type || 'calendar',
-      calculationRate: calculationRate || 1.5,
+      calculationRate: finalRate,
       isPreApproved: Boolean(isPreApproved),
       status: 'pending',
       paymentStatus: 'unpaid'
     });
 
-    const populated = await overtime.populate('employee', 'fullName email department position');
+    const populated = await overtime.populate('employee', 'fullName email department position profileImage nationalId');
 
     res.status(201).json({
       success: true,
@@ -63,9 +114,26 @@ export const getOvertimes = async (req, res) => {
       endDate
     } = req.query;
 
+    const userRoles = req.user?.roles || [];
+    const canManage = userRoles.some((r) => ['admin', 'hr', 'manager', 'finance'].includes(r));
+
     const query = {};
 
-    if (employee) query.employee = employee;
+    // Scoped visibility: Regular employees can only see their own overtime records
+    if (!canManage) {
+      const myEmpId = await resolveUserEmployeeId(req.user);
+      if (!myEmpId) {
+        return res.status(200).json({
+          success: true,
+          data: [],
+          pagination: { total: 0, page: 1, pages: 0 }
+        });
+      }
+      query.employee = myEmpId;
+    } else {
+      if (employee) query.employee = employee;
+    }
+
     if (status) query.status = status;
     if (paymentStatus) query.paymentStatus = paymentStatus;
     if (type) query.type = type;
@@ -79,7 +147,7 @@ export const getOvertimes = async (req, res) => {
     const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
     const total = await Overtime.countDocuments(query);
     const overtimes = await Overtime.find(query)
-      .populate('employee', 'fullName email department position')
+      .populate('employee', 'fullName email department position profileImage nationalId')
       .populate('approvedBy', 'fullName email')
       .sort({ startAt: -1 })
       .skip(skip)
@@ -106,8 +174,11 @@ export const getOvertimes = async (req, res) => {
 // Get overtime by ID
 export const getOvertimeById = async (req, res) => {
   try {
+    const userRoles = req.user?.roles || [];
+    const canManage = userRoles.some((r) => ['admin', 'hr', 'manager', 'finance'].includes(r));
+
     const overtime = await Overtime.findById(req.params.id)
-      .populate('employee', 'fullName email department position')
+      .populate('employee', 'fullName email department position profileImage nationalId')
       .populate('approvedBy', 'fullName email');
 
     if (!overtime) {
@@ -115,6 +186,18 @@ export const getOvertimeById = async (req, res) => {
         success: false,
         message: 'Overtime record not found'
       });
+    }
+
+    // Permission check for regular employee
+    if (!canManage) {
+      const myEmpId = await resolveUserEmployeeId(req.user);
+      const otEmpId = overtime.employee?._id || overtime.employee;
+      if (String(otEmpId) !== String(myEmpId)) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied: You can only view your own overtime records'
+        });
+      }
     }
 
     res.status(200).json({
