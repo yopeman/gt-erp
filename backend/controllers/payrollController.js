@@ -1,6 +1,23 @@
 import Payroll from '../models/Payroll.js';
 import Employee from '../models/Employee.js';
 
+/**
+ * Helper to resolve logged in employee ID safely
+ */
+const resolveUserEmployeeId = async (user) => {
+  if (!user) return null;
+  if (user.employee) {
+    return user.employee._id || user.employee;
+  }
+  const emp = await Employee.findOne({
+    $or: [
+      { user: user._id },
+      { email: user.email?.toLowerCase() }
+    ]
+  });
+  return emp ? emp._id : null;
+};
+
 // Helper for statutory Ethiopian Tax
 const calculateStatutoryTax = (taxableIncome) => {
   const income = Number(taxableIncome) || 0;
@@ -94,9 +111,26 @@ export const getPayrolls = async (req, res) => {
       toDate
     } = req.query;
 
+    const userRoles = req.user?.roles || [];
+    const canManage = userRoles.some((r) => ['admin', 'hr', 'finance'].includes(r));
+
     const query = {};
 
-    if (employeeId) query.employeeId = employeeId;
+    // Scoped visibility: Regular employees can only view their own payroll records
+    if (!canManage) {
+      const myEmpId = await resolveUserEmployeeId(req.user);
+      if (!myEmpId) {
+        return res.status(200).json({
+          success: true,
+          data: [],
+          pagination: { total: 0, page: 1, pages: 0 }
+        });
+      }
+      query.employeeId = myEmpId;
+    } else {
+      if (employeeId) query.employeeId = employeeId;
+    }
+
     if (status) query.status = status;
     if (type) query.type = type;
 
@@ -137,8 +171,11 @@ export const getPayrolls = async (req, res) => {
 // Get payroll by ID
 export const getPayrollById = async (req, res) => {
   try {
+    const userRoles = req.user?.roles || [];
+    const canManage = userRoles.some((r) => ['admin', 'hr', 'finance'].includes(r));
+
     const payroll = await Payroll.findById(req.params.id)
-      .populate('employeeId', 'fullName email department position baseSalary accountDetails')
+      .populate('employeeId', 'fullName email department position baseSalary accountDetails nationalId')
       .populate('createdBy', 'fullName email')
       .populate('approvedBy', 'fullName email');
 
@@ -147,6 +184,18 @@ export const getPayrollById = async (req, res) => {
         success: false,
         message: 'Payroll record not found'
       });
+    }
+
+    // Permission check for regular employee: can only view own payslip
+    if (!canManage) {
+      const myEmpId = await resolveUserEmployeeId(req.user);
+      const payEmpId = payroll.employeeId?._id || payroll.employeeId;
+      if (String(payEmpId) !== String(myEmpId)) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied: You can only view your own payroll and payslips'
+        });
+      }
     }
 
     res.status(200).json({
@@ -165,22 +214,41 @@ export const getPayrollById = async (req, res) => {
 // Update payroll
 export const updatePayroll = async (req, res) => {
   try {
+    const existing = await Payroll.findById(req.params.id);
+    if (!existing) {
+      return res.status(404).json({
+        success: false,
+        message: 'Payroll record not found'
+      });
+    }
+
+    if (existing.approvedBy) {
+      return res.status(400).json({
+        success: false,
+        message: 'Approved payroll records cannot be edited'
+      });
+    }
+
     const updateData = { ...req.body };
 
-    if (updateData.totalGross !== undefined || updateData.totalDeduction !== undefined) {
-      const existing = await Payroll.findById(req.params.id);
-      if (!existing) {
-        return res.status(404).json({
-          success: false,
-          message: 'Payroll record not found'
-        });
-      }
+    if (Array.isArray(updateData.earnings)) {
+      updateData.totalGross = updateData.earnings.reduce(
+        (sum, item) => sum + (Number(item.amount) || 0),
+        0
+      );
+    }
 
-      const gross = updateData.totalGross !== undefined ? Number(updateData.totalGross) : existing.totalGross;
-      const deduction = updateData.totalDeduction !== undefined ? Number(updateData.totalDeduction) : existing.totalDeduction;
-      if (updateData.totalNet === undefined) {
-        updateData.totalNet = gross - deduction;
-      }
+    if (Array.isArray(updateData.deductions)) {
+      updateData.totalDeduction = updateData.deductions.reduce(
+        (sum, item) => sum + (Number(item.amount) || 0),
+        0
+      );
+    }
+
+    const gross = updateData.totalGross !== undefined ? Number(updateData.totalGross) : existing.totalGross;
+    const deduction = updateData.totalDeduction !== undefined ? Number(updateData.totalDeduction) : existing.totalDeduction;
+    if (updateData.totalNet === undefined) {
+      updateData.totalNet = gross - deduction;
     }
 
     const payroll = await Payroll.findByIdAndUpdate(
@@ -188,15 +256,9 @@ export const updatePayroll = async (req, res) => {
       { $set: updateData },
       { new: true, runValidators: true }
     )
-      .populate('employeeId', 'fullName email department position baseSalary')
+      .populate('employeeId', 'fullName email department position baseSalary accountDetails nationalId')
+      .populate('createdBy', 'fullName email')
       .populate('approvedBy', 'fullName email');
-
-    if (!payroll) {
-      return res.status(404).json({
-        success: false,
-        message: 'Payroll record not found'
-      });
-    }
 
     res.status(200).json({
       success: true,

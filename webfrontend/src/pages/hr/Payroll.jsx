@@ -14,7 +14,8 @@ import {
   Printer,
   Users,
   Trash2,
-  FileText
+  FileText,
+  Pencil
 } from 'lucide-react';
 
 // Statutory Ethiopian Employment Tax Calculation (Proclamation 979/2016)
@@ -43,8 +44,9 @@ export default function Payroll() {
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Single Process Modal
+  // Single Process Modal & Editing State
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingPayrollId, setEditingPayrollId] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
   // Mass Payroll Modal
@@ -106,7 +108,7 @@ export default function Payroll() {
       const response = await api.get('/employees');
       if (response.success && Array.isArray(response.data)) {
         setEmployees(response.data);
-        if (response.data.length > 0) {
+        if (response.data.length > 0 && !formData.employeeId) {
           const emp = response.data[0];
           const base = emp.baseSalary || 15000;
           const pension = calculateStatutoryPension(base);
@@ -138,13 +140,79 @@ export default function Payroll() {
 
   useEffect(() => {
     fetchPayrolls();
-    fetchEmployeesList();
+    if (canApprove) {
+      fetchEmployeesList();
+    }
     setMassData((prev) => ({
       ...prev,
       fromDate: defaultFrom,
       toDate: defaultTo
     }));
-  }, []);
+  }, [canApprove]);
+
+  const handleOpenCreateModal = () => {
+    setEditingPayrollId(null);
+    setNewEarningName('');
+    setNewEarningAmount('');
+    setNewDeductionName('');
+    setNewDeductionAmount('');
+
+    const initialEmp = employees[0];
+    const base = initialEmp?.baseSalary || 15000;
+    const pension = calculateStatutoryPension(base);
+    const tax = calculateStatutoryTax(base);
+
+    setFormData({
+      employeeId: initialEmp ? initialEmp._id : '',
+      fromDate: defaultFrom,
+      toDate: defaultTo,
+      currency: 'ETB',
+      type: 'salary',
+      earnings: [{ name: 'Base Salary', amount: base }],
+      deductions: [
+        { name: 'Pension Contribution (7%)', amount: pension },
+        { name: 'Income Tax (PAYE)', amount: tax }
+      ],
+      totalGross: base,
+      totalDeduction: pension + tax,
+      totalNet: base - (pension + tax)
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEditModal = (item) => {
+    setEditingPayrollId(item._id);
+    setNewEarningName('');
+    setNewEarningAmount('');
+    setNewDeductionName('');
+    setNewDeductionAmount('');
+
+    const empId = item.employeeId?._id || item.employeeId;
+    const from = item.fromDate ? new Date(item.fromDate).toISOString().split('T')[0] : defaultFrom;
+    const to = item.toDate ? new Date(item.toDate).toISOString().split('T')[0] : defaultTo;
+
+    const earnings = item.earnings && item.earnings.length > 0
+      ? item.earnings.map((e) => ({ name: e.name, amount: e.amount }))
+      : [{ name: 'Base Salary', amount: item.totalGross }];
+
+    const deductions = item.deductions && item.deductions.length > 0
+      ? item.deductions.map((d) => ({ name: d.name, amount: d.amount }))
+      : [{ name: 'Deductions', amount: item.totalDeduction }];
+
+    setFormData({
+      employeeId: empId,
+      fromDate: from,
+      toDate: to,
+      currency: item.currency || 'ETB',
+      type: item.type || 'salary',
+      earnings,
+      deductions,
+      totalGross: item.totalGross,
+      totalDeduction: item.totalDeduction,
+      totalNet: item.totalNet
+    });
+    setIsModalOpen(true);
+  };
 
   const handleSelectEmployee = (empId) => {
     const emp = employees.find((e) => e._id === empId);
@@ -242,7 +310,7 @@ export default function Payroll() {
     }));
   };
 
-  // Single payroll form submit
+  // Process payroll submit (create or update)
   const handleProcessPayroll = async (e) => {
     e.preventDefault();
     if (!formData.employeeId || !formData.fromDate || !formData.toDate) {
@@ -251,13 +319,20 @@ export default function Payroll() {
     }
     setSubmitting(true);
     try {
-      const response = await api.post('/payrolls', formData);
+      let response;
+      if (editingPayrollId) {
+        response = await api.put(`/payrolls/${editingPayrollId}`, formData);
+      } else {
+        response = await api.post('/payrolls', formData);
+      }
+
       if (response.success) {
         setIsModalOpen(false);
+        setEditingPayrollId(null);
         await fetchPayrolls();
       }
     } catch (err) {
-      alert(err.message || 'Failed to process payroll');
+      alert(err.message || 'Failed to save payroll record');
     } finally {
       setSubmitting(false);
     }
@@ -359,7 +434,9 @@ export default function Payroll() {
             <span>{t('nav.payroll')}</span>
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Section 2.5 • Monthly payslips, gross calculations, deductions, and financial approvals.
+            {canApprove
+              ? 'Section 2.5 • Monthly payslips, gross calculations, deductions, and financial approvals.'
+              : 'View and print your personal monthly salary statements and confidential payslips.'}
           </p>
         </div>
 
@@ -385,7 +462,7 @@ export default function Payroll() {
               </button>
 
               <button
-                onClick={() => setIsModalOpen(true)}
+                onClick={handleOpenCreateModal}
                 className="px-4 py-2.5 bg-primary-500 hover:bg-primary-600 text-white font-bold text-xs rounded-xl shadow-md transition active:scale-95 flex items-center gap-2"
               >
                 <Plus className="w-4 h-4" />
@@ -402,10 +479,14 @@ export default function Payroll() {
         </div>
       ) : payrolls.length === 0 ? (
         <EmptyState
-          title="No payroll records generated"
-          message="No monthly payroll calculated yet. Click above to process payroll individually or in mass."
+          title={canApprove ? "No payroll records generated" : "No payroll records found"}
+          message={
+            canApprove
+              ? "No monthly payroll calculated yet. Click above to process payroll individually or in mass."
+              : "You do not have any issued payroll statements or payslips yet."
+          }
           actionText={canApprove ? t('actions.createPayroll') : null}
-          onAction={() => setIsModalOpen(true)}
+          onAction={handleOpenCreateModal}
           icon={CreditCard}
         />
       ) : (
@@ -456,10 +537,21 @@ export default function Payroll() {
                     className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 flex items-center gap-1.5 transition"
                   >
                     <Printer className="w-3.5 h-3.5 text-primary-500" />
-                    <span>Print Slip</span>
+                    <span>Slip</span>
                   </button>
 
                   <div className="flex items-center gap-2">
+                    {/* Edit button: shown if NOT approved and user has HR/Admin role */}
+                    {!item.approvedBy && canApprove && (
+                      <button
+                        onClick={() => handleOpenEditModal(item)}
+                        className="px-3 py-1.5 rounded-lg text-xs font-bold text-amber-800 bg-amber-100 hover:bg-amber-200 dark:bg-amber-950/70 dark:text-amber-300 transition flex items-center gap-1"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                        <span>Edit</span>
+                      </button>
+                    )}
+
                     {!item.approvedBy && canApprove && (
                       <button
                         onClick={() => handleApprove(item._id)}
@@ -468,6 +560,7 @@ export default function Payroll() {
                         Approve
                       </button>
                     )}
+
                     {/* Mark paid is strictly shown only when approved */}
                     {Boolean(item.approvedBy) && item.status !== 'paid' && canPay && (
                       <button
@@ -541,6 +634,18 @@ export default function Payroll() {
                         <span>Slip</span>
                       </button>
 
+                      {/* Edit Button: shown if NOT approved and user has HR/Admin role */}
+                      {!item.approvedBy && canApprove && (
+                        <button
+                          onClick={() => handleOpenEditModal(item)}
+                          className="px-2.5 py-1 text-xs font-bold rounded-lg text-amber-700 bg-amber-50 dark:bg-amber-950/60 hover:bg-amber-100 transition inline-flex items-center gap-1"
+                          title="Edit Payroll"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                          <span>Edit</span>
+                        </button>
+                      )}
+
                       {/* Approve Button */}
                       {!item.approvedBy && canApprove && (
                         <button
@@ -569,11 +674,14 @@ export default function Payroll() {
         </>
       )}
 
-      {/* Modal 1: Create Single Payroll Process */}
+      {/* Modal 1: Create / Edit Payroll Process */}
       <Modal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        title={t('actions.createPayroll')}
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingPayrollId(null);
+        }}
+        title={editingPayrollId ? 'Edit Payroll Statement' : t('actions.createPayroll')}
         maxWidth="max-w-2xl"
       >
         <form onSubmit={handleProcessPayroll} className="space-y-4">
@@ -783,7 +891,10 @@ export default function Payroll() {
           <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
             <button
               type="button"
-              onClick={() => setIsModalOpen(false)}
+              onClick={() => {
+                setIsModalOpen(false);
+                setEditingPayrollId(null);
+              }}
               className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
             >
               {t('actions.cancel')}
@@ -793,7 +904,11 @@ export default function Payroll() {
               disabled={submitting}
               className="px-5 py-2 rounded-xl bg-primary-500 hover:bg-primary-600 text-white font-bold text-xs shadow-md transition disabled:opacity-50"
             >
-              {submitting ? 'Calculating...' : 'Generate Payroll'}
+              {submitting
+                ? 'Saving...'
+                : editingPayrollId
+                ? 'Update Payroll'
+                : 'Generate Payroll'}
             </button>
           </div>
         </form>
