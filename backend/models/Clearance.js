@@ -42,7 +42,7 @@ const clearanceSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['pending', 'in_progress', 'completed', 'rejected'],
+      enum: ['pending', 'in_progress', 'completed', 'approved', 'rejected'],
       default: 'pending'
     },
     checklist: [clearanceChecklistItemSchema],

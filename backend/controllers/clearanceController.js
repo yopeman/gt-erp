@@ -1,11 +1,44 @@
 import Clearance from '../models/Clearance.js';
+import Employee from '../models/Employee.js';
+
+/**
+ * Helper to resolve logged in employee ID safely
+ */
+const resolveUserEmployeeId = async (user) => {
+  if (!user) return null;
+  if (user.employee) {
+    return user.employee._id || user.employee;
+  }
+  const emp = await Employee.findOne({
+    $or: [
+      { user: user._id },
+      { email: user.email?.toLowerCase().trim() }
+    ]
+  });
+  return emp ? emp._id : null;
+};
 
 // Create a new clearance request
 export const createClearance = async (req, res) => {
   try {
     const { employee, reason, checklist } = req.body;
 
-    if (!employee) {
+    const userRoles = req.user?.roles || [];
+    const canManage = userRoles.some((r) => ['admin', 'hr'].includes(r));
+
+    let targetEmployeeId = employee;
+
+    // Scoped restriction: Regular employees can only initiate clearance for themselves
+    if (!canManage) {
+      const myEmpId = await resolveUserEmployeeId(req.user);
+      if (!myEmpId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Could not resolve your linked employee profile to start clearance'
+        });
+      }
+      targetEmployeeId = myEmpId;
+    } else if (!targetEmployeeId) {
       return res.status(400).json({
         success: false,
         message: 'employee reference is required'
@@ -22,7 +55,7 @@ export const createClearance = async (req, res) => {
     ];
 
     const clearance = await Clearance.create({
-      employee,
+      employee: targetEmployeeId,
       reason,
       status: 'pending',
       checklist: checklist && checklist.length > 0 ? checklist : defaultChecklist
@@ -54,9 +87,26 @@ export const getClearances = async (req, res) => {
       status
     } = req.query;
 
+    const userRoles = req.user?.roles || [];
+    const canManage = userRoles.some((r) => ['admin', 'hr'].includes(r));
+
     const query = {};
 
-    if (employee) query.employee = employee;
+    // Scoped visibility: Regular employees can only see their own exit clearance records
+    if (!canManage) {
+      const myEmpId = await resolveUserEmployeeId(req.user);
+      if (!myEmpId) {
+        return res.status(200).json({
+          success: true,
+          data: [],
+          pagination: { total: 0, page: 1, pages: 0 }
+        });
+      }
+      query.employee = myEmpId;
+    } else if (employee) {
+      query.employee = employee;
+    }
+
     if (status) query.status = status;
 
     const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
@@ -100,6 +150,18 @@ export const getClearanceById = async (req, res) => {
         success: false,
         message: 'Clearance not found'
       });
+    }
+
+    const userRoles = req.user?.roles || [];
+    const canManage = userRoles.some((r) => ['admin', 'hr'].includes(r));
+    if (!canManage) {
+      const myEmpId = await resolveUserEmployeeId(req.user);
+      if (!myEmpId || clearance.employee?._id?.toString() !== myEmpId.toString()) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied: You can only view your own exit clearance record'
+        });
+      }
     }
 
     res.status(200).json({
@@ -151,7 +213,7 @@ export const updateClearance = async (req, res) => {
 export const updateChecklistItem = async (req, res) => {
   try {
     const { itemId } = req.params;
-    const { status, confirmedBy, remarks } = req.body;
+    const { status, confirmedBy, remarks, isConfirmed } = req.body;
 
     const clearance = await Clearance.findById(req.params.id);
     if (!clearance) {
@@ -169,12 +231,23 @@ export const updateChecklistItem = async (req, res) => {
       });
     }
 
-    if (status) item.status = status;
-    if (confirmedBy) item.confirmedBy = confirmedBy;
-    if (remarks !== undefined) item.remarks = remarks;
-    if (status === 'cleared') {
-      item.confirmedAt = new Date();
+    let newStatus = status;
+    if (!newStatus) {
+      if (isConfirmed === true) newStatus = 'cleared';
+      else if (isConfirmed === false) newStatus = 'pending';
+      else newStatus = item.status === 'cleared' ? 'pending' : 'cleared';
     }
+
+    item.status = newStatus;
+    if (newStatus === 'cleared') {
+      item.confirmedBy = confirmedBy || req.user?._id;
+      item.confirmedAt = new Date();
+    } else {
+      item.confirmedBy = null;
+      item.confirmedAt = null;
+    }
+
+    if (remarks !== undefined) item.remarks = remarks;
 
     // If any item is in progress or cleared, transition root clearance status to 'in_progress'
     if (clearance.status === 'pending') {
@@ -205,7 +278,8 @@ export const updateChecklistItem = async (req, res) => {
 // Final approval for clearance
 export const finalApproveClearance = async (req, res) => {
   try {
-    const { finalApprovedBy, status = 'completed' } = req.body;
+    const finalApprovedBy = req.body?.finalApprovedBy || req.user?._id;
+    const status = req.body?.status || 'approved';
 
     if (!finalApprovedBy) {
       return res.status(400).json({
@@ -222,11 +296,29 @@ export const finalApproveClearance = async (req, res) => {
       });
     }
 
+    // Verify all checklist items are cleared
+    const hasUnclearedItems = clearance.checklist && clearance.checklist.some((c) => c.status !== 'cleared');
+    if (hasUnclearedItems) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot grant final approval until all department checklist items are signed off'
+      });
+    }
+
     clearance.finalApprovedBy = finalApprovedBy;
     clearance.status = status;
     clearance.completedAt = new Date();
 
     await clearance.save();
+
+    // Mark employee as terminated upon finalized clearance
+    if (clearance.employee) {
+      try {
+        await Employee.findByIdAndUpdate(clearance.employee, { status: 'terminated' });
+      } catch (empErr) {
+        console.warn('Could not update employee status upon final clearance:', empErr.message);
+      }
+    }
 
     const populated = await clearance.populate([
       { path: 'employee', select: 'fullName email department position' },
