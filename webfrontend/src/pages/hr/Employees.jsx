@@ -75,6 +75,7 @@ const INITIAL_FORM_STATE = {
   baseSalary: '',
   hiredAt: new Date().toISOString().split('T')[0],
   manager: '',
+  user: '',
   status: 'active',
   profileImage: '',
   detailAddress: {
@@ -235,6 +236,7 @@ export default function Employees() {
       baseSalary: emp.baseSalary !== undefined ? String(emp.baseSalary) : '',
       hiredAt: emp.hiredAt ? new Date(emp.hiredAt).toISOString().split('T')[0] : '',
       manager: emp.manager?._id || emp.manager || '',
+      user: emp.user?._id || emp.user || '',
       status: emp.status || 'active',
       profileImage: emp.profileImage || '',
       detailAddress: {
@@ -354,6 +356,7 @@ export default function Employees() {
         type: formData.type,
         branch: formData.branch,
         status: formData.status,
+        user: formData.user || null,
         baseSalary: formData.baseSalary !== '' ? Number(formData.baseSalary) : 0,
         manager: formData.manager || null,
         profileImage: formData.profileImage || null,
@@ -597,6 +600,26 @@ export default function Employees() {
                     <Phone className="w-3.5 h-3.5 text-slate-400" />
                     <span>{emp.phoneNumber}</span>
                   </div>
+                  <div className="flex items-center justify-between pt-1">
+                    <span className="text-slate-400 text-[11px] flex items-center gap-1">
+                      <Shield className="w-3.5 h-3.5 text-primary-500" />
+                      System Access:
+                    </span>
+                    {emp.user ? (
+                      <div className="flex flex-wrap gap-1">
+                        {emp.user.roles?.map((r) => (
+                          <span
+                            key={r}
+                            className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-primary-50 dark:bg-primary-950/60 text-primary-600 dark:text-primary-400 border border-primary-500/20"
+                          >
+                            {r}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-slate-400 italic text-[11px]">No Login Account</span>
+                    )}
+                  </div>
                 </div>
 
                 <div className="flex items-center justify-between pt-1">
@@ -657,6 +680,7 @@ export default function Employees() {
                   <th className="px-4 py-3">Position</th>
                   <th className="px-4 py-3">Phone</th>
                   <th className="px-4 py-3">Type</th>
+                  <th className="px-4 py-3">System Access</th>
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3 text-right">Actions</th>
                 </tr>
@@ -695,6 +719,24 @@ export default function Employees() {
                     </td>
                     <td className="px-4 py-3 text-slate-500 dark:text-slate-400 capitalize">
                       {emp.type}
+                    </td>
+                    <td className="px-4 py-3">
+                      {emp.user ? (
+                        <div className="flex flex-wrap gap-1 max-w-[130px]">
+                          {emp.user.roles?.map((r) => (
+                            <span
+                              key={r}
+                              className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase bg-primary-50 dark:bg-primary-950/60 text-primary-600 dark:text-primary-400 border border-primary-500/20"
+                            >
+                              {r}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-[11px] text-slate-400 dark:text-slate-500 italic">
+                          No Login
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <Badge status={emp.status} text={emp.status} />
@@ -865,6 +907,50 @@ export default function Employees() {
                       ? `${selectedEmployee.manager.fullName} (${selectedEmployee.manager.position || 'Supervisor'})`
                       : 'None assigned'}
                   </div>
+                </div>
+
+                {/* Linked System User Account & Roles */}
+                <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 col-span-2 sm:col-span-4">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-slate-400 text-[10px] uppercase font-bold flex items-center gap-1.5">
+                      <ShieldCheck className="w-3.5 h-3.5 text-primary-500" />
+                      Connected System User Account & Permissions
+                    </span>
+                    {selectedEmployee.user ? (
+                      <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                        Login Active
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-slate-400 italic">No User Account</span>
+                    )}
+                  </div>
+                  {selectedEmployee.user ? (
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pt-2 border-t border-slate-200/60 dark:border-slate-800">
+                      <div>
+                        <div className="font-bold text-slate-800 dark:text-slate-200">
+                          {selectedEmployee.user.fullName || selectedEmployee.fullName}
+                        </div>
+                        <div className="text-[11px] text-slate-400">{selectedEmployee.user.email}</div>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[11px] text-slate-400">Assigned Roles:</span>
+                        <div className="flex flex-wrap gap-1">
+                          {selectedEmployee.user.roles?.map((r) => (
+                            <span
+                              key={r}
+                              className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-primary-100 dark:bg-primary-950/60 text-primary-700 dark:text-primary-300 border border-primary-500/20"
+                            >
+                              {r}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-[11px] text-slate-400 pt-1">
+                      This employee does not currently have login access. Edit profile to link a user account.
+                    </p>
+                  )}
                 </div>
               </div>
             )}

@@ -21,7 +21,9 @@ export const protect = async (req, res, next) => {
 
     const decoded = verifyToken(token);
 
-    const user = await User.findById(decoded.id || decoded._id).select('-password');
+    const user = await User.findById(decoded.id || decoded._id)
+      .select('-password')
+      .populate('employee', 'fullName email department position status branch profileImage');
     if (!user) {
       return res.status(401).json({
         success: false,

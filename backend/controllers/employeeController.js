@@ -1,4 +1,5 @@
 import Employee from '../models/Employee.js';
+import User from '../models/User.js';
 import { uploadToCloudinary } from '../utils/cloudinary.js';
 
 /**
@@ -60,6 +61,7 @@ export const createEmployee = async (req, res) => {
       detailAddress,
       hiredAt,
       manager,
+      user,
       type,
       profileImage,
       dateOfBirth,
@@ -88,6 +90,23 @@ export const createEmployee = async (req, res) => {
       });
     }
 
+    // Determine linked user if specified or auto-create system user account by default
+    let linkedUserId = user || null;
+    if (!linkedUserId && email) {
+      let matchedUser = await User.findOne({ email: email.toLowerCase() });
+      if (!matchedUser) {
+        const { hashPassword } = await import('../utils/password.js');
+        const defaultPassword = 'password123';
+        matchedUser = await User.create({
+          fullName,
+          email: email.toLowerCase(),
+          password: hashPassword(defaultPassword),
+          roles: ['employee']
+        });
+      }
+      linkedUserId = matchedUser._id;
+    }
+
     // Process profile image (Cloudinary with local fallback)
     const finalProfileImage = await processMediaUrl(profileImage, 'gt_erp/employees/profiles', 'image');
 
@@ -107,7 +126,7 @@ export const createEmployee = async (req, res) => {
 
     const employee = await Employee.create({
       fullName,
-      email,
+      email: email.toLowerCase(),
       department,
       position,
       gender,
@@ -116,6 +135,7 @@ export const createEmployee = async (req, res) => {
       detailAddress,
       hiredAt,
       manager: manager || null,
+      user: linkedUserId,
       type,
       profileImage: finalProfileImage || null,
       dateOfBirth,
@@ -129,10 +149,19 @@ export const createEmployee = async (req, res) => {
       baseSalary: baseSalary || 0
     });
 
+    // Ensure linked user points back to this employee
+    if (linkedUserId) {
+      await User.updateOne({ _id: linkedUserId }, { $set: { employee: employee._id } });
+    }
+
+    const populatedEmployee = await Employee.findById(employee._id)
+      .populate('manager', 'fullName email position department')
+      .populate('user', 'fullName email roles isDeleted');
+
     res.status(201).json({
       success: true,
       message: 'Employee created successfully',
-      data: employee
+      data: populatedEmployee
     });
   } catch (error) {
     res.status(500).json({
@@ -180,6 +209,7 @@ export const getEmployees = async (req, res) => {
     const total = await Employee.countDocuments(query);
     const employees = await Employee.find(query)
       .populate('manager', 'fullName email position department')
+      .populate('user', 'fullName email roles isDeleted')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit, 10));
@@ -207,6 +237,7 @@ export const getEmployeeById = async (req, res) => {
   try {
     const employee = await Employee.findById(req.params.id)
       .populate('manager', 'fullName email position department phoneNumber')
+      .populate('user', 'fullName email roles isDeleted')
       .populate('documents.uploadedBy', 'fullName email');
 
     if (!employee) {
@@ -256,17 +287,53 @@ export const updateEmployee = async (req, res) => {
       );
     }
 
+    // Handle user link consistency if user field is explicitly updated
+    if (req.body.user !== undefined) {
+      const currentEmployee = await Employee.findById(req.params.id);
+      const newUserId = req.body.user || null;
+      req.body.user = newUserId;
+
+      if (currentEmployee && currentEmployee.user && String(currentEmployee.user) !== String(newUserId)) {
+        // Unlink previous user
+        await User.updateOne({ _id: currentEmployee.user }, { $set: { employee: null } });
+      }
+
+      if (newUserId) {
+        // Link new user and clear any other employee attached to this user
+        await Employee.updateMany(
+          { user: newUserId, _id: { $ne: req.params.id } },
+          { $set: { user: null } }
+        );
+        await User.updateOne({ _id: newUserId }, { $set: { employee: req.params.id } });
+      }
+    }
+
     const employee = await Employee.findByIdAndUpdate(
       req.params.id,
       { $set: req.body },
       { new: true, runValidators: true }
-    ).populate('manager', 'fullName email position department');
+    )
+      .populate('manager', 'fullName email position department')
+      .populate('user', 'fullName email roles isDeleted');
 
     if (!employee) {
       return res.status(404).json({
         success: false,
         message: 'Employee not found'
       });
+    }
+
+    // Keep linked user details synchronized with updated employee info
+    if (employee.user) {
+      const linkedUserId = employee.user._id || employee.user;
+      const userUpdate = {
+        fullName: employee.fullName,
+        email: employee.email
+      };
+      if (employee.status === 'terminated') {
+        userUpdate.isDeleted = true;
+      }
+      await User.updateOne({ _id: linkedUserId }, { $set: userUpdate });
     }
 
     res.status(200).json({
@@ -296,6 +363,9 @@ export const deleteEmployee = async (req, res) => {
           message: 'Employee not found'
         });
       }
+      // Unlink any User pointing to this deleted Employee
+      await User.updateMany({ employee: req.params.id }, { $set: { employee: null } });
+
       return res.status(200).json({
         success: true,
         message: 'Employee permanently deleted'
@@ -307,6 +377,18 @@ export const deleteEmployee = async (req, res) => {
       { status: 'terminated' },
       { new: true }
     );
+
+    if (!employee) {
+      return res.status(404).json({
+        success: false,
+        message: 'Employee not found'
+      });
+    }
+
+    // Soft deactivation of linked user account on termination
+    if (employee.user) {
+      await User.updateOne({ _id: employee.user }, { $set: { isDeleted: true } });
+    }
 
     if (!employee) {
       return res.status(404).json({

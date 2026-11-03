@@ -1,11 +1,12 @@
 import User from '../models/User.js';
+import Employee from '../models/Employee.js';
 import { hashPassword, comparePassword } from '../utils/password.js';
 import { generateToken } from '../utils/token.js';
 
 // Register / Create user
 export const createUser = async (req, res) => {
   try {
-    const { fullName, email, password, roles } = req.body;
+    const { fullName, email, password, roles, employee } = req.body;
 
     if (!fullName || !email || !password) {
       return res.status(400).json({
@@ -22,25 +23,39 @@ export const createUser = async (req, res) => {
       });
     }
 
+    let linkedEmployeeId = employee || null;
+    if (!linkedEmployeeId && email) {
+      const matchedEmployee = await Employee.findOne({ email: email.toLowerCase() });
+      if (matchedEmployee) {
+        linkedEmployeeId = matchedEmployee._id;
+      }
+    }
+
     const hashedPassword = hashPassword(password);
 
     const user = await User.create({
       fullName,
       email: email.toLowerCase(),
       password: hashedPassword,
-      roles: roles || ['employee']
+      roles: roles || ['employee'],
+      employee: linkedEmployeeId
     });
+
+    if (linkedEmployeeId) {
+      await Employee.updateOne({ _id: linkedEmployeeId }, { $set: { user: user._id } });
+    }
 
     const token = generateToken({ id: user._id, email: user.email, roles: user.roles });
 
-    const userObj = user.toObject();
-    delete userObj.password;
+    const populatedUser = await User.findById(user._id)
+      .select('-password')
+      .populate('employee', 'fullName email department position status branch profileImage');
 
     res.status(201).json({
       success: true,
       message: 'User created successfully',
       token,
-      data: userObj
+      data: populatedUser
     });
   } catch (error) {
     res.status(500).json({
@@ -63,7 +78,8 @@ export const loginUser = async (req, res) => {
       });
     }
 
-    const user = await User.findOne({ email: email.toLowerCase() });
+    const user = await User.findOne({ email: email.toLowerCase() })
+      .populate('employee', 'fullName email department position status branch profileImage');
     if (!user || user.isDeleted) {
       return res.status(401).json({
         success: false,
@@ -141,6 +157,7 @@ export const getUsers = async (req, res) => {
     const total = await User.countDocuments(query);
     const users = await User.find(query)
       .select('-password')
+      .populate('employee', 'fullName email department position status branch profileImage')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit, 10));
@@ -166,7 +183,10 @@ export const getUsers = async (req, res) => {
 // Get user by ID
 export const getUserById = async (req, res) => {
   try {
-    const user = await User.findById(req.params.id).select('-password');
+    const user = await User.findById(req.params.id)
+      .select('-password')
+      .populate('employee', 'fullName email department position status branch profileImage');
+
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -190,7 +210,7 @@ export const getUserById = async (req, res) => {
 // Update user details
 export const updateUser = async (req, res) => {
   try {
-    const { fullName, email, roles, isDeleted, password } = req.body;
+    const { fullName, email, roles, employee, isDeleted, password } = req.body;
     const updateData = {};
 
     if (fullName) updateData.fullName = fullName;
@@ -199,17 +219,50 @@ export const updateUser = async (req, res) => {
     if (typeof isDeleted === 'boolean') updateData.isDeleted = isDeleted;
     if (password) updateData.password = hashPassword(password);
 
+    // Handle employee bidirectional link consistency
+    if (employee !== undefined) {
+      const currentUser = await User.findById(req.params.id);
+      const newEmpId = employee || null;
+      updateData.employee = newEmpId;
+
+      if (currentUser && currentUser.employee && String(currentUser.employee) !== String(newEmpId)) {
+        // Unlink previous employee
+        await Employee.updateOne({ _id: currentUser.employee }, { $set: { user: null } });
+      }
+
+      if (newEmpId) {
+        // Unlink any other user pointing to this employee
+        await User.updateMany(
+          { employee: newEmpId, _id: { $ne: req.params.id } },
+          { $set: { employee: null } }
+        );
+        // Link employee to this user
+        await Employee.updateOne({ _id: newEmpId }, { $set: { user: req.params.id } });
+      }
+    }
+
     const updatedUser = await User.findByIdAndUpdate(
       req.params.id,
       updateData,
       { new: true, runValidators: true }
-    ).select('-password');
+    )
+      .select('-password')
+      .populate('employee', 'fullName email department position status branch profileImage');
 
     if (!updatedUser) {
       return res.status(404).json({
         success: false,
         message: 'User not found'
       });
+    }
+
+    // Keep linked employee's fullName and email synced if user credentials changed
+    if (updatedUser.employee && (fullName || email)) {
+      const empId = updatedUser.employee._id || updatedUser.employee;
+      const empUpdate = {};
+      if (fullName) empUpdate.fullName = fullName;
+      if (email) empUpdate.email = email.toLowerCase();
+      await Employee.updateOne({ _id: empId }, { $set: empUpdate });
     }
 
     res.status(200).json({
@@ -233,7 +286,9 @@ export const deleteUser = async (req, res) => {
       req.params.id,
       { isDeleted: true },
       { new: true }
-    ).select('-password');
+    )
+      .select('-password')
+      .populate('employee', 'fullName email department position status branch profileImage');
 
     if (!user) {
       return res.status(404).json({
