@@ -1,6 +1,7 @@
 import express from 'express';
 import {
   createEmployee,
+  getMyProfile,
   getEmployees,
   getEmployeeById,
   updateEmployee,
@@ -15,6 +16,10 @@ const router = express.Router();
 
 router.use(protect);
 
+// Current employee profile
+router.get('/me', getMyProfile);
+
+// Employee CRUD
 router
   .route('/')
   .get(getEmployees)
@@ -30,4 +35,3 @@ router.post('/:id/documents', authorizeRoles('admin', 'hr', 'employee'), addDocu
 router.post('/:id/educations', authorizeRoles('admin', 'hr'), addEducation);
 
 export default router;
-

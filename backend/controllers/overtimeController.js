@@ -1,10 +1,28 @@
 import Overtime from '../models/Overtime.js';
+import Employee from '../models/Employee.js';
+import { recordApprovalEvent } from '../utils/approvalHelper.js';
+
+// Helper to resolve employee ID
+const resolveEmployeeId = async (req) => {
+  if (req.body.employee && req.user && (req.user.roles?.includes('admin') || req.user.roles?.includes('hr') || req.user.roles?.includes('manager'))) {
+    return req.body.employee;
+  }
+  if (req.user) {
+    const employee = await Employee.findOne({ email: req.user.email.toLowerCase() });
+    if (employee) {
+      return employee._id;
+    }
+  }
+  if (req.body.employee) {
+    return req.body.employee;
+  }
+  return null;
+};
 
 // Create overtime request
 export const createOvertime = async (req, res) => {
   try {
     const {
-      employee,
       startAt,
       workedHours,
       reason,
@@ -13,18 +31,28 @@ export const createOvertime = async (req, res) => {
       isPreApproved
     } = req.body;
 
-    if (!employee || !startAt || workedHours === undefined) {
+    const employeeId = await resolveEmployeeId(req);
+
+    if (!employeeId || !startAt || workedHours === undefined) {
       return res.status(400).json({
         success: false,
         message: 'employee, startAt, and workedHours are required'
       });
     }
 
+    const hours = Number(workedHours) || 0;
+    if (hours <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'workedHours must be greater than 0'
+      });
+    }
+
     const overtime = await Overtime.create({
-      employee,
+      employee: employeeId,
       startAt,
-      workedHours,
-      approvedHours: isPreApproved ? workedHours : 0,
+      workedHours: hours,
+      approvedHours: isPreApproved ? hours : 0,
       reason,
       type: type || 'calendar',
       calculationRate: calculationRate || 1.5,
@@ -33,7 +61,16 @@ export const createOvertime = async (req, res) => {
       paymentStatus: 'unpaid'
     });
 
-    const populated = await overtime.populate('employee', 'fullName email department position');
+    // Record submission in ApprovalHistory
+    await recordApprovalEvent({
+      referenceType: 'overtime',
+      referenceId: overtime._id,
+      action: 'submitted',
+      user: req.user,
+      comment: `Overtime request for ${hours} hours submitted`
+    });
+
+    const populated = await overtime.populate('employee', 'fullName email department position baseSalary');
 
     res.status(201).json({
       success: true,
@@ -44,6 +81,48 @@ export const createOvertime = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to create overtime request',
+      error: error.message
+    });
+  }
+};
+
+// Get current user's overtime records
+export const getMyOvertimes = async (req, res) => {
+  try {
+    const employeeId = await resolveEmployeeId(req);
+    if (!employeeId) {
+      return res.status(404).json({
+        success: false,
+        message: 'No employee profile linked to user'
+      });
+    }
+
+    const { page = 1, limit = 20, status, paymentStatus } = req.query;
+    const query = { employee: employeeId };
+    if (status) query.status = status;
+    if (paymentStatus) query.paymentStatus = paymentStatus;
+
+    const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+    const total = await Overtime.countDocuments(query);
+    const overtimes = await Overtime.find(query)
+      .populate('approvedBy', 'fullName email')
+      .sort({ startAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit, 10));
+
+    res.status(200).json({
+      success: true,
+      data: overtimes,
+      pagination: {
+        total,
+        page: parseInt(page, 10),
+        pages: Math.ceil(total / parseInt(limit, 10))
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch your overtime records',
       error: error.message
     });
   }
@@ -79,7 +158,7 @@ export const getOvertimes = async (req, res) => {
     const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
     const total = await Overtime.countDocuments(query);
     const overtimes = await Overtime.find(query)
-      .populate('employee', 'fullName email department position')
+      .populate('employee', 'fullName email department position baseSalary profileImage')
       .populate('approvedBy', 'fullName email')
       .sort({ startAt: -1 })
       .skip(skip)
@@ -107,7 +186,7 @@ export const getOvertimes = async (req, res) => {
 export const getOvertimeById = async (req, res) => {
   try {
     const overtime = await Overtime.findById(req.params.id)
-      .populate('employee', 'fullName email department position')
+      .populate('employee', 'fullName email department position baseSalary profileImage')
       .populate('approvedBy', 'fullName email');
 
     if (!overtime) {
@@ -130,7 +209,7 @@ export const getOvertimeById = async (req, res) => {
   }
 };
 
-// Update overtime request
+// Update overtime record
 export const updateOvertime = async (req, res) => {
   try {
     const overtime = await Overtime.findByIdAndUpdate(
@@ -138,7 +217,7 @@ export const updateOvertime = async (req, res) => {
       { $set: req.body },
       { new: true, runValidators: true }
     )
-      .populate('employee', 'fullName email department position')
+      .populate('employee', 'fullName email department position baseSalary')
       .populate('approvedBy', 'fullName email');
 
     if (!overtime) {
@@ -165,7 +244,7 @@ export const updateOvertime = async (req, res) => {
 // Review / Approve / Reject overtime
 export const reviewOvertime = async (req, res) => {
   try {
-    const { status, approvedHours, approvedBy } = req.body;
+    const { status, approvedHours, notes } = req.body;
 
     if (!status || !['approved', 'rejected', 'pending'].includes(status)) {
       return res.status(400).json({
@@ -174,29 +253,38 @@ export const reviewOvertime = async (req, res) => {
       });
     }
 
+    const existing = await Overtime.findById(req.params.id);
+    if (!existing) {
+      return res.status(404).json({
+        success: false,
+        message: 'Overtime record not found'
+      });
+    }
+
+    const finalApprovedHours = approvedHours !== undefined ? Number(approvedHours) : existing.workedHours;
+
     const updateData = {
       status,
-      approvedBy: approvedBy || null
+      approvedBy: req.user?._id || null,
+      approvedHours: status === 'approved' ? finalApprovedHours : 0
     };
-
-    if (approvedHours !== undefined) {
-      updateData.approvedHours = approvedHours;
-    }
 
     const overtime = await Overtime.findByIdAndUpdate(
       req.params.id,
       updateData,
       { new: true, runValidators: true }
     )
-      .populate('employee', 'fullName email department position')
+      .populate('employee', 'fullName email department position baseSalary')
       .populate('approvedBy', 'fullName email');
 
-    if (!overtime) {
-      return res.status(404).json({
-        success: false,
-        message: 'Overtime record not found'
-      });
-    }
+    // Record action in ApprovalHistory
+    await recordApprovalEvent({
+      referenceType: 'overtime',
+      referenceId: overtime._id,
+      action: status === 'approved' ? 'approved' : status === 'rejected' ? 'rejected' : 'returned for correction',
+      user: req.user,
+      comment: notes || `Overtime ${status} with ${updateData.approvedHours} approved hours`
+    });
 
     res.status(200).json({
       success: true,
@@ -274,4 +362,3 @@ export const deleteOvertime = async (req, res) => {
     });
   }
 };
-

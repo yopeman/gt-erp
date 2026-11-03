@@ -12,6 +12,7 @@ import jobApplicationRoutes from './jobApplicationRoutes.js';
 import internshipRoutes from './internshipRoutes.js';
 import clearanceRoutes from './clearanceRoutes.js';
 import leaveBalanceRoutes from './leaveBalanceRoutes.js';
+import companySettingRoutes from './companySettingRoutes.js';
 
 // Store & Inventory Module Routes
 import warehouseRoutes from './warehouseRoutes.js';
@@ -49,6 +50,7 @@ router.use('/job-applications', jobApplicationRoutes);
 router.use('/internships', internshipRoutes);
 router.use('/clearances', clearanceRoutes);
 router.use('/leave-balances', leaveBalanceRoutes);
+router.use('/company-settings', companySettingRoutes);
 
 // Store & Inventory Module
 router.use('/warehouses', warehouseRoutes);

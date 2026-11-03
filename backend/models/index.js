@@ -10,6 +10,8 @@ import JobApplication from './JobApplication.js';
 import Internship from './Internship.js';
 import Clearance from './Clearance.js';
 import LeaveBalance from './LeaveBalance.js';
+import CompanySetting from './CompanySetting.js';
+import Holiday from './Holiday.js';
 
 // Store & Inventory Module Models
 import Warehouse from './Warehouse.js';
@@ -46,6 +48,8 @@ export {
   Internship,
   Clearance,
   LeaveBalance,
+  CompanySetting,
+  Holiday,
 
   // Store & Inventory
   Warehouse,
@@ -83,6 +87,8 @@ export default {
   Internship,
   Clearance,
   LeaveBalance,
+  CompanySetting,
+  Holiday,
 
   // Store & Inventory
   Warehouse,

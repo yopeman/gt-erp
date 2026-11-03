@@ -13,7 +13,7 @@ const leaveBalanceSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ['annual', 'sick', 'emergency', 'holiday', 'casual'],
+      enum: ['annual', 'sick', 'emergency', 'holiday', 'casual', 'maternity', 'paternity', 'unpaid', 'other'],
       required: [true, 'Leave type is required'],
       trim: true
     },
@@ -30,6 +30,16 @@ const leaveBalanceSchema = new mongoose.Schema(
       type: Number,
       default: 0,
       min: [0, 'Total used leave cannot be negative']
+    },
+    carryForward: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    accrued: {
+      type: Number,
+      default: 0,
+      min: 0
     },
     total: {
       type: Number,
@@ -51,4 +61,3 @@ leaveBalanceSchema.index({ employee: 1, year: 1, type: 1 }, { unique: true });
 const LeaveBalance = mongoose.model('LeaveBalance', leaveBalanceSchema);
 
 export default LeaveBalance;
-

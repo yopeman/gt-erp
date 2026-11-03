@@ -1,4 +1,41 @@
 import Employee from '../models/Employee.js';
+import LeaveBalance from '../models/LeaveBalance.js';
+import CompanySetting from '../models/CompanySetting.js';
+
+// Get profile of current logged-in user
+export const getMyProfile = async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required'
+      });
+    }
+
+    const employee = await Employee.findOne({ email: req.user.email.toLowerCase() })
+      .populate('manager', 'fullName email position department phoneNumber')
+      .populate('documents.uploadedBy', 'fullName email');
+
+    if (!employee) {
+      return res.status(404).json({
+        success: false,
+        message: 'No employee record associated with current user account'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: employee
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch employee profile',
+      error: error.message
+    });
+  }
+};
+
 // Create a new employee
 export const createEmployee = async (req, res) => {
   try {
@@ -50,10 +87,10 @@ export const createEmployee = async (req, res) => {
       branch,
       phoneNumber,
       detailAddress,
-      hiredAt,
+      hiredAt: hiredAt || new Date(),
       manager: manager || null,
       type,
-      profileImage,
+      profileImage: profileImage || null,
       dateOfBirth,
       status: status || 'active',
       documents: documents || [],
@@ -65,9 +102,41 @@ export const createEmployee = async (req, res) => {
       baseSalary: baseSalary || 0
     });
 
+    // Auto-initialize standard leave balances for the new employee
+    try {
+      const currentYear = new Date().getFullYear();
+      const setting = await CompanySetting.findOne().sort({ createdAt: -1 });
+      const standardBalances = [
+        { type: 'annual', total: setting?.leaveSettings?.annualDaysPerYear || 16, isPayable: true },
+        { type: 'sick', total: setting?.leaveSettings?.sickDaysPerYear || 15, isPayable: false },
+        { type: 'emergency', total: setting?.leaveSettings?.emergencyDaysPerYear || 5, isPayable: false },
+        { type: 'casual', total: setting?.leaveSettings?.casualDaysPerYear || 3, isPayable: false }
+      ];
+
+      if (employee.gender === 'female') {
+        standardBalances.push({ type: 'maternity', total: setting?.leaveSettings?.maternityDays || 90, isPayable: true });
+      } else if (employee.gender === 'male') {
+        standardBalances.push({ type: 'paternity', total: setting?.leaveSettings?.paternityDays || 5, isPayable: false });
+      }
+
+      for (const item of standardBalances) {
+        await LeaveBalance.create({
+          employee: employee._id,
+          year: currentYear,
+          type: item.type,
+          isPayable: item.isPayable,
+          total: item.total,
+          remaining: item.total,
+          totalUsed: 0
+        });
+      }
+    } catch (balanceErr) {
+      console.warn('Auto leave balance init skipped:', balanceErr.message);
+    }
+
     res.status(201).json({
       success: true,
-      message: 'Employee created successfully',
+      message: 'Employee created successfully with initialized leave balances',
       data: employee
     });
   } catch (error) {
@@ -168,13 +237,25 @@ export const getEmployeeById = async (req, res) => {
 // Update employee
 export const updateEmployee = async (req, res) => {
   try {
-    if (req.body.email) {
-      req.body.email = req.body.email.toLowerCase();
+    const updateData = { ...req.body };
+
+    // Prevent direct modification of email to an existing one
+    if (updateData.email) {
+      const existing = await Employee.findOne({
+        email: updateData.email.toLowerCase(),
+        _id: { $ne: req.params.id }
+      });
+      if (existing) {
+        return res.status(409).json({
+          success: false,
+          message: 'Another employee with this email already exists'
+        });
+      }
     }
 
     const employee = await Employee.findByIdAndUpdate(
       req.params.id,
-      { $set: req.body },
+      { $set: updateData },
       { new: true, runValidators: true }
     ).populate('manager', 'fullName email position department');
 
@@ -199,31 +280,10 @@ export const updateEmployee = async (req, res) => {
   }
 };
 
-// Delete employee (or terminate)
+// Delete employee
 export const deleteEmployee = async (req, res) => {
   try {
-    const { permanent } = req.query;
-
-    if (permanent === 'true') {
-      const employee = await Employee.findByIdAndDelete(req.params.id);
-      if (!employee) {
-        return res.status(404).json({
-          success: false,
-          message: 'Employee not found'
-        });
-      }
-      return res.status(200).json({
-        success: true,
-        message: 'Employee permanently deleted'
-      });
-    }
-
-    const employee = await Employee.findByIdAndUpdate(
-      req.params.id,
-      { status: 'terminated' },
-      { new: true }
-    );
-
+    const employee = await Employee.findByIdAndDelete(req.params.id);
     if (!employee) {
       return res.status(404).json({
         success: false,
@@ -233,8 +293,7 @@ export const deleteEmployee = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: 'Employee status changed to terminated',
-      data: employee
+      message: 'Employee deleted successfully'
     });
   } catch (error) {
     res.status(500).json({
@@ -245,10 +304,10 @@ export const deleteEmployee = async (req, res) => {
   }
 };
 
-// Add a document to an employee
+// Add document to employee
 export const addDocument = async (req, res) => {
   try {
-    const { type, name, url, issuedAt, uploadedBy, expiresAt, approvedAt } = req.body;
+    const { type, name, url, issuedAt, expiresAt } = req.body;
 
     const employee = await Employee.findByIdAndUpdate(
       req.params.id,
@@ -259,9 +318,8 @@ export const addDocument = async (req, res) => {
             name,
             url,
             issuedAt,
-            uploadedBy,
-            expiresAt,
-            approvedAt
+            uploadedBy: req.user?._id || null,
+            expiresAt
           }
         }
       },

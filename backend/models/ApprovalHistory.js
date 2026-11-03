@@ -5,6 +5,11 @@ const approvalHistorySchema = new mongoose.Schema(
     referenceType: {
       type: String,
       enum: [
+        'leave request',
+        'overtime',
+        'clearance',
+        'payroll',
+        'job application',
         'purchase request',
         'purchase order',
         'stock request',
@@ -20,14 +25,29 @@ const approvalHistorySchema = new mongoose.Schema(
     },
     action: {
       type: String,
-      enum: ['submitted', 'approved', 'rejected', 'returned for correction'],
+      enum: [
+        'submitted',
+        'approved',
+        'rejected',
+        'manager_approved',
+        'hr_approved',
+        'returned for correction',
+        'cancelled',
+        'cleared',
+        'paid'
+      ],
       required: [true, 'Action is required'],
       trim: true
     },
     actionBy: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Employee',
-      required: [true, 'Action by employee is required']
+      refPath: 'actionByModel',
+      required: [true, 'Action by user or employee is required']
+    },
+    actionByModel: {
+      type: String,
+      enum: ['User', 'Employee'],
+      default: 'User'
     },
     comment: {
       type: String,
@@ -50,4 +70,3 @@ approvalHistorySchema.index({ actionDate: -1 });
 const ApprovalHistory = mongoose.model('ApprovalHistory', approvalHistorySchema);
 
 export default ApprovalHistory;
-

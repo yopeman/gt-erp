@@ -7,10 +7,12 @@ import ConnectDB from './config/database.js';
 import apiRoutes from './routes/index.js';
 import errorHandler from './middleware/errorHandler.js';
 
-dotenv.config();
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Load environment variables reliably from backend directory
+dotenv.config({ path: path.join(__dirname, '.env') });
+dotenv.config();
 
 const PORT = process.env.PORT || 5000;
 
@@ -28,17 +30,23 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Health check endpoint
 app.get('/', (req, res) => {
-  res.send('gt erp server is live...');
+  res.json({
+    status: 'online',
+    system: 'GT-ERP Backend API',
+    modules: ['HR', 'Inventory', 'Procurement', 'Approvals']
+  });
 });
 
-// HR Module API Routes
+// All API Routes (HR, Inventory, Purchase, Support)
 app.use('/api', apiRoutes);
 
 // Global Error Handler Middleware
 app.use(errorHandler);
 
-app.listen(PORT, () => {
-  console.log(`server is running on http://localhost:${PORT}`);
-});
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, () => {
+    console.log(`server is running on http://localhost:${PORT}`);
+  });
+}
 
 export default app;

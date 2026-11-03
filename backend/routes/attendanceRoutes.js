@@ -6,20 +6,29 @@ import {
   getAttendances,
   getAttendanceById,
   updateAttendance,
-  deleteAttendance
+  deleteAttendance,
+  getMyTodayAttendance,
+  getMyAttendanceHistory,
+  getAttendanceStats
 } from '../controllers/attendanceController.js';
-import { protect, optionalAuth } from '../middleware/auth.js';
+import { protect } from '../middleware/auth.js';
 import { authorizeRoles } from '../middleware/rbac.js';
 
 const router = express.Router();
 
-// Self Clock-In and Clock-Out routes (supports selfie capture)
-router.post('/clock-in', optionalAuth, clockIn);
-router.post('/clock-out', optionalAuth, clockOut);
-
-// Standard Attendance Management routes
+// All attendance operations require authentication
 router.use(protect);
 
+// Employee Self-Service Attendance
+router.post('/clock-in', clockIn);
+router.post('/clock-out', clockOut);
+router.get('/today', getMyTodayAttendance);
+router.get('/my-history', getMyAttendanceHistory);
+
+// Management / HR Analytics
+router.get('/stats', authorizeRoles('admin', 'hr', 'manager'), getAttendanceStats);
+
+// General Attendance Management routes
 router
   .route('/')
   .get(getAttendances)
@@ -32,4 +41,3 @@ router
   .delete(authorizeRoles('admin', 'hr'), deleteAttendance);
 
 export default router;
-

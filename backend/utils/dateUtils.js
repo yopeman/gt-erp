@@ -18,13 +18,60 @@ export const classifyAttendance = (
 };
 
 /**
- * Calculate total days inclusive between two dates
+ * Calculate total calendar days inclusive between two dates
  */
 export const calculateDaysBetween = (startDate, endDate) => {
   const start = new Date(startDate);
   const end = new Date(endDate);
   const diffTime = Math.abs(end - start);
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+};
+
+/**
+ * Calculate working days (excluding Saturdays, Sundays, and public holidays)
+ * @param {Date|string} startDate
+ * @param {Date|string} endDate
+ * @param {Array<Date|string>} holidays List of holiday dates
+ * @returns {number}
+ */
+export const calculateWorkingDays = (startDate, endDate, holidays = []) => {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+
+  if (isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) {
+    return 0;
+  }
+
+  // Normalize holidays to 'YYYY-MM-DD' strings for quick comparison
+  const holidayStrings = new Set(
+    holidays.map((h) => {
+      const d = new Date(h);
+      return !isNaN(d.getTime()) ? d.toISOString().split('T')[0] : null;
+    }).filter(Boolean)
+  );
+
+  let workingDays = 0;
+  const current = new Date(start);
+  current.setHours(0, 0, 0, 0);
+
+  const targetEnd = new Date(end);
+  targetEnd.setHours(0, 0, 0, 0);
+
+  while (current <= targetEnd) {
+    const dayOfWeek = current.getDay(); // 0 is Sunday, 6 is Saturday
+    const dateStr = current.toISOString().split('T')[0];
+
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+    const isHoliday = holidayStrings.has(dateStr);
+
+    if (!isWeekend && !isHoliday) {
+      workingDays++;
+    }
+
+    current.setDate(current.getDate() + 1);
+  }
+
+  return workingDays;
 };
 
 /**
@@ -42,6 +89,6 @@ export const calculateWorkedHours = (startTime, endTime) => {
 export default {
   classifyAttendance,
   calculateDaysBetween,
+  calculateWorkingDays,
   calculateWorkedHours
 };
-

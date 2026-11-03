@@ -7,6 +7,20 @@ const payrollSchema = new mongoose.Schema(
       ref: 'Employee',
       required: [true, 'Employee reference is required']
     },
+    payslipReference: {
+      type: String,
+      trim: true,
+      unique: true,
+      sparse: true
+    },
+    month: {
+      type: Number,
+      min: 1,
+      max: 12
+    },
+    year: {
+      type: Number
+    },
     fromDate: {
       type: Date,
       required: [true, 'From date is required']
@@ -20,28 +34,42 @@ const payrollSchema = new mongoose.Schema(
       default: 'ETB',
       trim: true
     },
-    createdBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
+    baseSalary: {
+      type: Number,
+      default: 0,
+      min: 0
     },
-    approvedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      default: null
+    workedDays: {
+      type: Number,
+      default: 30
     },
-    status: {
-      type: String,
-      enum: ['paid', 'partially', 'unpaid'],
-      default: 'unpaid'
+    overtimeHours: {
+      type: Number,
+      default: 0,
+      min: 0
     },
-    type: {
-      type: String,
-      enum: ['salary', 'overtime', 'transport', 'bonus', 'commission'],
-      default: 'salary'
+    overtimeAmount: {
+      type: Number,
+      default: 0,
+      min: 0
     },
-    paidAt: {
-      type: Date,
-      default: null
+    allowances: {
+      transport: { type: Number, default: 0 },
+      housing: { type: Number, default: 0 },
+      bonus: { type: Number, default: 0 },
+      other: { type: Number, default: 0 },
+      total: { type: Number, default: 0 }
+    },
+    deductions: {
+      incomeTax: { type: Number, default: 0 },
+      pensionEmployee: { type: Number, default: 0 },
+      unpaidLeave: { type: Number, default: 0 },
+      loanOrAdvance: { type: Number, default: 0 },
+      other: { type: Number, default: 0 },
+      total: { type: Number, default: 0 }
+    },
+    employerContributions: {
+      pensionEmployer: { type: Number, default: 0 }
     },
     totalGross: {
       type: Number,
@@ -56,6 +84,43 @@ const payrollSchema = new mongoose.Schema(
     totalNet: {
       type: Number,
       default: 0
+    },
+    paymentMethod: {
+      type: String,
+      enum: ['bank_transfer', 'cash', 'cheque', 'telebirr'],
+      default: 'bank_transfer'
+    },
+    bankDetails: {
+      bankName: { type: String, trim: true },
+      accountNumber: { type: String, trim: true },
+      holderName: { type: String, trim: true }
+    },
+    type: {
+      type: String,
+      enum: ['salary', 'overtime', 'transport', 'bonus', 'commission'],
+      default: 'salary'
+    },
+    status: {
+      type: String,
+      enum: ['paid', 'partially', 'unpaid', 'cancelled'],
+      default: 'unpaid'
+    },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    approvedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null
+    },
+    paidAt: {
+      type: Date,
+      default: null
+    },
+    remarks: {
+      type: String,
+      trim: true
     }
   },
   {
@@ -63,7 +128,9 @@ const payrollSchema = new mongoose.Schema(
   }
 );
 
+payrollSchema.index({ employeeId: 1, month: 1, year: 1 });
+payrollSchema.index({ status: 1 });
+
 const Payroll = mongoose.model('Payroll', payrollSchema);
 
 export default Payroll;
-

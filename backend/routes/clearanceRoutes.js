@@ -1,6 +1,7 @@
 import express from 'express';
 import {
   createClearance,
+  getMyClearance,
   getClearances,
   getClearanceById,
   updateClearance,
@@ -15,6 +16,14 @@ const router = express.Router();
 
 router.use(protect);
 
+// Employee Self-Service
+router.get('/my-clearance', getMyClearance);
+
+// Checklist items & Final approval
+router.patch('/:id/checklist/:itemId', authorizeRoles('admin', 'hr', 'manager'), updateChecklistItem);
+router.patch('/:id/final-approve', authorizeRoles('admin', 'hr'), finalApproveClearance);
+
+// Clearance CRUD
 router
   .route('/')
   .get(getClearances)
@@ -23,11 +32,7 @@ router
 router
   .route('/:id')
   .get(getClearanceById)
-  .put(updateClearance)
+  .put(authorizeRoles('admin', 'hr', 'manager'), updateClearance)
   .delete(authorizeRoles('admin', 'hr'), deleteClearance);
 
-router.patch('/:id/checklist/:itemId', updateChecklistItem);
-router.patch('/:id/final-approval', authorizeRoles('admin', 'hr'), finalApproveClearance);
-
 export default router;
-

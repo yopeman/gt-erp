@@ -4,6 +4,9 @@ import apiResponse from './apiResponse.js';
 import imageHandler from './imageHandler.js';
 import dateUtils from './dateUtils.js';
 import cloudinaryUtils from './cloudinary.js';
+import geoUtils from './geoUtils.js';
+import payrollCalculator from './payrollCalculator.js';
+import approvalHelper from './approvalHelper.js';
 
 export {
   tokenUtils,
@@ -11,7 +14,10 @@ export {
   apiResponse,
   imageHandler,
   dateUtils,
-  cloudinaryUtils
+  cloudinaryUtils,
+  geoUtils,
+  payrollCalculator,
+  approvalHelper
 };
 
 export default {
@@ -20,5 +26,8 @@ export default {
   apiResponse,
   imageHandler,
   dateUtils,
-  cloudinaryUtils
+  cloudinaryUtils,
+  geoUtils,
+  payrollCalculator,
+  approvalHelper
 };
