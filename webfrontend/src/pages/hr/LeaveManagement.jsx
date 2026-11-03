@@ -99,6 +99,11 @@ export default function LeaveManagement({ initialTab = 'requests' }) {
   const [adjustReason, setAdjustReason] = useState('');
   const [submittingAdjust, setSubmittingAdjust] = useState(false);
 
+  // Modal 6: View Balance Details Modal
+  const [balanceDetailModalOpen, setBalanceDetailModalOpen] = useState(false);
+  const [selectedBalanceDetail, setSelectedBalanceDetail] = useState(null);
+  const [adjustOpenedFromDetail, setAdjustOpenedFromDetail] = useState(false);
+
   // Identify current logged-in employee record
   const currentEmployee = useMemo(() => {
     return employees.find(
@@ -356,16 +361,33 @@ export default function LeaveManagement({ initialTab = 'requests' }) {
     try {
       const response = await api.patch(`/leave-balances/${selectedBalance._id}/adjust`, {
         adjustment: Number(adjustmentDays),
+        daysUsed: Number(adjustmentDays),
         reason: adjustReason
       });
       if (response.success) {
         setIsAdjustModalOpen(false);
+        if (adjustOpenedFromDetail && response.data) {
+          setSelectedBalanceDetail(response.data);
+          setBalanceDetailModalOpen(true);
+          setAdjustOpenedFromDetail(false);
+        } else if (balanceDetailModalOpen && selectedBalanceDetail?._id === selectedBalance._id) {
+          setSelectedBalanceDetail(response.data);
+        }
         await fetchData();
       }
     } catch (err) {
       alert(err.message || 'Failed to adjust leave balance');
     } finally {
       setSubmittingAdjust(false);
+    }
+  };
+
+  // Close Adjust Modal (returns to Detail modal if opened from there)
+  const handleCloseAdjustModal = () => {
+    setIsAdjustModalOpen(false);
+    if (adjustOpenedFromDetail) {
+      setBalanceDetailModalOpen(true);
+      setAdjustOpenedFromDetail(false);
     }
   };
 
@@ -925,8 +947,19 @@ export default function LeaveManagement({ initialTab = 'requests' }) {
                       </div>
                     </div>
 
-                    {canManage && (
-                      <div className="flex justify-end pt-1">
+                    <div className="flex items-center justify-between pt-1">
+                      <button
+                        onClick={() => {
+                          setSelectedBalanceDetail(item);
+                          setBalanceDetailModalOpen(true);
+                        }}
+                        className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 transition flex items-center gap-1.5"
+                      >
+                        <Eye className="w-3.5 h-3.5 text-slate-500" />
+                        <span>View Details</span>
+                      </button>
+
+                      {canManage && (
                         <button
                           onClick={() => {
                             setSelectedBalance(item);
@@ -938,8 +971,8 @@ export default function LeaveManagement({ initialTab = 'requests' }) {
                         >
                           {t('actions.adjust')}
                         </button>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -956,7 +989,7 @@ export default function LeaveManagement({ initialTab = 'requests' }) {
                       <th className="px-4 py-3.5 text-center">Used Days</th>
                       <th className="px-4 py-3.5 text-center">Remaining Days</th>
                       <th className="px-4 py-3.5 text-center">Payable</th>
-                      {canManage && <th className="px-4 py-3.5 text-right">Actions</th>}
+                      <th className="px-4 py-3.5 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60">
@@ -998,21 +1031,34 @@ export default function LeaveManagement({ initialTab = 'requests' }) {
                             <span className="text-xs text-slate-400">No</span>
                           )}
                         </td>
-                        {canManage && (
-                          <td className="px-4 py-3.5 text-right">
+                        <td className="px-4 py-3.5 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
                             <button
                               onClick={() => {
-                                setSelectedBalance(item);
-                                setAdjustmentDays(0);
-                                setAdjustReason('');
-                                setIsAdjustModalOpen(true);
+                                setSelectedBalanceDetail(item);
+                                setBalanceDetailModalOpen(true);
                               }}
-                              className="px-2.5 py-1 text-xs font-semibold rounded-lg text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 transition"
+                              title="View Quota Details & Adjustment Reason"
+                              className="p-1.5 text-slate-600 dark:text-slate-300 hover:text-primary-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition"
                             >
-                              {t('actions.adjust')}
+                              <Eye className="w-4 h-4" />
                             </button>
-                          </td>
-                        )}
+
+                            {canManage && (
+                              <button
+                                onClick={() => {
+                                  setSelectedBalance(item);
+                                  setAdjustmentDays(0);
+                                  setAdjustReason('');
+                                  setIsAdjustModalOpen(true);
+                                }}
+                                className="px-2.5 py-1 text-xs font-semibold rounded-lg text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 transition"
+                              >
+                                {t('actions.adjust')}
+                              </button>
+                            )}
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -1571,9 +1617,10 @@ export default function LeaveManagement({ initialTab = 'requests' }) {
       {selectedBalance && (
         <Modal
           isOpen={isAdjustModalOpen}
-          onClose={() => setIsAdjustModalOpen(false)}
+          onClose={handleCloseAdjustModal}
           title="Adjust Leave Days"
           maxWidth="max-w-sm"
+          zIndex="z-60"
         >
           <form onSubmit={handleAdjustBalance} className="space-y-4">
             <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-xs">
@@ -1615,7 +1662,7 @@ export default function LeaveManagement({ initialTab = 'requests' }) {
             <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
               <button
                 type="button"
-                onClick={() => setIsAdjustModalOpen(false)}
+                onClick={handleCloseAdjustModal}
                 className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
               >
                 {t('actions.cancel')}
@@ -1629,6 +1676,182 @@ export default function LeaveManagement({ initialTab = 'requests' }) {
               </button>
             </div>
           </form>
+        </Modal>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL 6: VIEW BALANCE QUOTA DETAILS & ADJUSTMENT REASON                   */}
+      {/* ========================================================================= */}
+      {selectedBalanceDetail && (
+        <Modal
+          isOpen={balanceDetailModalOpen}
+          onClose={() => setBalanceDetailModalOpen(false)}
+          title="Leave Quota & Balance Details"
+          maxWidth="max-w-xl"
+        >
+          <div className="space-y-4">
+            {/* Employee Header */}
+            <div className="flex items-start justify-between p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800">
+              <div className="flex items-center gap-3">
+                {selectedBalanceDetail.employee?.profileImage ? (
+                  <img
+                    src={selectedBalanceDetail.employee.profileImage}
+                    alt=""
+                    className="w-12 h-12 rounded-full object-cover border border-slate-200 dark:border-slate-700"
+                  />
+                ) : (
+                  <div className="w-12 h-12 rounded-full bg-primary-100 dark:bg-primary-950 text-primary-600 font-bold flex items-center justify-center text-base">
+                    {selectedBalanceDetail.employee?.fullName?.charAt(0) || 'E'}
+                  </div>
+                )}
+                <div>
+                  <h3 className="font-bold text-sm sm:text-base text-slate-900 dark:text-slate-100">
+                    {selectedBalanceDetail.employee?.fullName || 'Employee'}
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    {selectedBalanceDetail.employee?.department} • {selectedBalanceDetail.employee?.position}
+                  </p>
+                  <p className="text-[11px] text-slate-400 font-mono mt-0.5">
+                    {selectedBalanceDetail.employee?.email}
+                    {selectedBalanceDetail.employee?.nationalId && ` • ID: ${selectedBalanceDetail.employee.nationalId}`}
+                  </p>
+                </div>
+              </div>
+
+              <div className="text-right">
+                <span className="capitalize font-bold text-xs text-primary-600 dark:text-primary-400 px-2.5 py-1 rounded-lg bg-primary-50 dark:bg-primary-950/60 border border-primary-200/60 dark:border-primary-900/60">
+                  {selectedBalanceDetail.type} Leave
+                </span>
+                <div className="text-[11px] text-slate-400 font-mono mt-1">
+                  Year {selectedBalanceDetail.year}
+                </div>
+              </div>
+            </div>
+
+            {/* Quota Metrics Grid */}
+            <div className="grid grid-cols-4 gap-2 text-center text-xs">
+              <div className="p-3 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-800">
+                <span className="text-slate-400 text-[10px] uppercase font-semibold">Total Quota</span>
+                <div className="text-base font-black text-slate-800 dark:text-slate-100 mt-1">
+                  {selectedBalanceDetail.total} <span className="text-xs font-normal text-slate-400">days</span>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-800">
+                <span className="text-slate-400 text-[10px] uppercase font-semibold">Consumed</span>
+                <div className="text-base font-black text-amber-600 mt-1">
+                  {selectedBalanceDetail.totalUsed} <span className="text-xs font-normal text-slate-400">days</span>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-800">
+                <span className="text-slate-400 text-[10px] uppercase font-semibold">Remaining</span>
+                <div className="text-base font-black text-emerald-600 mt-1">
+                  {selectedBalanceDetail.remaining} <span className="text-xs font-normal text-slate-400">days</span>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-800">
+                <span className="text-slate-400 text-[10px] uppercase font-semibold">Payable</span>
+                <div className="text-sm font-bold text-slate-800 dark:text-slate-200 mt-1.5">
+                  {selectedBalanceDetail.isPayable ? 'Yes' : 'No'}
+                </div>
+              </div>
+            </div>
+
+            {/* Adjustment Information & Adjustment Reason Highlight Callout */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                <SlidersHorizontal className="w-4 h-4 text-primary-500" />
+                <span>Adjustment Reason & History</span>
+              </div>
+
+              {selectedBalanceDetail.adjustmentReason ? (
+                <div className="p-4 rounded-xl border border-primary-200 dark:border-primary-900 bg-primary-50/60 dark:bg-primary-950/40 text-xs space-y-2">
+                  <div className="flex items-center justify-between font-bold text-primary-900 dark:text-primary-200">
+                    <span className="flex items-center gap-1.5">
+                      <Info className="w-4 h-4 text-primary-500" />
+                      <span>Latest Adjustment Reason</span>
+                    </span>
+                    {selectedBalanceDetail.lastAdjustedAt && (
+                      <span className="text-[11px] font-normal text-slate-500 dark:text-slate-400">
+                        {new Date(selectedBalanceDetail.lastAdjustedAt).toLocaleString()}
+                        {selectedBalanceDetail.lastAdjustedBy?.fullName && ` by ${selectedBalanceDetail.lastAdjustedBy.fullName}`}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-slate-700 dark:text-slate-300 pl-5.5 font-medium leading-relaxed bg-white/70 dark:bg-slate-900/60 p-2.5 rounded-lg border border-primary-100 dark:border-primary-900/50">
+                    {selectedBalanceDetail.adjustmentReason}
+                  </p>
+                </div>
+              ) : (
+                <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40 text-xs text-slate-500 italic flex items-center gap-2">
+                  <Info className="w-4 h-4 text-slate-400 shrink-0" />
+                  <span>No manual adjustments have been recorded for this leave quota yet.</span>
+                </div>
+              )}
+
+              {/* Adjustments Audit Log (if multiple adjustments exist) */}
+              {Array.isArray(selectedBalanceDetail.adjustments) && selectedBalanceDetail.adjustments.length > 0 && (
+                <div className="space-y-1.5">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase">Adjustment Log History</span>
+                  <div className="max-h-40 overflow-y-auto rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-800 text-xs divide-y divide-slate-100 dark:divide-slate-700/60">
+                    {selectedBalanceDetail.adjustments.slice().reverse().map((adj, idx) => (
+                      <div key={idx} className="p-2.5 flex items-center justify-between gap-3">
+                        <div className="space-y-0.5">
+                          <div className="font-semibold text-slate-800 dark:text-slate-200">
+                            {adj.reason || 'Manual quota adjustment'}
+                          </div>
+                          <div className="text-[10px] text-slate-400">
+                            {adj.adjustedAt ? new Date(adj.adjustedAt).toLocaleString() : '-'}
+                            {adj.adjustedBy?.fullName && ` • by ${adj.adjustedBy.fullName}`}
+                          </div>
+                        </div>
+                        <span
+                          className={`font-mono text-xs font-bold px-2 py-0.5 rounded ${
+                            adj.adjustment > 0
+                              ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400'
+                              : 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400'
+                          }`}
+                        >
+                          {adj.adjustment > 0 ? `+${adj.adjustment}` : adj.adjustment} days
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setBalanceDetailModalOpen(false)}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                Close
+              </button>
+
+              {canManage && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedBalance(selectedBalanceDetail);
+                    setAdjustmentDays(0);
+                    setAdjustReason('');
+                    setAdjustOpenedFromDetail(true);
+                    setBalanceDetailModalOpen(false);
+                    setIsAdjustModalOpen(true);
+                  }}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-primary-500 hover:bg-primary-600 transition flex items-center gap-1.5 shadow-sm"
+                >
+                  <SlidersHorizontal className="w-3.5 h-3.5" />
+                  <span>Adjust Days</span>
+                </button>
+              )}
+            </div>
+          </div>
         </Modal>
       )}
     </div>

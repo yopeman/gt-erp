@@ -1,5 +1,28 @@
 import mongoose from 'mongoose';
 
+const adjustmentRecordSchema = new mongoose.Schema(
+  {
+    adjustment: {
+      type: Number,
+      required: true
+    },
+    reason: {
+      type: String,
+      trim: true,
+      default: ''
+    },
+    adjustedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    adjustedAt: {
+      type: Date,
+      default: Date.now
+    }
+  },
+  { _id: true }
+);
+
 const leaveBalanceSchema = new mongoose.Schema(
   {
     employee: {
@@ -36,6 +59,19 @@ const leaveBalanceSchema = new mongoose.Schema(
       default: 0,
       min: [0, 'Total leave cannot be negative']
     },
+    adjustmentReason: {
+      type: String,
+      trim: true,
+      default: ''
+    },
+    lastAdjustedAt: {
+      type: Date
+    },
+    lastAdjustedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    adjustments: [adjustmentRecordSchema],
     isDeleted: {
       type: Boolean,
       default: false

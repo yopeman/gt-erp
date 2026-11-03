@@ -89,6 +89,7 @@ export default function LeaveBalances() {
     try {
       const response = await api.patch(`/leave-balances/${selectedBalance._id}/adjust`, {
         adjustment: Number(adjustmentDays),
+        daysUsed: Number(adjustmentDays),
         reason: adjustReason
       });
       if (response.success) {

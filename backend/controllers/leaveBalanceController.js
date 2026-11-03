@@ -112,6 +112,8 @@ export const getLeaveBalances = async (req, res) => {
     const total = await LeaveBalance.countDocuments(query);
     const balances = await LeaveBalance.find(query)
       .populate('employee', 'fullName email department position profileImage nationalId')
+      .populate('lastAdjustedBy', 'fullName email')
+      .populate('adjustments.adjustedBy', 'fullName email')
       .sort({ year: -1, createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit, 10));
@@ -141,7 +143,9 @@ export const getLeaveBalanceById = async (req, res) => {
     const canManage = userRoles.some((r) => ['admin', 'hr', 'manager'].includes(r));
 
     const balance = await LeaveBalance.findById(req.params.id)
-      .populate('employee', 'fullName email department position profileImage nationalId');
+      .populate('employee', 'fullName email department position profileImage nationalId')
+      .populate('lastAdjustedBy', 'fullName email')
+      .populate('adjustments.adjustedBy', 'fullName email');
 
     if (!balance) {
       return res.status(404).json({
@@ -207,16 +211,24 @@ export const updateLeaveBalance = async (req, res) => {
 // Adjust leave balance days
 export const adjustLeaveDays = async (req, res) => {
   try {
-    const { daysUsed } = req.body;
+    const { daysUsed, adjustment, change: bodyChange, reason } = req.body;
 
-    if (daysUsed === undefined) {
+    // Resolve adjustment value from adjustment, days, change, or daysUsed
+    const rawVal = adjustment !== undefined
+      ? adjustment
+      : (req.body.days !== undefined
+          ? req.body.days
+          : (bodyChange !== undefined
+              ? bodyChange
+              : daysUsed));
+
+    if (rawVal === undefined || rawVal === null || isNaN(Number(rawVal))) {
       return res.status(400).json({
         success: false,
-        message: 'daysUsed number is required'
+        message: 'Adjustment days number is required'
       });
     }
 
-    const change = Number(daysUsed);
     const balance = await LeaveBalance.findById(req.params.id);
 
     if (!balance) {
@@ -226,18 +238,55 @@ export const adjustLeaveDays = async (req, res) => {
       });
     }
 
-    if (balance.remaining - change < 0) {
-      return res.status(400).json({
-        success: false,
-        message: `Adjustment would result in negative balance. Available remaining days: ${balance.remaining}.`
-      });
+    const numVal = Number(rawVal);
+
+    if (adjustment !== undefined || req.body.days !== undefined || bodyChange !== undefined) {
+      // Direct quota adjustment (+ to add to quota & remaining, - to subtract)
+      if (balance.remaining + numVal < 0) {
+        return res.status(400).json({
+          success: false,
+          message: `Adjustment would result in negative balance. Available remaining days: ${balance.remaining}.`
+        });
+      }
+
+      balance.total = Math.max(0, balance.total + numVal);
+      balance.remaining = Math.max(0, balance.remaining + numVal);
+    } else {
+      // Legacy daysUsed adjustment: positive increases totalUsed and decreases remaining
+      if (balance.remaining - numVal < 0) {
+        return res.status(400).json({
+          success: false,
+          message: `Adjustment would result in negative balance. Available remaining days: ${balance.remaining}.`
+        });
+      }
+
+      balance.totalUsed = Math.max(0, balance.totalUsed + numVal);
+      balance.remaining = Math.max(0, balance.remaining - numVal);
     }
 
-    balance.totalUsed += change;
-    balance.remaining = Math.max(0, balance.remaining - change);
+    const finalReason = reason || req.body.adjustmentReason || req.body.adjustReason || '';
+    balance.adjustmentReason = finalReason;
+    balance.lastAdjustedAt = new Date();
+    if (req.user?._id) {
+      balance.lastAdjustedBy = req.user._id;
+    }
+    if (!Array.isArray(balance.adjustments)) {
+      balance.adjustments = [];
+    }
+    balance.adjustments.push({
+      adjustment: numVal,
+      reason: finalReason,
+      adjustedBy: req.user?._id || null,
+      adjustedAt: new Date()
+    });
+
     await balance.save();
 
-    const populated = await balance.populate('employee', 'fullName email department position profileImage nationalId');
+    const populated = await balance.populate([
+      { path: 'employee', select: 'fullName email department position profileImage nationalId' },
+      { path: 'lastAdjustedBy', select: 'fullName email' },
+      { path: 'adjustments.adjustedBy', select: 'fullName email' }
+    ]);
 
     res.status(200).json({
       success: true,
