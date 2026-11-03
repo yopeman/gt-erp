@@ -22,6 +22,7 @@ import {
   Factory,
   TrendingUp,
   Landmark,
+  Globe,
   ChevronDown,
   ChevronRight,
   X
@@ -37,6 +38,7 @@ const iconMap = {
   Timer,
   CreditCard,
   Briefcase,
+  Globe,
   GraduationCap,
   FileCheck2,
   Shield,

@@ -8,7 +8,7 @@ export const ERP_MODULES = [
     id: 'hr',
     titleKey: 'modules.hr',
     icon: 'Users',
-    requiredRoles: ['admin', 'hr', 'manager', 'employee'],
+    requiredRoles: [],
     status: 'active',
     submodules: [
       { id: 'dashboard', path: '/hr/dashboard', titleKey: 'nav.hrDashboard', icon: 'LayoutDashboard', requiredRoles: ['admin', 'hr', 'manager', 'employee'], status: 'active' },
@@ -18,6 +18,7 @@ export const ERP_MODULES = [
       { id: 'overtimes', path: '/hr/overtimes', titleKey: 'nav.overtime', icon: 'Timer', requiredRoles: ['admin', 'hr', 'manager', 'employee'], status: 'active' },
       { id: 'payrolls', path: '/hr/payrolls', titleKey: 'nav.payroll', icon: 'CreditCard', requiredRoles: ['admin', 'hr', 'finance', 'employee'], status: 'active' },
       { id: 'recruitment', path: '/hr/recruitment', titleKey: 'nav.recruitment', icon: 'Briefcase', requiredRoles: ['admin', 'hr'], status: 'active' },
+      { id: 'careers', path: '/careers', titleKey: 'nav.careers', icon: 'Globe', requiredRoles: [], status: 'active' },
       { id: 'internships', path: '/hr/internships', titleKey: 'nav.internships', icon: 'GraduationCap', requiredRoles: ['admin', 'hr', 'manager'], status: 'active' },
       { id: 'clearances', path: '/hr/clearances', titleKey: 'nav.clearances', icon: 'FileCheck2', requiredRoles: ['admin', 'hr', 'manager', 'employee'], status: 'active' },
     ]

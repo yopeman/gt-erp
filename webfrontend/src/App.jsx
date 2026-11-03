@@ -22,6 +22,10 @@ import Clearances from './pages/hr/Clearances';
 // Admin Pages (Section 7.1)
 import UsersPage from './pages/admin/Users';
 
+// Public Careers & Job Application Pages
+import PublicJobs from './pages/careers/PublicJobs';
+import PublicJobDetail from './pages/careers/PublicJobDetail';
+
 // Future Modules (Sections 1, 3, 4, 5, 6 - non-blocking modular placeholders)
 import UpcomingModule from './pages/modules/UpcomingModule';
 
@@ -29,8 +33,12 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Public Login */}
+        {/* Public Login & Public Careers Board */}
         <Route path="/login" element={<Login />} />
+        <Route path="/careers" element={<PublicJobs />} />
+        <Route path="/careers/:id" element={<PublicJobDetail />} />
+        <Route path="/jobs" element={<Navigate to="/careers" replace />} />
+        <Route path="/jobs/:id" element={<PublicJobDetail />} />
 
         {/* Protected ERP Shell */}
         <Route

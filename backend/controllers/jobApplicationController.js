@@ -1,9 +1,11 @@
 import JobApplication from '../models/JobApplication.js';
+import { uploadToCloudinary } from '../utils/cloudinary.js';
+import { sendInterviewEmail } from '../utils/mailer.js';
 
 // Submit / Create a job application
 export const createJobApplication = async (req, res) => {
   try {
-    const { position, candidate, attachments } = req.body;
+    const { position, candidate, attachments = [], resumeFile, resumeFileName, resumeUrl } = req.body;
 
     if (!position || !candidate || !candidate.name || !candidate.email) {
       return res.status(400).json({
@@ -12,10 +14,36 @@ export const createJobApplication = async (req, res) => {
       });
     }
 
+    const finalAttachments = Array.isArray(attachments) ? [...attachments] : [];
+
+    // If resume base64 file is attached, upload to Cloudinary
+    if (resumeFile) {
+      try {
+        const uploadResult = await uploadToCloudinary(resumeFile, {
+          folder: 'gt_erp/resumes',
+          resourceType: 'auto'
+        });
+        finalAttachments.push({
+          name: resumeFileName || 'Resume / CV Document',
+          url: uploadResult.secureUrl || uploadResult.url
+        });
+      } catch (uploadErr) {
+        console.warn('Resume upload to Cloudinary failed, continuing:', uploadErr.message);
+      }
+    }
+
+    // If resume URL / portfolio link is provided
+    if (resumeUrl && !finalAttachments.some((a) => a.url === resumeUrl)) {
+      finalAttachments.push({
+        name: 'Portfolio / Resume Link',
+        url: resumeUrl
+      });
+    }
+
     const application = await JobApplication.create({
       position,
       candidate,
-      attachments: attachments || [],
+      attachments: finalAttachments,
       applyAt: new Date(),
       status: 'applied'
     });
@@ -161,6 +189,23 @@ export const scheduleInterview = async (req, res) => {
         success: false,
         message: 'Job application not found'
       });
+    }
+
+    // Send interview email notification with fallback to console
+    if (application.candidate?.email) {
+      try {
+        await sendInterviewEmail({
+          to: application.candidate.email,
+          candidateName: application.candidate.name,
+          positionTitle: application.position?.title || 'Open Position',
+          date,
+          type,
+          meetingLink,
+          note
+        });
+      } catch (emailErr) {
+        console.warn('[Recruitment Mailer] Email dispatch failed:', emailErr.message);
+      }
     }
 
     res.status(200).json({
