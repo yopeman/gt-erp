@@ -6,6 +6,7 @@ import {
   getEmployeeById,
   updateEmployee,
   deleteEmployee,
+  linkUserAccount,
   addDocument,
   addEducation
 } from '../controllers/employeeController.js';
@@ -19,7 +20,9 @@ router.use(protect);
 // Current employee profile
 router.get('/me', getMyProfile);
 
-// Employee CRUD
+// Admin / HR Employee Management
+router.post('/:id/link-user', authorizeRoles('admin', 'hr'), linkUserAccount);
+
 router
   .route('/')
   .get(getEmployees)

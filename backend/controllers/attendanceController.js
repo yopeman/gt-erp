@@ -12,6 +12,12 @@ const resolveEmployeeId = async (req) => {
   if (req.body.employee && req.user && (req.user.roles?.includes('admin') || req.user.roles?.includes('hr') || req.user.roles?.includes('manager'))) {
     return req.body.employee;
   }
+  if (req.user?.employee?._id) {
+    return req.user.employee._id;
+  }
+  if (req.user?.employee) {
+    return req.user.employee;
+  }
   if (req.user) {
     const employee = await Employee.findOne({ email: req.user.email.toLowerCase() });
     if (employee) {

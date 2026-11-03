@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+
 const userSchema = new mongoose.Schema(
   {
     fullName: {
@@ -21,6 +22,23 @@ const userSchema = new mongoose.Schema(
       type: [String],
       default: ['employee']
     },
+    employee: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Employee',
+      default: null
+    },
+    mustChangePassword: {
+      type: Boolean,
+      default: false
+    },
+    isTemporaryPassword: {
+      type: Boolean,
+      default: false
+    },
+    lastPasswordChangeAt: {
+      type: Date,
+      default: null
+    },
     isDeleted: {
       type: Boolean,
       default: false
@@ -31,7 +49,9 @@ const userSchema = new mongoose.Schema(
   }
 );
 
+userSchema.index({ email: 1 });
+userSchema.index({ employee: 1 });
+
 const User = mongoose.model('User', userSchema);
 
 export default User;
-
