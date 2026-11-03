@@ -59,6 +59,18 @@ const payrollSchema = new mongoose.Schema(
       type: Date,
       default: null
     },
+    overtimeRecords: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Overtime'
+      }
+    ],
+    leaveRecords: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'LeaveRequest'
+      }
+    ],
     earnings: [payrollItemSchema],
     deductions: [payrollItemSchema],
     totalGross: {

@@ -9,13 +9,16 @@ import {
   CreditCard,
   Plus,
   CheckCircle,
+  CheckCircle2,
   DollarSign,
   RefreshCw,
   Printer,
   Users,
   Trash2,
   FileText,
-  Pencil
+  Pencil,
+  Clock,
+  CalendarCheck2
 } from 'lucide-react';
 
 // Statutory Ethiopian Employment Tax Calculation (Proclamation 979/2016)
@@ -48,6 +51,10 @@ export default function Payroll() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPayrollId, setEditingPayrollId] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Auto-Sync with Leave and Overtime State
+  const [syncingBreakdown, setSyncingBreakdown] = useState(false);
+  const [breakdownDetails, setBreakdownDetails] = useState(null);
 
   // Mass Payroll Modal
   const [isMassModalOpen, setIsMassModalOpen] = useState(false);
@@ -110,27 +117,7 @@ export default function Payroll() {
         setEmployees(response.data);
         if (response.data.length > 0 && !formData.employeeId) {
           const emp = response.data[0];
-          const base = emp.baseSalary || 15000;
-          const pension = calculateStatutoryPension(base);
-          const tax = calculateStatutoryTax(base);
-          const earnings = [{ name: 'Base Salary', amount: base }];
-          const deductions = [
-            { name: 'Pension Contribution (7%)', amount: pension },
-            { name: 'Income Tax (PAYE)', amount: tax }
-          ];
-          const totalGross = base;
-          const totalDeduction = pension + tax;
-          setFormData((prev) => ({
-            ...prev,
-            employeeId: emp._id,
-            fromDate: prev.fromDate || defaultFrom,
-            toDate: prev.toDate || defaultTo,
-            earnings,
-            deductions,
-            totalGross,
-            totalDeduction,
-            totalNet: totalGross - totalDeduction
-          }));
+          fetchPayrollPreview(emp._id, defaultFrom, defaultTo);
         }
       }
     } catch (err) {
@@ -150,33 +137,50 @@ export default function Payroll() {
     }));
   }, [canApprove]);
 
+  // Fetch dynamic preview linking Overtime and Leave
+  const fetchPayrollPreview = async (empId, fromVal, toVal) => {
+    const targetEmp = empId || formData.employeeId;
+    const from = fromVal || formData.fromDate;
+    const to = toVal || formData.toDate;
+    if (!targetEmp || !from || !to) return;
+
+    setSyncingBreakdown(true);
+    try {
+      const res = await api.get(`/payrolls/calculate-preview?employeeId=${targetEmp}&fromDate=${from}&toDate=${to}`);
+      if (res.success && res.data) {
+        const data = res.data;
+        setFormData((prev) => ({
+          ...prev,
+          employeeId: targetEmp,
+          fromDate: from,
+          toDate: to,
+          earnings: data.earnings || [],
+          deductions: data.deductions || [],
+          totalGross: data.totalGross,
+          totalDeduction: data.totalDeduction,
+          totalNet: data.totalNet
+        }));
+        setBreakdownDetails(data.summary || null);
+      }
+    } catch (err) {
+      console.warn('Preview calculation error:', err);
+    } finally {
+      setSyncingBreakdown(false);
+    }
+  };
+
   const handleOpenCreateModal = () => {
     setEditingPayrollId(null);
     setNewEarningName('');
     setNewEarningAmount('');
     setNewDeductionName('');
     setNewDeductionAmount('');
+    setBreakdownDetails(null);
 
     const initialEmp = employees[0];
-    const base = initialEmp?.baseSalary || 15000;
-    const pension = calculateStatutoryPension(base);
-    const tax = calculateStatutoryTax(base);
-
-    setFormData({
-      employeeId: initialEmp ? initialEmp._id : '',
-      fromDate: defaultFrom,
-      toDate: defaultTo,
-      currency: 'ETB',
-      type: 'salary',
-      earnings: [{ name: 'Base Salary', amount: base }],
-      deductions: [
-        { name: 'Pension Contribution (7%)', amount: pension },
-        { name: 'Income Tax (PAYE)', amount: tax }
-      ],
-      totalGross: base,
-      totalDeduction: pension + tax,
-      totalNet: base - (pension + tax)
-    });
+    if (initialEmp) {
+      fetchPayrollPreview(initialEmp._id, defaultFrom, defaultTo);
+    }
     setIsModalOpen(true);
   };
 
@@ -186,6 +190,7 @@ export default function Payroll() {
     setNewEarningAmount('');
     setNewDeductionName('');
     setNewDeductionAmount('');
+    setBreakdownDetails(null);
 
     const empId = item.employeeId?._id || item.employeeId;
     const from = item.fromDate ? new Date(item.fromDate).toISOString().split('T')[0] : defaultFrom;
@@ -215,29 +220,15 @@ export default function Payroll() {
   };
 
   const handleSelectEmployee = (empId) => {
-    const emp = employees.find((e) => e._id === empId);
-    const base = emp?.baseSalary || 15000;
-    const pension = calculateStatutoryPension(base);
-    const tax = calculateStatutoryTax(base);
+    fetchPayrollPreview(empId, formData.fromDate, formData.toDate);
+  };
 
-    const earnings = [{ name: 'Base Salary', amount: base }];
-    const deductions = [
-      { name: 'Pension Contribution (7%)', amount: pension },
-      { name: 'Income Tax (PAYE)', amount: tax }
-    ];
-
-    const totalGross = base;
-    const totalDeduction = pension + tax;
-
-    setFormData((prev) => ({
-      ...prev,
-      employeeId: empId,
-      earnings,
-      deductions,
-      totalGross,
-      totalDeduction,
-      totalNet: totalGross - totalDeduction
-    }));
+  const handleDateChange = (field, val) => {
+    const updated = { ...formData, [field]: val };
+    setFormData(updated);
+    if (updated.employeeId && updated.fromDate && updated.toDate) {
+      fetchPayrollPreview(updated.employeeId, updated.fromDate, updated.toDate);
+    }
   };
 
   // Add Earning row
@@ -338,7 +329,7 @@ export default function Payroll() {
     }
   };
 
-  // Mass payroll submit
+  // Mass payroll submit linking leave and overtime
   const handleMassProcess = async (e) => {
     e.preventDefault();
     if (!massData.fromDate || !massData.toDate) {
@@ -435,7 +426,7 @@ export default function Payroll() {
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
             {canApprove
-              ? 'Section 2.5 • Monthly payslips, gross calculations, deductions, and financial approvals.'
+              ? 'Section 2.5 • Integrated with Attendance, Overtime & Leave records for accurate monthly disbursements.'
               : 'View and print your personal monthly salary statements and confidential payslips.'}
           </p>
         </div>
@@ -531,13 +522,29 @@ export default function Payroll() {
                   </div>
                 </div>
 
+                {/* Linked Modules Quick Indicator */}
+                {(item.overtimeRecords?.length > 0 || item.leaveRecords?.length > 0) && (
+                  <div className="flex flex-wrap gap-2 text-[10px] py-1 text-slate-500 border-b border-slate-100 dark:border-slate-800">
+                    {item.overtimeRecords?.length > 0 && (
+                      <span className="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 font-bold">
+                        +{item.overtimeRecords.length} OT Records
+                      </span>
+                    )}
+                    {item.leaveRecords?.length > 0 && (
+                      <span className="px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300 font-bold">
+                        {item.leaveRecords.length} Leaves
+                      </span>
+                    )}
+                  </div>
+                )}
+
                 <div className="flex items-center justify-between pt-1">
                   <button
                     onClick={() => handleOpenSlip(item)}
                     className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 flex items-center gap-1.5 transition"
                   >
                     <Printer className="w-3.5 h-3.5 text-primary-500" />
-                    <span>Slip</span>
+                    <span>Print Slip</span>
                   </button>
 
                   <div className="flex items-center gap-2">
@@ -602,7 +609,22 @@ export default function Payroll() {
                       </div>
                     </td>
                     <td className="px-4 py-3 text-slate-500">
-                      {new Date(item.fromDate).toLocaleDateString()} - {new Date(item.toDate).toLocaleDateString()}
+                      <div>
+                        {new Date(item.fromDate).toLocaleDateString()} - {new Date(item.toDate).toLocaleDateString()}
+                      </div>
+                      {/* Linked overtime & leave badges */}
+                      <div className="flex items-center gap-1.5 mt-1">
+                        {item.overtimeRecords?.length > 0 && (
+                          <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/50 px-1.5 py-0.5 rounded">
+                            {item.overtimeRecords.length} OT
+                          </span>
+                        )}
+                        {item.leaveRecords?.length > 0 && (
+                          <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 dark:bg-indigo-950/50 px-1.5 py-0.5 rounded">
+                            {item.leaveRecords.length} Leave
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-right font-medium text-slate-700 dark:text-slate-300">
                       {item.totalGross?.toLocaleString()} {item.currency}
@@ -687,9 +709,20 @@ export default function Payroll() {
         <form onSubmit={handleProcessPayroll} className="space-y-4">
           {/* Employee Selection */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-              Select Employee <span className="text-rose-500">*</span>
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                Select Employee <span className="text-rose-500">*</span>
+              </label>
+              <button
+                type="button"
+                onClick={() => fetchPayrollPreview(formData.employeeId, formData.fromDate, formData.toDate)}
+                disabled={syncingBreakdown}
+                className="text-xs text-primary-600 dark:text-primary-400 font-semibold hover:underline flex items-center gap-1"
+              >
+                <RefreshCw className={`w-3 h-3 ${syncingBreakdown ? 'animate-spin' : ''}`} />
+                <span>Re-sync Leave & Overtime</span>
+              </button>
+            </div>
             <select
               required
               value={formData.employeeId}
@@ -714,7 +747,7 @@ export default function Payroll() {
                 type="date"
                 required
                 value={formData.fromDate}
-                onChange={(e) => setFormData({ ...formData, fromDate: e.target.value })}
+                onChange={(e) => handleDateChange('fromDate', e.target.value)}
                 className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs sm:text-sm focus:ring-2 focus:ring-primary-500"
               />
             </div>
@@ -727,11 +760,48 @@ export default function Payroll() {
                 type="date"
                 required
                 value={formData.toDate}
-                onChange={(e) => setFormData({ ...formData, toDate: e.target.value })}
+                onChange={(e) => handleDateChange('toDate', e.target.value)}
                 className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs sm:text-sm focus:ring-2 focus:ring-primary-500"
               />
             </div>
           </div>
+
+          {/* Linked Overtime & Leave Sync Banner */}
+          {syncingBreakdown ? (
+            <div className="p-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs text-slate-400 animate-pulse">
+              Syncing approved overtime and leave records for this period...
+            </div>
+          ) : breakdownDetails && (
+            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-xs space-y-1.5">
+              <span className="font-bold text-[10px] uppercase tracking-wider text-slate-400 block">
+                Automatic Cross-Module Reconciliation
+              </span>
+              <div className="flex flex-wrap gap-3">
+                {breakdownDetails.totalOtHours > 0 ? (
+                  <span className="flex items-center gap-1 text-emerald-600 font-bold bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-lg border border-emerald-200 dark:border-emerald-900">
+                    <Clock className="w-3.5 h-3.5" />
+                    Overtime: {breakdownDetails.totalOtHours}h approved (+{breakdownDetails.totalOtAmount?.toLocaleString()} ETB)
+                  </span>
+                ) : (
+                  <span className="text-slate-400 italic">No approved unpaid overtime in period.</span>
+                )}
+
+                {breakdownDetails.unpaidLeaveDays > 0 ? (
+                  <span className="flex items-center gap-1 text-rose-600 font-bold bg-rose-50 dark:bg-rose-950/40 px-2 py-0.5 rounded-lg border border-rose-200 dark:border-rose-900">
+                    <CalendarCheck2 className="w-3.5 h-3.5" />
+                    Unpaid Leave: {breakdownDetails.unpaidLeaveDays} days (-{breakdownDetails.unpaidLeaveDeduction?.toLocaleString()} ETB)
+                  </span>
+                ) : null}
+
+                {breakdownDetails.paidLeaveDays > 0 && (
+                  <span className="flex items-center gap-1 text-indigo-600 font-bold bg-indigo-50 dark:bg-indigo-950/40 px-2 py-0.5 rounded-lg border border-indigo-200 dark:border-indigo-900">
+                    <CalendarCheck2 className="w-3.5 h-3.5" />
+                    Paid Leaves: {breakdownDetails.paidLeaveDays} days taken
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Earnings Breakdown Section */}
           <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/40 space-y-2.5">
@@ -925,9 +995,14 @@ export default function Payroll() {
           <div className="p-3.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/60 text-xs text-indigo-900 dark:text-indigo-200 leading-relaxed">
             <p className="font-bold flex items-center gap-1.5 mb-1">
               <Users className="w-4 h-4 text-indigo-600" />
-              Batch Salary Generation
+              Integrated Cross-Module Batch Generation
             </p>
-            Generates monthly payroll records for all active employees. Calculates Ethiopian statutory 7% pension contribution and progressive income tax (Proclamation 979/2016) from base salary. Existing records for the same period will automatically be skipped.
+            Generates monthly payroll for all active staff members with automated reconciliation:
+            <ul className="list-disc pl-4 mt-1 space-y-0.5 text-[11px]">
+              <li>Includes approved Overtime shifts (1.5x / 2.0x rates)</li>
+              <li>Deducts approved Unpaid Leave days</li>
+              <li>Calculates 7% employee pension & progressive PAYE income tax</li>
+            </ul>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -1083,6 +1158,29 @@ export default function Payroll() {
                   </span>
                 </div>
               </div>
+
+              {/* Linked Overtime & Leaves Information */}
+              {(selectedSlip.overtimeRecords?.length > 0 || selectedSlip.leaveRecords?.length > 0) && (
+                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-800 text-xs space-y-1">
+                  <span className="font-bold text-[10px] uppercase tracking-wider text-slate-400 block">
+                    Integrated Reconciliation Details
+                  </span>
+                  <div className="flex flex-wrap gap-4 text-slate-700 dark:text-slate-300">
+                    {selectedSlip.overtimeRecords?.length > 0 && (
+                      <span className="flex items-center gap-1.5 font-bold text-emerald-600 dark:text-emerald-400">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        {selectedSlip.overtimeRecords.length} Approved Overtime Shift(s) Reconciled
+                      </span>
+                    )}
+                    {selectedSlip.leaveRecords?.length > 0 && (
+                      <span className="flex items-center gap-1.5 font-bold text-indigo-600 dark:text-indigo-400">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        {selectedSlip.leaveRecords.length} Leave Request(s) Processed
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Earnings & Deductions Tables */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -6,7 +6,8 @@ import {
   updateOvertime,
   reviewOvertime,
   updateOvertimePaymentStatus,
-  deleteOvertime
+  deleteOvertime,
+  lookupAttendanceForOvertime
 } from '../controllers/overtimeController.js';
 import { protect } from '../middleware/auth.js';
 import { authorizeRoles } from '../middleware/rbac.js';
@@ -19,6 +20,8 @@ router
   .route('/')
   .get(getOvertimes)
   .post(createOvertime);
+
+router.get('/attendance-lookup', lookupAttendanceForOvertime);
 
 router
   .route('/:id')

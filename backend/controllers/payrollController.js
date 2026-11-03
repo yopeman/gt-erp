@@ -1,5 +1,7 @@
 import Payroll from '../models/Payroll.js';
 import Employee from '../models/Employee.js';
+import Overtime from '../models/Overtime.js';
+import LeaveRequest from '../models/LeaveRequest.js';
 
 /**
  * Helper to resolve logged in employee ID safely
@@ -18,7 +20,7 @@ const resolveUserEmployeeId = async (user) => {
   return emp ? emp._id : null;
 };
 
-// Helper for statutory Ethiopian Tax
+// Helper for statutory Ethiopian Tax (Proclamation 979/2016)
 const calculateStatutoryTax = (taxableIncome) => {
   const income = Number(taxableIncome) || 0;
   if (income <= 600) return 0;
@@ -28,6 +30,203 @@ const calculateStatutoryTax = (taxableIncome) => {
   if (income <= 7800) return Math.round(income * 0.25 - 565);
   if (income <= 10900) return Math.round(income * 0.30 - 955);
   return Math.round(income * 0.35 - 1500);
+};
+
+/**
+ * Shared Payroll Calculation Engine
+ * Links Employee base salary with:
+ * 1. Approved Overtime records (adds Overtime earnings)
+ * 2. Approved Leave requests (deducts Unpaid Leave)
+ * 3. Ethiopian Statutory Pension (7%) & Progressive Income Tax
+ */
+export const computePayrollBreakdown = async ({
+  employeeId,
+  fromDate,
+  toDate,
+  customEarnings = [],
+  customDeductions = []
+}) => {
+  const from = new Date(fromDate);
+  const to = new Date(toDate);
+
+  const employee = await Employee.findById(employeeId);
+  if (!employee) throw new Error('Employee not found');
+
+  const baseSalary = Number(employee.baseSalary) || 15000;
+  const earnings = [{ name: 'Base Salary', amount: baseSalary }];
+  const deductions = [];
+
+  // 1. Link Overtime:
+  // Find approved overtimes for this employee in the period that haven't been paid
+  const approvedOvertimes = await Overtime.find({
+    employee: employeeId,
+    status: 'approved',
+    paymentStatus: { $ne: 'paid' },
+    startAt: { $gte: from, $lte: to }
+  });
+
+  let totalOtHours = 0;
+  let totalOtAmount = 0;
+  // Standard working hours = 208 hrs / month (26 days * 8 hours)
+  const hourlyRate = baseSalary / 208;
+
+  for (const ot of approvedOvertimes) {
+    const hours = ot.approvedHours > 0 ? ot.approvedHours : ot.workedHours;
+    const rate = ot.calculationRate || 1.5;
+    const amount = Math.round(hours * hourlyRate * rate);
+    totalOtHours += hours;
+    totalOtAmount += amount;
+  }
+
+  if (totalOtAmount > 0) {
+    earnings.push({
+      name: `Approved Overtime (${totalOtHours} hrs)`,
+      amount: totalOtAmount
+    });
+  }
+
+  // Include any custom earnings passed (allowances, bonuses, etc.)
+  if (Array.isArray(customEarnings) && customEarnings.length > 0) {
+    customEarnings.forEach((ce) => {
+      if (
+        ce.name &&
+        ce.name !== 'Base Salary' &&
+        !ce.name.startsWith('Approved Overtime') &&
+        !earnings.some((e) => e.name === ce.name)
+      ) {
+        earnings.push({
+          name: ce.name,
+          amount: Number(ce.amount) || 0
+        });
+      }
+    });
+  }
+
+  // 2. Link Leave:
+  // Find accepted leave requests overlapping with the period
+  const acceptedLeaves = await LeaveRequest.find({
+    employee: employeeId,
+    decision: 'accepted',
+    startDate: { $lte: to },
+    endDate: { $gte: from }
+  });
+
+  let unpaidLeaveDays = 0;
+  let paidLeaveDays = 0;
+  const dailyRate = Math.round(baseSalary / 30);
+
+  for (const leave of acceptedLeaves) {
+    const leaveStart = new Date(Math.max(new Date(leave.startDate), from));
+    const leaveEnd = new Date(Math.min(new Date(leave.endDate), to));
+    if (leaveEnd >= leaveStart) {
+      const days = Math.ceil((leaveEnd - leaveStart) / (1000 * 60 * 60 * 24)) + 1;
+      if (leave.type === 'unpaid') {
+        unpaidLeaveDays += days;
+      } else {
+        paidLeaveDays += days;
+      }
+    }
+  }
+
+  let unpaidLeaveDeduction = 0;
+  if (unpaidLeaveDays > 0) {
+    unpaidLeaveDeduction = unpaidLeaveDays * dailyRate;
+    deductions.push({
+      name: `Unpaid Leave Deduction (${unpaidLeaveDays} days)`,
+      amount: unpaidLeaveDeduction
+    });
+  }
+
+  // 3. Statutory Deductions (Pension 7% & Income Tax)
+  const pension = Math.round(baseSalary * 0.07);
+  deductions.push({
+    name: 'Pension Contribution (7%)',
+    amount: pension
+  });
+
+  // Calculate gross before tax
+  const totalGross = earnings.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+
+  // Taxable income = Base Salary + Overtime Pay - Unpaid Leave Deduction
+  const taxableIncome = Math.max(0, baseSalary + totalOtAmount - unpaidLeaveDeduction);
+  const incomeTax = calculateStatutoryTax(taxableIncome);
+  deductions.push({
+    name: 'Income Tax (PAYE)',
+    amount: incomeTax
+  });
+
+  // Include any custom deductions passed (loan repayment, penalty, etc.)
+  if (Array.isArray(customDeductions) && customDeductions.length > 0) {
+    customDeductions.forEach((cd) => {
+      if (
+        cd.name &&
+        !cd.name.startsWith('Pension Contribution') &&
+        !cd.name.startsWith('Income Tax') &&
+        !cd.name.startsWith('Unpaid Leave Deduction') &&
+        !deductions.some((d) => d.name === cd.name)
+      ) {
+        deductions.push({
+          name: cd.name,
+          amount: Number(cd.amount) || 0
+        });
+      }
+    });
+  }
+
+  const totalDeduction = deductions.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+  const totalNet = totalGross - totalDeduction;
+
+  return {
+    employee,
+    baseSalary,
+    earnings,
+    deductions,
+    totalGross,
+    totalDeduction,
+    totalNet,
+    overtimeRecords: approvedOvertimes.map((o) => o._id),
+    leaveRecords: acceptedLeaves.map((l) => l._id),
+    summary: {
+      totalOtHours,
+      totalOtAmount,
+      overtimeCount: approvedOvertimes.length,
+      unpaidLeaveDays,
+      unpaidLeaveDeduction,
+      paidLeaveDays,
+      leaveCount: acceptedLeaves.length
+    }
+  };
+};
+
+// Preview Payroll Calculation with live leave and overtime breakdown
+export const previewPayrollCalculation = async (req, res) => {
+  try {
+    const { employeeId, fromDate, toDate } = req.query;
+
+    if (!employeeId || !fromDate || !toDate) {
+      return res.status(400).json({
+        success: false,
+        message: 'employeeId, fromDate, and toDate are required'
+      });
+    }
+
+    const result = await computePayrollBreakdown({
+      employeeId,
+      fromDate,
+      toDate
+    });
+
+    res.status(200).json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to calculate payroll preview',
+      error: error.message
+    });
+  }
 };
 
 // Create a new payroll record
@@ -54,6 +253,27 @@ export const createPayroll = async (req, res) => {
       });
     }
 
+    const from = new Date(fromDate);
+    const to = new Date(toDate);
+
+    // Identify linked overtime and leave records
+    const approvedOvertimes = await Overtime.find({
+      employee: employeeId,
+      status: 'approved',
+      paymentStatus: { $ne: 'paid' },
+      startAt: { $gte: from, $lte: to }
+    });
+
+    const acceptedLeaves = await LeaveRequest.find({
+      employee: employeeId,
+      decision: 'accepted',
+      startDate: { $lte: to },
+      endDate: { $gte: from }
+    });
+
+    const overtimeIds = approvedOvertimes.map((o) => o._id);
+    const leaveIds = acceptedLeaves.map((l) => l._id);
+
     const calculatedGross = Array.isArray(earnings) && earnings.length > 0
       ? earnings.reduce((sum, item) => sum + (Number(item.amount) || 0), 0)
       : Number(totalGross) || 0;
@@ -72,6 +292,8 @@ export const createPayroll = async (req, res) => {
       type: type || 'salary',
       earnings: Array.isArray(earnings) ? earnings : [],
       deductions: Array.isArray(deductions) ? deductions : [],
+      overtimeRecords: overtimeIds,
+      leaveRecords: leaveIds,
       totalGross: calculatedGross,
       totalDeduction: calculatedDeduction,
       totalNet: net,
@@ -79,8 +301,18 @@ export const createPayroll = async (req, res) => {
       status: 'unpaid'
     });
 
+    // Link this payroll to the overtime records
+    if (overtimeIds.length > 0) {
+      await Overtime.updateMany(
+        { _id: { $in: overtimeIds } },
+        { payroll: payroll._id }
+      );
+    }
+
     const populated = await payroll.populate([
       { path: 'employeeId', select: 'fullName email department position baseSalary accountDetails nationalId' },
+      { path: 'overtimeRecords', select: 'workedHours approvedHours calculationRate startAt' },
+      { path: 'leaveRecords', select: 'type startDate endDate reason' },
       { path: 'createdBy', select: 'fullName email' }
     ]);
 
@@ -144,6 +376,8 @@ export const getPayrolls = async (req, res) => {
     const total = await Payroll.countDocuments(query);
     const payrolls = await Payroll.find(query)
       .populate('employeeId', 'fullName email department position baseSalary accountDetails nationalId')
+      .populate('overtimeRecords', 'workedHours approvedHours calculationRate startAt')
+      .populate('leaveRecords', 'type startDate endDate reason')
       .populate('createdBy', 'fullName email')
       .populate('approvedBy', 'fullName email')
       .sort({ createdAt: -1 })
@@ -176,6 +410,8 @@ export const getPayrollById = async (req, res) => {
 
     const payroll = await Payroll.findById(req.params.id)
       .populate('employeeId', 'fullName email department position baseSalary accountDetails nationalId')
+      .populate('overtimeRecords', 'workedHours approvedHours calculationRate startAt reason')
+      .populate('leaveRecords', 'type startDate endDate reason')
       .populate('createdBy', 'fullName email')
       .populate('approvedBy', 'fullName email');
 
@@ -257,6 +493,8 @@ export const updatePayroll = async (req, res) => {
       { new: true, runValidators: true }
     )
       .populate('employeeId', 'fullName email department position baseSalary accountDetails nationalId')
+      .populate('overtimeRecords', 'workedHours approvedHours calculationRate startAt')
+      .populate('leaveRecords', 'type startDate endDate reason')
       .populate('createdBy', 'fullName email')
       .populate('approvedBy', 'fullName email');
 
@@ -292,6 +530,8 @@ export const approvePayroll = async (req, res) => {
       { new: true }
     )
       .populate('employeeId', 'fullName email department position baseSalary accountDetails nationalId')
+      .populate('overtimeRecords', 'workedHours approvedHours calculationRate startAt')
+      .populate('leaveRecords', 'type startDate endDate reason')
       .populate('approvedBy', 'fullName email');
 
     if (!payroll) {
@@ -315,7 +555,7 @@ export const approvePayroll = async (req, res) => {
   }
 };
 
-// Mass process payroll for all active employees
+// Mass process payroll for all active employees linked with leave and overtime
 export const massProcessPayroll = async (req, res) => {
   try {
     const { fromDate, toDate, currency = 'ETB', type = 'salary' } = req.body;
@@ -362,19 +602,12 @@ export const massProcessPayroll = async (req, res) => {
         continue;
       }
 
-      const baseSalary = Number(emp.baseSalary) || 15000;
-      const pension = Math.round(baseSalary * 0.07);
-      const incomeTax = calculateStatutoryTax(baseSalary);
-
-      const earnings = [{ name: 'Base Salary', amount: baseSalary }];
-      const deductions = [
-        { name: 'Pension Contribution (7%)', amount: pension },
-        { name: 'Income Tax (PAYE)', amount: incomeTax }
-      ];
-
-      const totalGross = baseSalary;
-      const totalDeduction = pension + incomeTax;
-      const totalNet = totalGross - totalDeduction;
+      // Calculate complete breakdown linking Leave and Overtime
+      const breakdown = await computePayrollBreakdown({
+        employeeId: emp._id,
+        fromDate: from,
+        toDate: to
+      });
 
       const payroll = await Payroll.create({
         employeeId: emp._id,
@@ -382,14 +615,24 @@ export const massProcessPayroll = async (req, res) => {
         toDate: to,
         currency: currency || 'ETB',
         type: type || 'salary',
-        earnings,
-        deductions,
-        totalGross,
-        totalDeduction,
-        totalNet,
+        earnings: breakdown.earnings,
+        deductions: breakdown.deductions,
+        overtimeRecords: breakdown.overtimeRecords,
+        leaveRecords: breakdown.leaveRecords,
+        totalGross: breakdown.totalGross,
+        totalDeduction: breakdown.totalDeduction,
+        totalNet: breakdown.totalNet,
         createdBy: req.user?._id || null,
         status: 'unpaid'
       });
+
+      // Link overtime records to this payroll
+      if (breakdown.overtimeRecords && breakdown.overtimeRecords.length > 0) {
+        await Overtime.updateMany(
+          { _id: { $in: breakdown.overtimeRecords } },
+          { payroll: payroll._id }
+        );
+      }
 
       createdPayrolls.push(payroll);
     }
@@ -412,17 +655,12 @@ export const massProcessPayroll = async (req, res) => {
   }
 };
 
-// Mark payroll as paid
+// Mark payroll as paid - automatically updates linked overtime records to paid!
 export const markPayrollAsPaid = async (req, res) => {
   try {
     const { status = 'paid', paidAt = new Date() } = req.body;
 
-    const payroll = await Payroll.findByIdAndUpdate(
-      req.params.id,
-      { status, paidAt },
-      { new: true }
-    ).populate('employeeId', 'fullName email department position');
-
+    const payroll = await Payroll.findById(req.params.id);
     if (!payroll) {
       return res.status(404).json({
         success: false,
@@ -430,10 +668,38 @@ export const markPayrollAsPaid = async (req, res) => {
       });
     }
 
+    payroll.status = status;
+    payroll.paidAt = paidAt;
+    await payroll.save();
+
+    // Link and mark associated overtime records as paid
+    if (payroll.overtimeRecords && payroll.overtimeRecords.length > 0) {
+      await Overtime.updateMany(
+        { _id: { $in: payroll.overtimeRecords } },
+        { paymentStatus: 'paid', payroll: payroll._id }
+      );
+    } else {
+      await Overtime.updateMany(
+        {
+          employee: payroll.employeeId,
+          status: 'approved',
+          paymentStatus: { $ne: 'paid' },
+          startAt: { $gte: payroll.fromDate, $lte: payroll.toDate }
+        },
+        { paymentStatus: 'paid', payroll: payroll._id }
+      );
+    }
+
+    const populated = await payroll.populate([
+      { path: 'employeeId', select: 'fullName email department position' },
+      { path: 'overtimeRecords', select: 'workedHours approvedHours calculationRate paymentStatus' },
+      { path: 'leaveRecords', select: 'type startDate endDate reason' }
+    ]);
+
     res.status(200).json({
       success: true,
-      message: `Payroll status updated to ${status}`,
-      data: payroll
+      message: `Payroll status updated to ${status}. Linked overtimes updated to paid.`,
+      data: populated
     });
   } catch (error) {
     res.status(500).json({
@@ -455,6 +721,12 @@ export const deletePayroll = async (req, res) => {
       });
     }
 
+    // Unlink overtime records
+    await Overtime.updateMany(
+      { payroll: req.params.id },
+      { $unset: { payroll: 1 }, paymentStatus: 'unpaid' }
+    );
+
     res.status(200).json({
       success: true,
       message: 'Payroll record deleted successfully'
@@ -467,4 +739,3 @@ export const deletePayroll = async (req, res) => {
     });
   }
 };
-

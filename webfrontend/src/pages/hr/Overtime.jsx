@@ -58,6 +58,10 @@ export default function Overtime() {
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [selectedOvertime, setSelectedOvertime] = useState(null);
 
+  // Attendance Link Verification State
+  const [attendanceLookup, setAttendanceLookup] = useState(null);
+  const [lookingUpAttendance, setLookingUpAttendance] = useState(false);
+
   // Modal: Review Decision (Approve / Reject with remarks)
   const [decisionModalOpen, setDecisionModalOpen] = useState(false);
   const [decisionType, setDecisionType] = useState('approved'); // 'approved' | 'rejected'
@@ -140,6 +144,39 @@ export default function Overtime() {
       type: newType,
       calculationRate: rate
     }));
+  };
+
+  // Check linked attendance for chosen date and auto-fill overtime
+  const handleCheckAttendance = async (dateVal, empIdVal) => {
+    const d = dateVal || formData.startAt;
+    const emp = empIdVal || (canManage ? formData.employee : currentEmployee?._id);
+    if (!d || !emp) return;
+    setLookingUpAttendance(true);
+    try {
+      const res = await api.get(`/overtimes/attendance-lookup?employee=${emp}&date=${d}`);
+      if (res.success && res.data) {
+        setAttendanceLookup(res.data);
+        if (res.data.suggestedOvertime > 0) {
+          setFormData((prev) => ({
+            ...prev,
+            workedHours: res.data.suggestedOvertime,
+            type: res.data.suggestedType || prev.type,
+            calculationRate: res.data.suggestedRate || prev.calculationRate
+          }));
+        }
+      } else {
+        setAttendanceLookup(null);
+      }
+    } catch (err) {
+      console.warn('Attendance lookup err:', err);
+    } finally {
+      setLookingUpAttendance(false);
+    }
+  };
+
+  const handleDateChange = (val) => {
+    setFormData((prev) => ({ ...prev, startAt: val }));
+    handleCheckAttendance(val);
   };
 
   const handleCreateOvertime = async (e) => {
@@ -687,7 +724,7 @@ export default function Overtime() {
                 type="date"
                 required
                 value={formData.startAt}
-                onChange={(e) => setFormData({ ...formData, startAt: e.target.value })}
+                onChange={(e) => handleDateChange(e.target.value)}
                 className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs sm:text-sm focus:ring-2 focus:ring-primary-500"
               />
             </div>
@@ -707,6 +744,34 @@ export default function Overtime() {
               />
             </div>
           </div>
+
+          {/* Linked Attendance Verification Info Banner */}
+          {lookingUpAttendance ? (
+            <div className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs text-slate-400 animate-pulse">
+              Checking shift attendance records for this date...
+            </div>
+          ) : attendanceLookup ? (
+            <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 text-xs text-blue-900 dark:text-blue-200 flex items-center justify-between gap-2">
+              <div>
+                <span className="font-bold flex items-center gap-1.5 text-blue-700 dark:text-blue-300">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                  Linked Attendance Shift Found
+                </span>
+                <p className="text-[11px] text-blue-600 dark:text-blue-300 mt-0.5">
+                  Clocked In: {attendanceLookup.startTime ? new Date(attendanceLookup.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'} – Clocked Out: {attendanceLookup.endTime ? new Date(attendanceLookup.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'In progress'} ({attendanceLookup.workedHours}h shift).
+                </p>
+              </div>
+              {attendanceLookup.suggestedOvertime > 0 && (
+                <div className="px-2.5 py-1 bg-blue-600 text-white font-bold rounded-lg text-[11px] whitespace-nowrap shadow-xs">
+                  +{attendanceLookup.suggestedOvertime}h Overtime
+                </div>
+              )}
+            </div>
+          ) : formData.startAt ? (
+            <div className="text-[11px] text-slate-400 italic">
+              No attendance shift recorded on this date. You may still manually submit with supervisor pre-approval.
+            </div>
+          ) : null}
 
           {/* Overtime Type and Calculation Rate (Auto-Selected & Disabled) */}
           <div className="grid grid-cols-2 gap-3">

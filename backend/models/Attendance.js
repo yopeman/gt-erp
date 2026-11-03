@@ -48,6 +48,15 @@ const attendanceSchema = new mongoose.Schema(
     },
     clockInSelfie: selfieCaptureSchema,
     clockOutSelfie: selfieCaptureSchema,
+    workedHours: {
+      type: Number,
+      default: 0
+    },
+    linkedOvertime: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Overtime',
+      default: null
+    },
     selfRecorded: {
       type: Boolean,
       default: true

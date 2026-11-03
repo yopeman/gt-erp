@@ -62,6 +62,16 @@ const overtimeSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
       default: null
+    },
+    attendance: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Attendance',
+      default: null
+    },
+    payroll: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Payroll',
+      default: null
     }
   },
   {

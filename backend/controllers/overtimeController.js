@@ -1,5 +1,7 @@
 import Overtime from '../models/Overtime.js';
 import Employee from '../models/Employee.js';
+import Attendance from '../models/Attendance.js';
+import { calculateWorkedHours } from '../utils/dateUtils.js';
 
 /**
  * Helper to resolve logged in employee ID safely
@@ -71,6 +73,19 @@ export const createOvertime = async (req, res) => {
     // Auto-select calculation rate from type
     const finalRate = Number(calculationRate) || OVERTIME_TYPE_RATES[type] || 1.5;
 
+    // Check if matching attendance exists for this employee on that date
+    const shiftDate = new Date(startAt);
+    const startOfDay = new Date(shiftDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(shiftDate);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const matchingAttendance = await Attendance.findOne({
+      employee: targetEmployeeId,
+      date: { $gte: startOfDay, $lte: endOfDay },
+      isDeleted: false
+    });
+
     const overtime = await Overtime.create({
       employee: targetEmployeeId,
       startAt,
@@ -81,10 +96,20 @@ export const createOvertime = async (req, res) => {
       calculationRate: finalRate,
       isPreApproved: Boolean(isPreApproved),
       status: 'pending',
-      paymentStatus: 'unpaid'
+      paymentStatus: 'unpaid',
+      attendance: matchingAttendance ? matchingAttendance._id : null
     });
 
-    const populated = await overtime.populate('employee', 'fullName email department position profileImage nationalId');
+    if (matchingAttendance) {
+      matchingAttendance.type = 'overtime';
+      matchingAttendance.linkedOvertime = overtime._id;
+      await matchingAttendance.save();
+    }
+
+    const populated = await overtime.populate([
+      { path: 'employee', select: 'fullName email department position profileImage nationalId' },
+      { path: 'attendance', select: 'date startTime endTime workedHours type' }
+    ]);
 
     res.status(201).json({
       success: true,
@@ -95,6 +120,76 @@ export const createOvertime = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to create overtime request',
+      error: error.message
+    });
+  }
+};
+
+// Lookup attendance for an overtime date to auto-calculate worked and overtime hours
+export const lookupAttendanceForOvertime = async (req, res) => {
+  try {
+    const { employee, date } = req.query;
+    const userRoles = req.user?.roles || [];
+    const canManage = userRoles.some((r) => ['admin', 'hr', 'manager'].includes(r));
+
+    let targetEmployeeId = employee;
+    if (!canManage || !targetEmployeeId) {
+      targetEmployeeId = await resolveUserEmployeeId(req.user);
+    }
+
+    if (!targetEmployeeId || !date) {
+      return res.status(400).json({
+        success: false,
+        message: 'employee and date are required'
+      });
+    }
+
+    const d = new Date(date);
+    const startOfDay = new Date(d);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(d);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const attendance = await Attendance.findOne({
+      employee: targetEmployeeId,
+      date: { $gte: startOfDay, $lte: endOfDay },
+      isDeleted: false
+    });
+
+    if (!attendance) {
+      return res.status(200).json({
+        success: true,
+        data: null,
+        message: 'No attendance record found for this date'
+      });
+    }
+
+    let workedHours = attendance.workedHours || 0;
+    if (!workedHours && attendance.startTime && attendance.endTime) {
+      workedHours = calculateWorkedHours(attendance.startTime, attendance.endTime);
+    }
+
+    const suggestedOvertime = workedHours > 8 ? Number((workedHours - 8).toFixed(2)) : 0;
+    const isWeekend = [0, 6].includes(d.getDay());
+    const suggestedType = isWeekend ? 'weekend' : 'calendar';
+    const suggestedRate = isWeekend ? 2.0 : 1.5;
+
+    res.status(200).json({
+      success: true,
+      data: {
+        attendanceId: attendance._id,
+        startTime: attendance.startTime,
+        endTime: attendance.endTime,
+        workedHours,
+        suggestedOvertime,
+        suggestedType,
+        suggestedRate
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to lookup attendance',
       error: error.message
     });
   }
@@ -149,6 +244,8 @@ export const getOvertimes = async (req, res) => {
     const overtimes = await Overtime.find(query)
       .populate('employee', 'fullName email department position profileImage nationalId')
       .populate('approvedBy', 'fullName email')
+      .populate('attendance', 'date startTime endTime workedHours type')
+      .populate('payroll', 'fromDate toDate status paidAt totalNet')
       .sort({ startAt: -1 })
       .skip(skip)
       .limit(parseInt(limit, 10));
@@ -179,7 +276,9 @@ export const getOvertimeById = async (req, res) => {
 
     const overtime = await Overtime.findById(req.params.id)
       .populate('employee', 'fullName email department position profileImage nationalId')
-      .populate('approvedBy', 'fullName email');
+      .populate('approvedBy', 'fullName email')
+      .populate('attendance', 'date startTime endTime workedHours type')
+      .populate('payroll', 'fromDate toDate status paidAt totalNet');
 
     if (!overtime) {
       return res.status(404).json({

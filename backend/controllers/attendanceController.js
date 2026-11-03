@@ -1,7 +1,8 @@
 import Attendance from '../models/Attendance.js';
 import Employee from '../models/Employee.js';
+import Overtime from '../models/Overtime.js';
 import { uploadToCloudinary } from '../utils/cloudinary.js';
-import { classifyAttendance } from '../utils/dateUtils.js';
+import { classifyAttendance, calculateWorkedHours } from '../utils/dateUtils.js';
 
 /**
  * Resolve employee ID from request body or authenticated user.
@@ -189,6 +190,55 @@ export const clockOut = async (req, res) => {
     const clockOutTime = new Date();
     attendance.endTime = clockOutTime;
 
+    // Calculate worked hours and link overtime if shift exceeds standard 8 hours
+    let workedHours = 0;
+    if (attendance.startTime) {
+      workedHours = calculateWorkedHours(attendance.startTime, clockOutTime);
+      attendance.workedHours = workedHours;
+    }
+
+    // Auto-link with Overtime if work hours > 8 hours
+    if (workedHours > 8) {
+      attendance.type = 'overtime';
+      const extraHours = Number((workedHours - 8).toFixed(2));
+      if (extraHours >= 0.5 && !attendance.linkedOvertime) {
+        const shiftDate = attendance.startTime || attendance.date || new Date();
+        const isWeekend = [0, 6].includes(new Date(shiftDate).getDay());
+        const otType = isWeekend ? 'weekend' : 'calendar';
+        const otRate = isWeekend ? 2.0 : 1.5;
+
+        const existingOt = await Overtime.findOne({
+          employee: employeeId,
+          $or: [
+            { attendance: attendance._id },
+            { startAt: { $gte: startOfDay, $lte: endOfDay } }
+          ]
+        });
+
+        if (!existingOt) {
+          const autoOt = await Overtime.create({
+            employee: employeeId,
+            attendance: attendance._id,
+            startAt: attendance.startTime || attendance.date,
+            workedHours: extraHours,
+            approvedHours: 0,
+            type: otType,
+            calculationRate: otRate,
+            reason: `Auto-recorded from attendance shift (${workedHours}h shift, ${extraHours}h overtime)`,
+            status: 'pending',
+            paymentStatus: 'unpaid'
+          });
+          attendance.linkedOvertime = autoOt._id;
+        } else {
+          attendance.linkedOvertime = existingOt._id;
+          if (!existingOt.attendance) {
+            existingOt.attendance = attendance._id;
+            await existingOt.save();
+          }
+        }
+      }
+    }
+
     // Normalize location with diameter
     const finalLocation = location ? { ...location } : {};
     if (finalLocation.accuracy && !finalLocation.diameter) {
@@ -203,10 +253,10 @@ export const clockOut = async (req, res) => {
 
     await attendance.save();
 
-    const populated = await attendance.populate(
-      'employee',
-      'fullName email department position profileImage nationalId branch phoneNumber'
-    );
+    const populated = await attendance.populate([
+      { path: 'employee', select: 'fullName email department position profileImage nationalId branch phoneNumber' },
+      { path: 'linkedOvertime', select: 'workedHours approvedHours status calculationRate' }
+    ]);
 
     res.status(200).json({
       success: true,
@@ -327,6 +377,7 @@ export const getAttendances = async (req, res) => {
     const total = await Attendance.countDocuments(query);
     const attendances = await Attendance.find(query)
       .populate('employee', 'fullName email department position profileImage nationalId branch phoneNumber')
+      .populate('linkedOvertime', 'workedHours approvedHours status calculationRate')
       .sort({ date: -1, createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit, 10));
