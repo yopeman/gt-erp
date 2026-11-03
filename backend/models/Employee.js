@@ -50,6 +50,38 @@ const educationSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const bankAccountSchema = new mongoose.Schema(
+  {
+    bankName: {
+      type: String,
+      trim: true,
+      default: 'Commercial Bank of Ethiopia (CBE)'
+    },
+    holderName: {
+      type: String,
+      trim: true
+    },
+    number: {
+      type: String,
+      trim: true
+    },
+    branch: {
+      type: String,
+      trim: true
+    },
+    status: {
+      type: String,
+      enum: ['active', 'inactive'],
+      default: 'active'
+    },
+    isPrimary: {
+      type: Boolean,
+      default: false
+    }
+  },
+  { _id: false }
+);
+
 const employeeSchema = new mongoose.Schema(
   {
     fullName: {
@@ -167,25 +199,7 @@ const employeeSchema = new mongoose.Schema(
       }
     },
     educations: [educationSchema],
-    accountDetails: {
-      holderName: {
-        type: String,
-        trim: true
-      },
-      number: {
-        type: String,
-        trim: true
-      },
-      status: {
-        type: String,
-        enum: ['active', 'inactive'],
-        default: 'active'
-      },
-      isPrimary: {
-        type: Boolean,
-        default: true
-      }
-    },
+    accountDetails: [bankAccountSchema],
     baseSalary: {
       type: Number,
       default: 0,

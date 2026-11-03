@@ -1,4 +1,51 @@
 import Employee from '../models/Employee.js';
+import { uploadToCloudinary } from '../utils/cloudinary.js';
+
+/**
+ * Normalizes account details array ensuring strictly ONE primary account
+ */
+export const normalizeAccountDetails = (accounts) => {
+  if (!accounts) return [];
+  const list = Array.isArray(accounts) ? accounts : [accounts];
+  const validList = list.filter((acc) => acc && (acc.holderName || acc.number || acc.bankName));
+  if (validList.length === 0) return [];
+
+  let primaryIndex = validList.findIndex((acc) => acc.isPrimary === true || acc.isPrimary === 'true');
+  if (primaryIndex === -1 && validList.length > 0) {
+    primaryIndex = 0; // Default first account as primary
+  }
+
+  return validList.map((acc, idx) => ({
+    bankName: acc.bankName || 'Commercial Bank of Ethiopia (CBE)',
+    holderName: acc.holderName || '',
+    number: acc.number || '',
+    branch: acc.branch || '',
+    status: acc.status || 'active',
+    isPrimary: idx === primaryIndex
+  }));
+};
+
+/**
+ * Uploads base64 data to Cloudinary (or fallback local file system)
+ * Returns the permanent hosted/local URL instead of raw base64
+ */
+const processMediaUrl = async (urlOrBase64, folder, resourceType = 'auto') => {
+  if (!urlOrBase64 || typeof urlOrBase64 !== 'string') return urlOrBase64;
+  if (urlOrBase64.startsWith('data:') || urlOrBase64.length > 500) {
+    try {
+      const uploadResult = await uploadToCloudinary(urlOrBase64, {
+        folder,
+        resourceType
+      });
+      return uploadResult.secureUrl || uploadResult.url;
+    } catch (err) {
+      console.error('Error processing media URL, falling back:', err.message);
+      return urlOrBase64;
+    }
+  }
+  return urlOrBase64;
+};
+
 // Create a new employee
 export const createEmployee = async (req, res) => {
   try {
@@ -41,6 +88,23 @@ export const createEmployee = async (req, res) => {
       });
     }
 
+    // Process profile image (Cloudinary with local fallback)
+    const finalProfileImage = await processMediaUrl(profileImage, 'gt_erp/employees/profiles', 'image');
+
+    // Process documents if any are base64
+    let processedDocuments = [];
+    if (Array.isArray(documents) && documents.length > 0) {
+      processedDocuments = await Promise.all(
+        documents.map(async (doc) => ({
+          ...doc,
+          url: await processMediaUrl(doc.url, 'gt_erp/documents', 'auto')
+        }))
+      );
+    }
+
+    // Normalize bank accounts ensuring exactly one primary
+    const processedAccounts = normalizeAccountDetails(accountDetails);
+
     const employee = await Employee.create({
       fullName,
       email,
@@ -53,15 +117,15 @@ export const createEmployee = async (req, res) => {
       hiredAt,
       manager: manager || null,
       type,
-      profileImage,
+      profileImage: finalProfileImage || null,
       dateOfBirth,
       status: status || 'active',
-      documents: documents || [],
+      documents: processedDocuments,
       nationalId,
       emergency,
       warranty,
       educations: educations || [],
-      accountDetails,
+      accountDetails: processedAccounts,
       baseSalary: baseSalary || 0
     });
 
@@ -172,6 +236,26 @@ export const updateEmployee = async (req, res) => {
       req.body.email = req.body.email.toLowerCase();
     }
 
+    // Process profile image if base64
+    if (req.body.profileImage) {
+      req.body.profileImage = await processMediaUrl(req.body.profileImage, 'gt_erp/employees/profiles', 'image');
+    }
+
+    // Normalize bank accounts ensuring strictly one primary
+    if (req.body.accountDetails) {
+      req.body.accountDetails = normalizeAccountDetails(req.body.accountDetails);
+    }
+
+    // Process any base64 document URLs
+    if (Array.isArray(req.body.documents)) {
+      req.body.documents = await Promise.all(
+        req.body.documents.map(async (doc) => ({
+          ...doc,
+          url: await processMediaUrl(doc.url, 'gt_erp/documents', 'auto')
+        }))
+      );
+    }
+
     const employee = await Employee.findByIdAndUpdate(
       req.params.id,
       { $set: req.body },
@@ -248,7 +332,9 @@ export const deleteEmployee = async (req, res) => {
 // Add a document to an employee
 export const addDocument = async (req, res) => {
   try {
-    const { type, name, url, issuedAt, uploadedBy, expiresAt, approvedAt } = req.body;
+    const { type, name, url, file, issuedAt, uploadedBy, expiresAt, approvedAt } = req.body;
+    const rawDocumentData = file || url;
+    const finalUrl = await processMediaUrl(rawDocumentData, 'gt_erp/documents', 'auto');
 
     const employee = await Employee.findByIdAndUpdate(
       req.params.id,
@@ -257,7 +343,7 @@ export const addDocument = async (req, res) => {
           documents: {
             type,
             name,
-            url,
+            url: finalUrl,
             issuedAt,
             uploadedBy,
             expiresAt,

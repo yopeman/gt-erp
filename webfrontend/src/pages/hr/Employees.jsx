@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import Modal from '../../components/common/Modal';
 import Badge from '../../components/common/Badge';
 import EmptyState from '../../components/common/EmptyState';
+import IdCardModal from '../../components/hr/IdCardModal';
 import api from '../../services/api';
 import {
   Users,
@@ -27,8 +28,38 @@ import {
   Shield,
   UserCheck,
   Calendar,
-  AlertCircle
+  AlertCircle,
+  Camera,
+  Upload,
+  User,
+  Check
 } from 'lucide-react';
+
+const ETHIOPIAN_BANKS = [
+  'Commercial Bank of Ethiopia (CBE)',
+  'Awash Bank',
+  'Dashen Bank',
+  'Bank of Abyssinia',
+  'Cooperative Bank of Oromia',
+  'Hibret Bank',
+  'Nib International Bank',
+  'Zemen Bank',
+  'Oromia Bank',
+  'Wegagen Bank',
+  'Berhan Bank',
+  'Bunna Bank',
+  'Abay Bank',
+  'Addis International Bank',
+  'Enat Bank',
+  'Global Bank Ethiopia',
+  'Siinqee Bank',
+  'Tsedey Bank',
+  'Gadaa Bank',
+  'Amhara Bank',
+  'Telebirr',
+  'CBE Birr',
+  'Other'
+];
 
 const INITIAL_FORM_STATE = {
   fullName: '',
@@ -45,6 +76,7 @@ const INITIAL_FORM_STATE = {
   hiredAt: new Date().toISOString().split('T')[0],
   manager: '',
   status: 'active',
+  profileImage: '',
   detailAddress: {
     location: '',
     home: ''
@@ -61,12 +93,16 @@ const INITIAL_FORM_STATE = {
     nationalId: '',
     relationshipToEmployee: ''
   },
-  accountDetails: {
-    holderName: '',
-    number: '',
-    status: 'active',
-    isPrimary: true
-  }
+  accountDetails: [
+    {
+      bankName: 'Commercial Bank of Ethiopia (CBE)',
+      holderName: '',
+      number: '',
+      branch: '',
+      status: 'active',
+      isPrimary: true
+    }
+  ]
 };
 
 export default function Employees() {
@@ -95,6 +131,9 @@ export default function Employees() {
   const [profileTab, setProfileTab] = useState('overview'); // 'overview' | 'address' | 'emergency' | 'bank' | 'docs' | 'education'
   const [docModalOpen, setDocModalOpen] = useState(false);
   const [eduModalOpen, setEduModalOpen] = useState(false);
+
+  // ID Card Generator Modal State
+  const [idCardEmployee, setIdCardEmployee] = useState(null);
 
   const [docForm, setDocForm] = useState({
     type: 'contract',
@@ -142,6 +181,46 @@ export default function Employees() {
   const handleOpenEditModal = (emp) => {
     setModalMode('edit');
     setEditingId(emp._id);
+
+    // Normalize bank accounts into an array with exactly one primary
+    let normalizedAccounts = [];
+    if (Array.isArray(emp.accountDetails) && emp.accountDetails.length > 0) {
+      normalizedAccounts = emp.accountDetails.map((acc, idx) => ({
+        bankName: acc.bankName || 'Commercial Bank of Ethiopia (CBE)',
+        holderName: acc.holderName || '',
+        number: acc.number || '',
+        branch: acc.branch || '',
+        status: acc.status || 'active',
+        isPrimary: Boolean(acc.isPrimary)
+      }));
+    } else if (emp.accountDetails && typeof emp.accountDetails === 'object' && (emp.accountDetails.holderName || emp.accountDetails.number)) {
+      normalizedAccounts = [
+        {
+          bankName: emp.accountDetails.bankName || 'Commercial Bank of Ethiopia (CBE)',
+          holderName: emp.accountDetails.holderName || '',
+          number: emp.accountDetails.number || '',
+          branch: emp.accountDetails.branch || '',
+          status: emp.accountDetails.status || 'active',
+          isPrimary: true
+        }
+      ];
+    } else {
+      normalizedAccounts = [
+        {
+          bankName: 'Commercial Bank of Ethiopia (CBE)',
+          holderName: emp.fullName || '',
+          number: '',
+          branch: '',
+          status: 'active',
+          isPrimary: true
+        }
+      ];
+    }
+
+    if (!normalizedAccounts.some((acc) => acc.isPrimary)) {
+      normalizedAccounts[0].isPrimary = true;
+    }
+
     setFormData({
       fullName: emp.fullName || '',
       email: emp.email || '',
@@ -157,6 +236,7 @@ export default function Employees() {
       hiredAt: emp.hiredAt ? new Date(emp.hiredAt).toISOString().split('T')[0] : '',
       manager: emp.manager?._id || emp.manager || '',
       status: emp.status || 'active',
+      profileImage: emp.profileImage || '',
       detailAddress: {
         location: emp.detailAddress?.location || '',
         home: emp.detailAddress?.home || ''
@@ -173,12 +253,7 @@ export default function Employees() {
         nationalId: emp.warranty?.nationalId || '',
         relationshipToEmployee: emp.warranty?.relationshipToEmployee || ''
       },
-      accountDetails: {
-        holderName: emp.accountDetails?.holderName || '',
-        number: emp.accountDetails?.number || '',
-        status: emp.accountDetails?.status || 'active',
-        isPrimary: emp.accountDetails?.isPrimary ?? true
-      }
+      accountDetails: normalizedAccounts
     });
     setActiveTab('personal');
     setFormError('');
@@ -197,6 +272,68 @@ export default function Employees() {
         ...prev[section],
         [field]: value
       }
+    }));
+  };
+
+  // Profile Image Handlers
+  const handleProfileImageUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        setFormData((prev) => ({ ...prev, profileImage: reader.result }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveProfileImage = () => {
+    setFormData((prev) => ({ ...prev, profileImage: '' }));
+  };
+
+  // Multiple Bank Account Handlers
+  const handleAddBankAccount = () => {
+    setFormData((prev) => ({
+      ...prev,
+      accountDetails: [
+        ...prev.accountDetails,
+        {
+          bankName: 'Commercial Bank of Ethiopia (CBE)',
+          holderName: prev.fullName || '',
+          number: '',
+          branch: '',
+          status: 'active',
+          isPrimary: prev.accountDetails.length === 0
+        }
+      ]
+    }));
+  };
+
+  const handleRemoveBankAccount = (indexToRemove) => {
+    setFormData((prev) => {
+      const remaining = prev.accountDetails.filter((_, idx) => idx !== indexToRemove);
+      if (remaining.length > 0 && !remaining.some((acc) => acc.isPrimary)) {
+        remaining[0].isPrimary = true;
+      }
+      return { ...prev, accountDetails: remaining };
+    });
+  };
+
+  const handleAccountChange = (index, field, value) => {
+    setFormData((prev) => {
+      const updated = [...prev.accountDetails];
+      updated[index] = { ...updated[index], [field]: value };
+      return { ...prev, accountDetails: updated };
+    });
+  };
+
+  const handleSetPrimaryAccount = (primaryIndex) => {
+    setFormData((prev) => ({
+      ...prev,
+      accountDetails: prev.accountDetails.map((acc, idx) => ({
+        ...acc,
+        isPrimary: idx === primaryIndex
+      }))
     }));
   };
 
@@ -219,6 +356,7 @@ export default function Employees() {
         status: formData.status,
         baseSalary: formData.baseSalary !== '' ? Number(formData.baseSalary) : 0,
         manager: formData.manager || null,
+        profileImage: formData.profileImage || null,
         detailAddress: formData.detailAddress,
         emergency: formData.emergency,
         warranty: formData.warranty,
@@ -425,12 +563,23 @@ export default function Employees() {
                 className="p-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-xs space-y-3"
               >
                 <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">{emp.fullName}</h3>
-                    <p className="text-xs text-primary-500 font-medium">{emp.position}</p>
-                    {emp.nationalId && (
-                      <span className="text-[10px] text-slate-400 font-mono">ID: {emp.nationalId}</span>
-                    )}
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 shrink-0 flex items-center justify-center">
+                      {emp.profileImage ? (
+                        <img src={emp.profileImage} alt={emp.fullName} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-xs font-bold text-slate-500 uppercase">
+                          {emp.fullName?.slice(0, 2) || 'GT'}
+                        </span>
+                      )}
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">{emp.fullName}</h3>
+                      <p className="text-xs text-primary-500 font-medium">{emp.position}</p>
+                      {emp.nationalId && (
+                        <span className="text-[10px] text-slate-400 font-mono">ID: {emp.nationalId}</span>
+                      )}
+                    </div>
                   </div>
                   <Badge status={emp.status} text={emp.status} />
                 </div>
@@ -464,6 +613,14 @@ export default function Employees() {
                   </button>
 
                   <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => setIdCardEmployee(emp)}
+                      className="px-2 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition flex items-center gap-1"
+                      title="Generate ID Card"
+                    >
+                      <CreditCard className="w-3.5 h-3.5 text-sky-500" />
+                      <span>ID Card</span>
+                    </button>
                     {canManage && (
                       <button
                         onClick={() => handleOpenEditModal(emp)}
@@ -508,8 +665,21 @@ export default function Employees() {
                 {filteredEmployees.map((emp) => (
                   <tr key={emp._id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition">
                     <td className="px-4 py-3">
-                      <div className="font-bold text-slate-900 dark:text-slate-100">{emp.fullName}</div>
-                      <div className="text-xs text-slate-400">{emp.email}</div>
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 shrink-0 flex items-center justify-center">
+                          {emp.profileImage ? (
+                            <img src={emp.profileImage} alt={emp.fullName} className="w-full h-full object-cover" />
+                          ) : (
+                            <span className="text-xs font-bold text-slate-500 uppercase">
+                              {emp.fullName?.slice(0, 2) || 'GT'}
+                            </span>
+                          )}
+                        </div>
+                        <div>
+                          <div className="font-bold text-slate-900 dark:text-slate-100">{emp.fullName}</div>
+                          <div className="text-xs text-slate-400">{emp.email}</div>
+                        </div>
+                      </div>
                     </td>
                     <td className="px-4 py-3 font-mono text-slate-600 dark:text-slate-300">
                       {emp.nationalId || '-'}
@@ -539,6 +709,13 @@ export default function Employees() {
                         className="px-2.5 py-1 text-xs font-semibold text-primary-600 bg-primary-50 dark:bg-primary-950/60 hover:bg-primary-100 rounded-lg transition"
                       >
                         Profile
+                      </button>
+                      <button
+                        onClick={() => setIdCardEmployee(emp)}
+                        className="p-1.5 text-slate-400 hover:text-sky-600 hover:bg-sky-50 dark:hover:bg-sky-950/40 rounded-lg transition"
+                        title="Generate & Print ID Card"
+                      >
+                        <CreditCard className="w-4 h-4" />
                       </button>
                       {canManage && (
                         <button
@@ -578,33 +755,52 @@ export default function Employees() {
           <div className="space-y-5">
             {/* Header Card */}
             <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="text-lg font-black text-slate-900 dark:text-slate-100">
-                    {selectedEmployee.fullName}
-                  </h3>
-                  <Badge status={selectedEmployee.status} text={selectedEmployee.status} />
+              <div className="flex items-center gap-3.5">
+                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl overflow-hidden bg-slate-200 dark:bg-slate-700 border-2 border-slate-300 dark:border-slate-600 shrink-0 flex items-center justify-center shadow-xs">
+                  {selectedEmployee.profileImage ? (
+                    <img src={selectedEmployee.profileImage} alt={selectedEmployee.fullName} className="w-full h-full object-cover" />
+                  ) : (
+                    <User className="w-8 h-8 text-slate-400" />
+                  )}
                 </div>
-                <p className="text-xs text-primary-500 font-bold mt-0.5">
-                  {selectedEmployee.position} • {selectedEmployee.department} ({selectedEmployee.branch || 'Main Plant'})
-                </p>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  {selectedEmployee.email} • {selectedEmployee.phoneNumber}
-                  {selectedEmployee.nationalId ? ` • ID: ${selectedEmployee.nationalId}` : ''}
-                </p>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-black text-slate-900 dark:text-slate-100">
+                      {selectedEmployee.fullName}
+                    </h3>
+                    <Badge status={selectedEmployee.status} text={selectedEmployee.status} />
+                  </div>
+                  <p className="text-xs text-primary-500 font-bold mt-0.5">
+                    {selectedEmployee.position} • {selectedEmployee.department} ({selectedEmployee.branch || 'Main Plant'})
+                  </p>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    {selectedEmployee.email} • {selectedEmployee.phoneNumber}
+                    {selectedEmployee.nationalId ? ` • ID: ${selectedEmployee.nationalId}` : ''}
+                  </p>
+                </div>
               </div>
 
-              {canManage && (
+              <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
                 <button
-                  onClick={() => {
-                    handleOpenEditModal(selectedEmployee);
-                  }}
-                  className="px-3.5 py-2 bg-primary-500 hover:bg-primary-600 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center gap-1.5 self-start sm:self-auto"
+                  onClick={() => setIdCardEmployee(selectedEmployee)}
+                  className="px-3.5 py-2 bg-slate-900 dark:bg-slate-700 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center gap-1.5"
+                  title="Generate Staff ID Badge"
                 >
-                  <Edit className="w-3.5 h-3.5" />
-                  <span>Edit Profile</span>
+                  <CreditCard className="w-3.5 h-3.5 text-sky-400" />
+                  <span>ID Badge</span>
                 </button>
-              )}
+                {canManage && (
+                  <button
+                    onClick={() => {
+                      handleOpenEditModal(selectedEmployee);
+                    }}
+                    className="px-3.5 py-2 bg-primary-500 hover:bg-primary-600 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center gap-1.5"
+                  >
+                    <Edit className="w-3.5 h-3.5" />
+                    <span>Edit Profile</span>
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Profile Navigation Tabs */}
@@ -613,7 +809,7 @@ export default function Employees() {
                 { id: 'overview', label: 'Overview & Job' },
                 { id: 'address', label: 'Address & Home' },
                 { id: 'emergency', label: 'Emergency & Warranty' },
-                { id: 'bank', label: 'Bank Account' },
+                { id: 'bank', label: `Bank Accounts (${Array.isArray(selectedEmployee.accountDetails) ? selectedEmployee.accountDetails.length : 1})` },
                 { id: 'docs', label: `Documents (${selectedEmployee.documents?.length || 0})` },
                 { id: 'education', label: `Education (${selectedEmployee.educations?.length || 0})` }
               ].map((tab) => (
@@ -732,36 +928,89 @@ export default function Employees() {
               </div>
             )}
 
-            {/* Tab 4: Bank Account */}
+            {/* Tab 4: Multiple Bank Accounts */}
             {profileTab === 'bank' && (
-              <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-3 text-xs">
-                <div className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5 border-b border-slate-200 dark:border-slate-800 pb-2">
-                  <CreditCard className="w-4 h-4 text-primary-500" />
-                  <span>Disbursement Bank Account</span>
+              <div className="space-y-3 text-xs">
+                <div className="flex items-center justify-between pb-1 border-b border-slate-200 dark:border-slate-800">
+                  <span className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5 uppercase tracking-wider text-[11px]">
+                    <CreditCard className="w-4 h-4 text-primary-500" />
+                    <span>Bank Disbursement Accounts</span>
+                  </span>
+                  <span className="text-slate-400 text-[11px]">
+                    Only 1 primary account designated for payroll
+                  </span>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <span className="text-slate-400 text-[10px] uppercase font-bold">Account Holder</span>
-                    <p className="font-bold text-slate-800 dark:text-slate-200 text-sm mt-0.5">
-                      {selectedEmployee.accountDetails?.holderName || selectedEmployee.fullName}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 text-[10px] uppercase font-bold">Account Number</span>
-                    <p className="font-bold text-slate-800 dark:text-slate-200 text-sm font-mono mt-0.5">
-                      {selectedEmployee.accountDetails?.number || 'No account number linked'}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 text-[10px] uppercase font-bold">Status & Primary</span>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Badge status={selectedEmployee.accountDetails?.status || 'active'} text={selectedEmployee.accountDetails?.status || 'Active'} />
-                      {selectedEmployee.accountDetails?.isPrimary && (
-                        <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-md">Primary</span>
-                      )}
+
+                {(() => {
+                  const accounts = Array.isArray(selectedEmployee.accountDetails)
+                    ? selectedEmployee.accountDetails
+                    : selectedEmployee.accountDetails
+                    ? [selectedEmployee.accountDetails]
+                    : [];
+
+                  if (accounts.length === 0) {
+                    return (
+                      <div className="p-4 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 text-center text-slate-400">
+                        No bank accounts registered.
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {accounts.map((acc, idx) => (
+                        <div
+                          key={idx}
+                          className={`p-3.5 rounded-xl border transition ${
+                            acc.isPrimary
+                              ? 'bg-emerald-50/40 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-800 shadow-xs'
+                              : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-2 mb-2">
+                            <div>
+                              <span className="font-bold text-slate-900 dark:text-slate-100 text-xs block">
+                                {acc.bankName || 'Bank Account'}
+                              </span>
+                              {acc.branch && (
+                                <span className="text-[10px] text-slate-400 block">{acc.branch} Branch</span>
+                              )}
+                            </div>
+                            {acc.isPrimary ? (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-600 text-white flex items-center gap-1 shrink-0">
+                                <Check className="w-3 h-3" />
+                                <span>PRIMARY</span>
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 shrink-0">
+                                Secondary
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="space-y-1 text-[11px]">
+                            <div className="text-slate-500">
+                              Holder:{' '}
+                              <strong className="text-slate-800 dark:text-slate-200">
+                                {acc.holderName || selectedEmployee.fullName}
+                              </strong>
+                            </div>
+                            <div className="text-slate-500">
+                              Account Number:{' '}
+                              <strong className="font-mono text-slate-900 dark:text-slate-100">
+                                {acc.number || 'N/A'}
+                              </strong>
+                            </div>
+                            <div className="flex items-center gap-2 pt-1">
+                              <span className="text-slate-400 text-[10px]">Status:</span>
+                              <Badge status={acc.status || 'active'} text={acc.status || 'Active'} />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  </div>
-                </div>
+                  );
+                })()}
               </div>
             )}
 
@@ -797,8 +1046,13 @@ export default function Employees() {
                           <div className="text-[10px] text-slate-400 capitalize">{doc.type}</div>
                         </div>
                         {doc.url && (
-                          <a href={doc.url} target="_blank" rel="noreferrer" className="text-primary-500 hover:underline text-[11px] font-semibold">
-                            View / Download
+                          <a
+                            href={doc.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-primary-600 dark:text-primary-400 hover:underline text-[11px] font-semibold flex items-center gap-1 bg-primary-50 dark:bg-primary-950/60 px-2 py-1 rounded-lg"
+                          >
+                            <span>Open File</span>
                           </a>
                         )}
                       </div>
@@ -891,10 +1145,13 @@ export default function Employees() {
             </label>
             <input
               type="file"
-              accept=".pdf,image/*"
+              accept=".pdf,image/*,.doc,.docx"
               onChange={handleDocumentFileUpload}
               className="w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-primary-50 file:text-primary-700 dark:file:bg-primary-950/60 dark:file:text-primary-300 hover:file:bg-primary-100"
             />
+            <p className="text-[10px] text-slate-400 mt-1">
+              Files are automatically stored via Cloudinary CDN with local disk fallback (never stored as base64 in database).
+            </p>
           </div>
 
           <div>
@@ -905,8 +1162,8 @@ export default function Employees() {
               type="text"
               value={docForm.url}
               onChange={(e) => setDocForm({ ...docForm, url: e.target.value })}
-              className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs"
-              placeholder="https://... or uploaded data"
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-mono"
+              placeholder="https://... or auto-populated from file"
             />
           </div>
 
@@ -1024,7 +1281,7 @@ export default function Employees() {
             }`}
           >
             <Users className="w-3.5 h-3.5" />
-            <span>1. Personal & Job</span>
+            <span>1. Personal & Photo</span>
           </button>
 
           <button
@@ -1063,14 +1320,55 @@ export default function Employees() {
             }`}
           >
             <CreditCard className="w-3.5 h-3.5" />
-            <span>4. Bank Account</span>
+            <span>4. Bank Accounts ({formData.accountDetails.length})</span>
           </button>
         </div>
 
         <form onSubmit={handleSaveEmployee} className="space-y-4">
-          {/* TAB 1: Personal & Employment */}
+          {/* TAB 1: Personal, Photo & Employment */}
           {activeTab === 'personal' && (
             <div className="space-y-4">
+              {/* Profile Image Upload Box */}
+              <div className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/40 flex flex-col sm:flex-row items-center gap-4">
+                <div className="w-20 h-20 rounded-2xl overflow-hidden bg-white dark:bg-slate-800 border-2 border-slate-300 dark:border-slate-700 shadow-xs shrink-0 flex items-center justify-center">
+                  {formData.profileImage ? (
+                    <img src={formData.profileImage} alt="Profile" className="w-full h-full object-cover" />
+                  ) : (
+                    <User className="w-10 h-10 text-slate-400" />
+                  )}
+                </div>
+
+                <div className="flex-1 text-center sm:text-left space-y-1.5">
+                  <div className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                    Employee Profile Photo
+                  </div>
+                  <p className="text-[11px] text-slate-500">
+                    Used across the workforce directory, staff profiles, and automatically printed on the Staff ID Badge.
+                  </p>
+                  <div className="flex items-center gap-2 justify-center sm:justify-start pt-1">
+                    <label className="cursor-pointer py-1.5 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/60 flex items-center gap-1.5 shadow-xs">
+                      <Upload className="w-3.5 h-3.5 text-primary-500" />
+                      <span>{formData.profileImage ? 'Change Photo' : 'Upload Photo'}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleProfileImageUpload}
+                        className="hidden"
+                      />
+                    </label>
+                    {formData.profileImage && (
+                      <button
+                        type="button"
+                        onClick={handleRemoveProfileImage}
+                        className="py-1.5 px-2.5 rounded-xl text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
@@ -1143,7 +1441,6 @@ export default function Employees() {
                   >
                     <option value="male">Male</option>
                     <option value="female">Female</option>
-                    <option value="other">Other</option>
                   </select>
                 </div>
 
@@ -1465,68 +1762,157 @@ export default function Employees() {
             </div>
           )}
 
-          {/* TAB 4: Bank Account */}
+          {/* TAB 4: Multiple Bank Accounts (Only 1 Primary) */}
           {activeTab === 'bank' && (
             <div className="space-y-4">
-              <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900 text-xs text-emerald-700 dark:text-emerald-300 flex items-start gap-2">
-                <CreditCard className="w-4 h-4 shrink-0 mt-0.5" />
-                <span>
-                  Bank account used for monthly payroll disbursement, bonuses, and overtime compensations.
-                </span>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+                    <CreditCard className="w-4 h-4 text-primary-500" />
+                    <span>Disbursement Bank Accounts</span>
+                  </h4>
+                  <p className="text-[11px] text-slate-500">
+                    Register employee bank accounts. Exactly <strong>one</strong> account must be designated as primary for automatic payroll disbursements.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleAddBankAccount}
+                  className="px-3 py-1.5 bg-primary-50 dark:bg-primary-950/60 text-primary-600 dark:text-primary-300 hover:bg-primary-100 rounded-xl font-bold text-xs flex items-center gap-1 transition shadow-xs"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Bank Account</span>
+                </button>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Account Holder Name
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.accountDetails.holderName}
-                    onChange={(e) => handleNestedInputChange('accountDetails', 'holderName', e.target.value)}
-                    placeholder="Full name matching bank passport / ID"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs sm:text-sm focus:ring-2 focus:ring-primary-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Bank Account Number
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.accountDetails.number}
-                    onChange={(e) => handleNestedInputChange('accountDetails', 'number', e.target.value)}
-                    placeholder="e.g. 1000123456789 (CBE / Awash / Dashen)"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs sm:text-sm focus:ring-2 focus:ring-primary-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Account Status
-                  </label>
-                  <select
-                    value={formData.accountDetails.status}
-                    onChange={(e) => handleNestedInputChange('accountDetails', 'status', e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs sm:text-sm focus:ring-2 focus:ring-primary-500"
+              <div className="space-y-3">
+                {formData.accountDetails.map((account, index) => (
+                  <div
+                    key={index}
+                    className={`p-4 rounded-2xl border transition relative ${
+                      account.isPrimary
+                        ? 'border-emerald-500/80 bg-emerald-50/30 dark:bg-emerald-950/20 shadow-xs'
+                        : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40'
+                    }`}
                   >
-                    <option value="active">Active (Disbursements Allowed)</option>
-                    <option value="inactive">Inactive</option>
-                  </select>
-                </div>
+                    <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-200/80 dark:border-slate-800">
+                      <div className="flex items-center gap-2">
+                        <span className="w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center font-mono font-bold text-xs text-slate-700 dark:text-slate-200">
+                          {index + 1}
+                        </span>
+                        <span className="font-bold text-xs text-slate-800 dark:text-slate-200">
+                          {account.bankName || `Bank Account #${index + 1}`}
+                        </span>
+                        {account.isPrimary && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-600 text-white flex items-center gap-1">
+                            <Check className="w-3 h-3" />
+                            <span>PRIMARY DISBURSEMENT</span>
+                          </span>
+                        )}
+                      </div>
 
-                <div className="flex items-center pt-6">
-                  <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-700 dark:text-slate-300">
-                    <input
-                      type="checkbox"
-                      checked={formData.accountDetails.isPrimary}
-                      onChange={(e) => handleNestedInputChange('accountDetails', 'isPrimary', e.target.checked)}
-                      className="w-4 h-4 rounded text-primary-500 focus:ring-primary-500"
-                    />
-                    <span>Designate as Primary Disbursement Account</span>
-                  </label>
-                </div>
+                      <div className="flex items-center gap-2">
+                        {!account.isPrimary && (
+                          <button
+                            type="button"
+                            onClick={() => handleSetPrimaryAccount(index)}
+                            className="px-2.5 py-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 rounded-lg transition"
+                          >
+                            Set as Primary
+                          </button>
+                        )}
+
+                        {formData.accountDetails.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveBankAccount(index)}
+                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition"
+                            title="Remove this account"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                      <div>
+                        <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                          Bank Name *
+                        </label>
+                        <select
+                          value={account.bankName}
+                          onChange={(e) => handleAccountChange(index, 'bankName', e.target.value)}
+                          className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs sm:text-sm focus:ring-2 focus:ring-primary-500"
+                        >
+                          {ETHIOPIAN_BANKS.map((b) => (
+                            <option key={b} value={b}>
+                              {b}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                          Account Holder Full Name *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={account.holderName}
+                          onChange={(e) => handleAccountChange(index, 'holderName', e.target.value)}
+                          placeholder="As stated in passbook / bank ID"
+                          className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs sm:text-sm focus:ring-2 focus:ring-primary-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                          Bank Account Number *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={account.number}
+                          onChange={(e) => handleAccountChange(index, 'number', e.target.value)}
+                          placeholder="e.g. 1000123456789"
+                          className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs sm:text-sm font-mono focus:ring-2 focus:ring-primary-500"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                            Branch (Optional)
+                          </label>
+                          <input
+                            type="text"
+                            value={account.branch || ''}
+                            onChange={(e) => handleAccountChange(index, 'branch', e.target.value)}
+                            placeholder="e.g. Bole Medhanialem"
+                            className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs sm:text-sm focus:ring-2 focus:ring-primary-500"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                            Account Status
+                          </label>
+                          <select
+                            value={account.status}
+                            onChange={(e) => handleAccountChange(index, 'status', e.target.value)}
+                            className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs sm:text-sm focus:ring-2 focus:ring-primary-500"
+                          >
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -1588,6 +1974,13 @@ export default function Employees() {
           </div>
         </form>
       </Modal>
+
+      {/* Staff ID Card Generator & Print Studio Modal */}
+      <IdCardModal
+        isOpen={Boolean(idCardEmployee)}
+        onClose={() => setIdCardEmployee(null)}
+        employee={idCardEmployee}
+      />
     </div>
   );
 }
