@@ -1,5 +1,21 @@
 import mongoose from 'mongoose';
 
+const payrollItemSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    amount: {
+      type: Number,
+      required: true,
+      min: [0, 'Amount cannot be negative']
+    }
+  },
+  { _id: true }
+);
+
 const payrollSchema = new mongoose.Schema(
   {
     employeeId: {
@@ -43,6 +59,8 @@ const payrollSchema = new mongoose.Schema(
       type: Date,
       default: null
     },
+    earnings: [payrollItemSchema],
+    deductions: [payrollItemSchema],
     totalGross: {
       type: Number,
       default: 0,

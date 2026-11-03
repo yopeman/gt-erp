@@ -6,7 +6,8 @@ import {
   updatePayroll,
   approvePayroll,
   markPayrollAsPaid,
-  deletePayroll
+  deletePayroll,
+  massProcessPayroll
 } from '../controllers/payrollController.js';
 import { protect } from '../middleware/auth.js';
 import { authorizeRoles } from '../middleware/rbac.js';
@@ -19,6 +20,9 @@ router
   .route('/')
   .get(getPayrolls)
   .post(authorizeRoles('admin', 'hr', 'finance'), createPayroll);
+
+router.post('/mass', authorizeRoles('admin', 'hr', 'finance'), massProcessPayroll);
+router.post('/bulk', authorizeRoles('admin', 'hr', 'finance'), massProcessPayroll);
 
 router
   .route('/:id')
