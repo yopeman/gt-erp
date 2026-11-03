@@ -107,6 +107,17 @@ export const createEmployee = async (req, res) => {
       linkedUserId = matchedUser._id;
     }
 
+    // Enforce 1-to-1 unique relationship: ensure user is not already linked to another employee
+    if (linkedUserId) {
+      const existingLink = await Employee.findOne({ user: linkedUserId });
+      if (existingLink) {
+        return res.status(409).json({
+          success: false,
+          message: `User account is already linked to employee '${existingLink.fullName}'. A one-to-one relationship is required.`
+        });
+      }
+    }
+
     // Process profile image (Cloudinary with local fallback)
     const finalProfileImage = await processMediaUrl(profileImage, 'gt_erp/employees/profiles', 'image');
 

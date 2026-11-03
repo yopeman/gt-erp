@@ -31,6 +31,17 @@ export const createUser = async (req, res) => {
       }
     }
 
+    // Enforce 1-to-1 unique relationship: ensure employee is not already linked to another user
+    if (linkedEmployeeId) {
+      const existingUserLink = await User.findOne({ employee: linkedEmployeeId });
+      if (existingUserLink) {
+        return res.status(409).json({
+          success: false,
+          message: `Employee is already linked to user account '${existingUserLink.email}'. A one-to-one relationship is required.`
+        });
+      }
+    }
+
     const hashedPassword = hashPassword(password);
 
     const user = await User.create({

@@ -25,7 +25,10 @@ const userSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Employee',
       default: null,
-      index: true
+      index: {
+        unique: true,
+        partialFilterExpression: { employee: { $type: 'objectId' } }
+      }
     },
     isDeleted: {
       type: Boolean,
