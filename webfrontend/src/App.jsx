@@ -10,6 +10,7 @@ import Login from './pages/auth/Login';
 import HrDashboard from './pages/hr/HrDashboard';
 import Employees from './pages/hr/Employees';
 import Attendance from './pages/hr/Attendance';
+import LeaveManagement from './pages/hr/LeaveManagement';
 import LeaveRequests from './pages/hr/LeaveRequests';
 import LeaveBalances from './pages/hr/LeaveBalances';
 import Overtime from './pages/hr/Overtime';
@@ -47,8 +48,9 @@ export default function App() {
           <Route path="hr/dashboard" element={<HrDashboard />} />
           <Route path="hr/employees" element={<Employees />} />
           <Route path="hr/attendance" element={<Attendance />} />
-          <Route path="hr/leave-requests" element={<LeaveRequests />} />
-          <Route path="hr/leave-balances" element={<LeaveBalances />} />
+          <Route path="hr/leave" element={<LeaveManagement />} />
+          <Route path="hr/leave-requests" element={<LeaveManagement initialTab="requests" />} />
+          <Route path="hr/leave-balances" element={<LeaveManagement initialTab="balances" />} />
           <Route path="hr/overtimes" element={<Overtime />} />
           <Route path="hr/payrolls" element={<Payroll />} />
           <Route path="hr/recruitment" element={<Recruitment />} />

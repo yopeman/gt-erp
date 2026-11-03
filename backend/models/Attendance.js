@@ -13,7 +13,9 @@ const selfieCaptureSchema = new mongoose.Schema(
     location: {
       latitude: { type: Number },
       longitude: { type: Number },
-      address: { type: String, trim: true }
+      address: { type: String, trim: true },
+      accuracy: { type: Number },
+      diameter: { type: Number }
     }
   },
   { _id: false }

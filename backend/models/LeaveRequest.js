@@ -38,6 +38,11 @@ const leaveRequestSchema = new mongoose.Schema(
     decideAt: {
       type: Date,
       default: null
+    },
+    decisionReason: {
+      type: String,
+      trim: true,
+      default: ''
     }
   },
   {

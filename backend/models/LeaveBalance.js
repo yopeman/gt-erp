@@ -13,7 +13,7 @@ const leaveBalanceSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ['annual', 'sick', 'emergency', 'holiday', 'casual'],
+      enum: ['annual', 'sick', 'emergency', 'holiday', 'casual', 'maternity', 'paternity', 'unpaid', 'other'],
       required: [true, 'Leave type is required'],
       trim: true
     },

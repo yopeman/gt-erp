@@ -16,15 +16,14 @@ import {
   CheckCircle2,
   RefreshCw,
   AlertCircle,
-  Upload,
   UserCheck,
   Eye,
-  Plus,
-  Filter,
   X,
   FileEdit,
-  Trash2,
-  SlidersHorizontal
+  ExternalLink,
+  Compass,
+  ShieldCheck,
+  User
 } from 'lucide-react';
 
 export default function Attendance() {
@@ -60,7 +59,10 @@ export default function Attendance() {
   const [geoLoading, setGeoLoading] = useState(false);
   const [geoError, setGeoError] = useState('');
 
-  // Photo viewer modal
+  // Complete attendance capture inspection modal
+  const [selectedAttendanceDetail, setSelectedAttendanceDetail] = useState(null);
+
+  // Photo quick viewer modal
   const [viewSelfieModal, setViewSelfieModal] = useState(null);
 
   // Manual Attendance Record Modal for HR/Admin
@@ -74,6 +76,14 @@ export default function Attendance() {
     endTime: '17:00',
     type: 'on time'
   });
+
+  // Current logged in user's employee record
+  const currentEmployee = employees.find(
+    (e) =>
+      (user?.employee && (e._id === (user.employee._id || user.employee))) ||
+      (e.user && (e.user._id || e.user) === user?._id) ||
+      (e.email?.toLowerCase() === user?.email?.toLowerCase())
+  );
 
   const fetchAttendanceRecords = async () => {
     setLoading(true);
@@ -102,12 +112,23 @@ export default function Attendance() {
 
   const fetchEmployeesList = async () => {
     try {
-      const response = await api.get('/employees');
+      const response = await api.get('/employees?limit=200');
       if (response.success && Array.isArray(response.data)) {
         setEmployees(response.data);
-        if (response.data.length > 0) {
-          setSelectedEmployee(response.data[0]._id);
-          setManualForm((prev) => ({ ...prev, employee: response.data[0]._id }));
+        const myEmp = response.data.find(
+          (e) =>
+            (user?.employee && (e._id === (user.employee._id || user.employee))) ||
+            (e.user && (e.user._id || e.user) === user?._id) ||
+            (e.email?.toLowerCase() === user?.email?.toLowerCase())
+        );
+
+        if (!canManage) {
+          if (myEmp) {
+            setSelectedEmployee(myEmp._id);
+          }
+        } else if (response.data.length > 0) {
+          setSelectedEmployee(myEmp ? myEmp._id : response.data[0]._id);
+          setManualForm((prev) => ({ ...prev, employee: myEmp ? myEmp._id : response.data[0]._id }));
         }
       }
     } catch (err) {
@@ -130,6 +151,13 @@ export default function Attendance() {
     };
   }, []);
 
+  // Sync selected employee whenever currentEmployee or canManage changes
+  useEffect(() => {
+    if (!canManage && currentEmployee) {
+      setSelectedEmployee(currentEmployee._id);
+    }
+  }, [canManage, currentEmployee]);
+
   // CAMERA CONTROLS
   const startCamera = async () => {
     setCameraError('');
@@ -149,7 +177,7 @@ export default function Attendance() {
     } catch (err) {
       console.warn('Camera access warning:', err);
       setCameraError(
-        err.message || 'Camera permission denied or camera device unavailable. You can use the photo upload option below.'
+        err.message || 'Camera permission denied or camera device unavailable. Please ensure camera access is enabled.'
       );
     }
   };
@@ -180,18 +208,6 @@ export default function Attendance() {
     startCamera();
   };
 
-  const handleSelfieFileUpload = (e) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        setCapturedSelfie(reader.result);
-        stopCamera();
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
   // GEOLOCATION CONTROLS
   const getGeolocation = () => {
     setGeoLoading(true);
@@ -204,10 +220,12 @@ export default function Attendance() {
 
     navigator.geolocation.getCurrentPosition(
       (pos) => {
+        const accuracy = Math.round(pos.coords.accuracy || 0);
         setGeoLocation({
           latitude: pos.coords.latitude,
           longitude: pos.coords.longitude,
-          accuracy: pos.coords.accuracy
+          accuracy: accuracy,
+          diameter: accuracy * 2
         });
         setGeoLoading(false);
       },
@@ -226,6 +244,12 @@ export default function Attendance() {
     setClockSuccess('');
     setCapturedSelfie('');
     setCameraError('');
+
+    // Ensure non-manager always uses their own employee ID
+    if (!canManage && currentEmployee) {
+      setSelectedEmployee(currentEmployee._id);
+    }
+
     setIsClockModalOpen(true);
     setTimeout(() => {
       startCamera();
@@ -249,20 +273,25 @@ export default function Attendance() {
     try {
       const endpoint = clockAction === 'clockIn' ? '/attendances/clock-in' : '/attendances/clock-out';
 
+      const accuracy = geoLocation?.accuracy || 0;
+      const diameter = geoLocation?.diameter || accuracy * 2;
+
       const locationPayload = geoLocation
         ? {
             latitude: geoLocation.latitude,
             longitude: geoLocation.longitude,
-            address: `GPS [${geoLocation.latitude.toFixed(6)}, ${geoLocation.longitude.toFixed(6)}] (±${Math.round(
-              geoLocation.accuracy || 0
-            )}m)`
+            accuracy: accuracy,
+            diameter: diameter,
+            address: `GPS [${geoLocation.latitude.toFixed(6)}, ${geoLocation.longitude.toFixed(6)}] (Radius ±${accuracy}m, Diameter ${diameter}m)`
           }
         : {
             address: 'GPS coordinates unavailable / Browser permission not granted'
           };
 
+      const employeeTarget = canManage ? selectedEmployee : currentEmployee?._id || selectedEmployee;
+
       const payload = {
-        employee: selectedEmployee,
+        employee: employeeTarget,
         location: locationPayload,
         selfie: capturedSelfie || undefined
       };
@@ -283,7 +312,7 @@ export default function Attendance() {
     }
   };
 
-  // MANUAL ATTENDANCE ADJUSTMENT
+  // MANUAL ATTENDANCE ADJUSTMENT (HR / Admin only)
   const handleOpenManualModal = () => {
     setManualError('');
     setIsManualModalOpen(true);
@@ -336,6 +365,17 @@ export default function Attendance() {
     return timeVal;
   };
 
+  const calculateDuration = (start, end) => {
+    if (!start || !end) return 'In Progress';
+    const s = new Date(start).getTime();
+    const e = new Date(end).getTime();
+    if (isNaN(s) || isNaN(e) || e < s) return 'N/A';
+    const diffMs = e - s;
+    const hrs = Math.floor(diffMs / (1000 * 60 * 60));
+    const mins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+    return `${hrs}h ${mins}m`;
+  };
+
   // Filter attendances by client search query
   const filteredAttendances = attendances.filter((att) => {
     const empName = att.employee?.fullName?.toLowerCase() || '';
@@ -354,7 +394,9 @@ export default function Attendance() {
             <span>{t('nav.attendance')}</span>
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Section 2.3 • Daily workforce tracking with live camera selfie verification and GPS location.
+            {canManage
+              ? 'Workforce attendance management with selfie camera capture and GPS geolocation radius.'
+              : 'Personal attendance records with live camera selfie verification and GPS check-in.'}
           </p>
         </div>
 
@@ -405,7 +447,7 @@ export default function Attendance() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search employee or dept..."
+            placeholder={canManage ? 'Search employee or dept...' : 'Search records...'}
             className="w-full pl-9 pr-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-primary-500"
           />
         </div>
@@ -465,7 +507,11 @@ export default function Attendance() {
       ) : filteredAttendances.length === 0 ? (
         <EmptyState
           title="No attendance records found"
-          message="No daily clock logs match your criteria. Use Clock In or HR Adjustment to register punches."
+          message={
+            canManage
+              ? 'No daily clock logs match your criteria. Use Clock In or HR Adjustment to register punches.'
+              : 'You have no attendance logs registered yet. Use Clock In to record your daily attendance.'
+          }
           actionText={t('actions.clockIn')}
           onAction={() => openClockModal('clockIn')}
           icon={Clock}
@@ -477,14 +523,29 @@ export default function Attendance() {
             {filteredAttendances.map((att) => (
               <div
                 key={att._id}
-                className="p-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-xs space-y-2.5"
+                className="p-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-xs space-y-3"
               >
                 <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">
-                      {att.employee?.fullName || 'Employee'}
-                    </h3>
-                    <p className="text-xs text-slate-400">{att.employee?.department || '-'}</p>
+                  <div className="flex items-center gap-2.5">
+                    {att.employee?.profileImage ? (
+                      <img
+                        src={att.employee.profileImage}
+                        alt={att.employee?.fullName}
+                        className="w-10 h-10 rounded-xl object-cover border border-slate-200 dark:border-slate-700"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-xl bg-primary-50 dark:bg-primary-950/40 text-primary-600 font-bold flex items-center justify-center border border-primary-500/20 text-xs">
+                        {att.employee?.fullName?.charAt(0) || 'E'}
+                      </div>
+                    )}
+                    <div>
+                      <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">
+                        {att.employee?.fullName || 'Employee'}
+                      </h3>
+                      <p className="text-xs text-slate-400">
+                        {att.employee?.department || '-'} • {att.employee?.position || 'Staff'}
+                      </p>
+                    </div>
                   </div>
                   <Badge status={att.type || 'onTime'} text={att.type || 'On Time'} />
                 </div>
@@ -492,57 +553,50 @@ export default function Attendance() {
                 <div className="text-xs grid grid-cols-2 gap-2 text-slate-600 dark:text-slate-300 border-t border-slate-100 dark:border-slate-700/60 pt-2">
                   <div>
                     <span className="text-slate-400">Date:</span>{' '}
-                    {new Date(att.date).toLocaleDateString()}
+                    <strong>{new Date(att.date).toLocaleDateString()}</strong>
                   </div>
                   <div>
-                    <span className="text-slate-400">Punch:</span>{' '}
-                    {formatTimeDisplay(att.startTime)} - {formatTimeDisplay(att.endTime)}
+                    <span className="text-slate-400">Hours:</span>{' '}
+                    <strong>{calculateDuration(att.startTime, att.endTime)}</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Clock In:</span>{' '}
+                    <span className="font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
+                      {formatTimeDisplay(att.startTime)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Clock Out:</span>{' '}
+                    <span className="font-mono text-primary-500 font-semibold">
+                      {formatTimeDisplay(att.endTime)}
+                    </span>
                   </div>
                 </div>
 
-                {/* Selfies & Geolocation badges */}
-                <div className="flex items-center justify-between pt-1 border-t border-slate-100 dark:border-slate-700/60 text-[11px]">
+                {/* Verification badges & View Complete Action */}
+                <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-700/60 text-[11px]">
                   <div className="flex items-center gap-1.5">
                     {att.clockInSelfie?.image && (
-                      <button
-                        onClick={() =>
-                          setViewSelfieModal({
-                            title: `Clock-In Selfie: ${att.employee?.fullName}`,
-                            image: att.clockInSelfie.image,
-                            capturedAt: att.clockInSelfie.capturedAt,
-                            location: att.clockInSelfie.location
-                          })
-                        }
-                        className="px-2 py-1 rounded-md bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 flex items-center gap-1 font-semibold hover:underline"
-                      >
+                      <span className="px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 flex items-center gap-1 font-semibold text-[10px]">
                         <Camera className="w-3 h-3" />
-                        <span>In Selfie</span>
-                      </button>
+                        <span>Selfie In</span>
+                      </span>
                     )}
-                    {att.clockOutSelfie?.image && (
-                      <button
-                        onClick={() =>
-                          setViewSelfieModal({
-                            title: `Clock-Out Selfie: ${att.employee?.fullName}`,
-                            image: att.clockOutSelfie.image,
-                            capturedAt: att.clockOutSelfie.capturedAt,
-                            location: att.clockOutSelfie.location
-                          })
-                        }
-                        className="px-2 py-1 rounded-md bg-primary-50 dark:bg-primary-950/50 text-primary-700 dark:text-primary-300 flex items-center gap-1 font-semibold hover:underline"
-                      >
-                        <Camera className="w-3 h-3" />
-                        <span>Out Selfie</span>
-                      </button>
+                    {att.clockInSelfie?.location?.latitude && (
+                      <span className="px-2 py-0.5 rounded-md bg-sky-50 dark:bg-sky-950/50 text-sky-700 dark:text-sky-300 flex items-center gap-1 font-semibold text-[10px]">
+                        <MapPin className="w-3 h-3" />
+                        <span>GPS</span>
+                      </span>
                     )}
                   </div>
 
-                  {att.clockInSelfie?.location?.latitude && (
-                    <span className="text-slate-400 flex items-center gap-1 text-[10px]" title="GPS Verified">
-                      <MapPin className="w-3 h-3 text-emerald-500" />
-                      <span>GPS OK</span>
-                    </span>
-                  )}
+                  <button
+                    onClick={() => setSelectedAttendanceDetail(att)}
+                    className="px-3 py-1.5 rounded-lg bg-primary-50 dark:bg-primary-950/60 text-primary-600 dark:text-primary-400 hover:bg-primary-100 font-semibold text-xs flex items-center gap-1.5 transition"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>View Capture</span>
+                  </button>
                 </div>
               </div>
             ))}
@@ -556,81 +610,73 @@ export default function Attendance() {
                   <th className="px-4 py-3">Employee</th>
                   <th className="px-4 py-3">Department</th>
                   <th className="px-4 py-3">Date</th>
-                  <th className="px-4 py-3">Start Time</th>
-                  <th className="px-4 py-3">End Time</th>
-                  <th className="px-4 py-3">Verification / Selfies</th>
+                  <th className="px-4 py-3">Clock In</th>
+                  <th className="px-4 py-3">Clock Out</th>
+                  <th className="px-4 py-3">Duration</th>
                   <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60">
                 {filteredAttendances.map((att) => (
                   <tr key={att._id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition">
-                    <td className="px-4 py-3 font-semibold text-slate-900 dark:text-slate-100">
-                      {att.employee?.fullName || 'Employee'}
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2.5">
+                        {att.employee?.profileImage ? (
+                          <img
+                            src={att.employee.profileImage}
+                            alt={att.employee?.fullName}
+                            className="w-8 h-8 rounded-full object-cover border border-slate-200 dark:border-slate-700"
+                          />
+                        ) : (
+                          <div className="w-8 h-8 rounded-full bg-primary-50 dark:bg-primary-950/50 text-primary-600 dark:text-primary-400 font-bold flex items-center justify-center border border-primary-500/20 text-xs">
+                            {att.employee?.fullName?.charAt(0) || 'E'}
+                          </div>
+                        )}
+                        <div>
+                          <div className="font-semibold text-slate-900 dark:text-slate-100">
+                            {att.employee?.fullName || 'Employee'}
+                          </div>
+                          <div className="text-slate-500 dark:text-slate-400 text-xs">
+                            {att.employee?.position || 'Staff'}
+                          </div>
+                        </div>
+                      </div>
                     </td>
+
                     <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
                       {att.employee?.department || '-'}
                     </td>
+
                     <td className="px-4 py-3 text-slate-500 dark:text-slate-400">
                       {new Date(att.date).toLocaleDateString()}
                     </td>
+
                     <td className="px-4 py-3 font-mono font-medium text-emerald-600 dark:text-emerald-400">
                       {formatTimeDisplay(att.startTime)}
                     </td>
+
                     <td className="px-4 py-3 font-mono font-medium text-primary-500">
                       {formatTimeDisplay(att.endTime)}
                     </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        {att.clockInSelfie?.image && (
-                          <button
-                            onClick={() =>
-                              setViewSelfieModal({
-                                title: `Clock-In Selfie: ${att.employee?.fullName}`,
-                                image: att.clockInSelfie.image,
-                                capturedAt: att.clockInSelfie.capturedAt,
-                                location: att.clockInSelfie.location
-                              })
-                            }
-                            className="px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 text-xs font-semibold hover:underline flex items-center gap-1"
-                            title="Inspect Clock-In Selfie"
-                          >
-                            <Camera className="w-3 h-3" />
-                            <span>In</span>
-                          </button>
-                        )}
-                        {att.clockOutSelfie?.image && (
-                          <button
-                            onClick={() =>
-                              setViewSelfieModal({
-                                title: `Clock-Out Selfie: ${att.employee?.fullName}`,
-                                image: att.clockOutSelfie.image,
-                                capturedAt: att.clockOutSelfie.capturedAt,
-                                location: att.clockOutSelfie.location
-                              })
-                            }
-                            className="px-2 py-0.5 rounded bg-primary-50 dark:bg-primary-950/60 text-primary-700 dark:text-primary-400 text-xs font-semibold hover:underline flex items-center gap-1"
-                            title="Inspect Clock-Out Selfie"
-                          >
-                            <Camera className="w-3 h-3" />
-                            <span>Out</span>
-                          </button>
-                        )}
-                        {att.clockInSelfie?.location?.latitude && (
-                          <span
-                            className="text-slate-400 flex items-center gap-0.5 text-[11px]"
-                            title={`GPS: ${att.clockInSelfie.location.latitude}, ${att.clockInSelfie.location.longitude}`}
-                          >
-                            <MapPin className="w-3 h-3 text-emerald-500" />
-                          </span>
-                        )}
-                        {!att.clockInSelfie?.image && !att.clockOutSelfie?.image && (
-                          <span className="text-slate-400 text-xs italic">Manual log</span>
-                        )}
-                      </div>
+
+                    <td className="px-4 py-3 font-medium text-slate-700 dark:text-slate-300">
+                      {calculateDuration(att.startTime, att.endTime)}
                     </td>
+
                     <td className="px-4 py-3">
                       <Badge status={att.type || 'onTime'} text={att.type || 'On Time'} />
+                    </td>
+
+                    <td className="px-4 py-3 text-right">
+                      <button
+                        onClick={() => setSelectedAttendanceDetail(att)}
+                        className="px-2.5 py-1 text-xs font-semibold text-primary-600 bg-primary-50 dark:bg-primary-950/60 hover:bg-primary-100 rounded-lg transition inline-flex items-center gap-1.5"
+                        title="View complete attendance capture information"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        <span>View Capture</span>
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -640,7 +686,7 @@ export default function Attendance() {
         </>
       )}
 
-      {/* Real Camera & GPS Clock In / Out Modal */}
+      {/* Clock In / Out Modal (Real Camera & Live Geolocation) */}
       <Modal
         isOpen={isClockModalOpen}
         onClose={closeClockModal}
@@ -662,34 +708,61 @@ export default function Attendance() {
         )}
 
         <form onSubmit={handleClockAction} className="space-y-4">
+          {/* Employee Selection: HR/Manager can select other, regular employee is locked to themselves */}
           <div>
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-              Select Employee Profile *
+              Employee Profile *
             </label>
-            <select
-              value={selectedEmployee}
-              onChange={(e) => setSelectedEmployee(e.target.value)}
-              required
-              className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs sm:text-sm focus:ring-2 focus:ring-primary-500"
-            >
-              {employees.length === 0 ? (
-                <option value="">No employees found - register first</option>
-              ) : (
-                employees.map((emp) => (
-                  <option key={emp._id} value={emp._id}>
-                    {emp.fullName} ({emp.department} - {emp.position})
-                  </option>
-                ))
-              )}
-            </select>
+            {canManage ? (
+              <select
+                value={selectedEmployee}
+                onChange={(e) => setSelectedEmployee(e.target.value)}
+                required
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs sm:text-sm focus:ring-2 focus:ring-primary-500"
+              >
+                {employees.length === 0 ? (
+                  <option value="">No employees found - register first</option>
+                ) : (
+                  employees.map((emp) => (
+                    <option key={emp._id} value={emp._id}>
+                      {emp.fullName} ({emp.department} - {emp.position})
+                    </option>
+                  ))
+                )}
+              </select>
+            ) : (
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center gap-3">
+                {currentEmployee?.profileImage ? (
+                  <img
+                    src={currentEmployee.profileImage}
+                    alt={currentEmployee.fullName}
+                    className="w-10 h-10 rounded-xl object-cover border border-slate-200 dark:border-slate-700"
+                  />
+                ) : (
+                  <div className="w-10 h-10 rounded-xl bg-primary-50 dark:bg-primary-950/40 text-primary-600 font-bold flex items-center justify-center border border-primary-500/20 text-xs">
+                    {(currentEmployee?.fullName || user?.fullName)?.slice(0, 2).toUpperCase()}
+                  </div>
+                )}
+                <div>
+                  <div className="font-bold text-xs sm:text-sm text-slate-900 dark:text-slate-100">
+                    {currentEmployee?.fullName || user?.fullName}
+                  </div>
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                    {currentEmployee?.department
+                      ? `${currentEmployee.department} • ${currentEmployee.position}`
+                      : user?.email}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Real Browser Camera Capture */}
+          {/* Verification Selfie (Real Camera Only, Upload Fallback Removed) */}
           <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 space-y-2.5">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
                 <Camera className="w-4 h-4 text-primary-500" />
-                <span>Verification Selfie (Real Camera)</span>
+                <span>Verification Selfie</span>
               </span>
               {capturedSelfie ? (
                 <button
@@ -711,7 +784,7 @@ export default function Attendance() {
               )}
             </div>
 
-            {/* Video or Snapshot View */}
+            {/* Live Video or Snapshot View */}
             <div className="relative rounded-xl overflow-hidden bg-slate-950 aspect-video flex items-center justify-center border border-slate-800">
               {capturedSelfie ? (
                 <img src={capturedSelfie} alt="Captured Selfie" className="w-full h-full object-cover" />
@@ -737,36 +810,20 @@ export default function Attendance() {
               <canvas ref={canvasRef} className="hidden" />
             </div>
 
-            {/* Camera Actions & File Fallback */}
-            <div className="flex items-center justify-between gap-2 pt-1">
-              {!capturedSelfie && !cameraError && (
-                <button
-                  type="button"
-                  onClick={capturePhoto}
-                  className="w-full py-2 bg-primary-500 hover:bg-primary-600 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center justify-center gap-1.5"
-                >
-                  <Camera className="w-4 h-4" />
-                  <span>Snap Live Photo</span>
-                </button>
-              )}
-
-              <div className="w-full">
-                <label className="w-full cursor-pointer py-1.5 px-3 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-[11px] font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 flex items-center justify-center gap-1.5">
-                  <Upload className="w-3.5 h-3.5 text-primary-500" />
-                  <span>{capturedSelfie ? 'Or upload different photo' : 'Upload photo / file fallback'}</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    capture="user"
-                    onChange={handleSelfieFileUpload}
-                    className="hidden"
-                  />
-                </label>
-              </div>
-            </div>
+            {/* Snap Live Photo Button */}
+            {!capturedSelfie && !cameraError && (
+              <button
+                type="button"
+                onClick={capturePhoto}
+                className="w-full py-2 bg-primary-500 hover:bg-primary-600 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center justify-center gap-1.5"
+              >
+                <Camera className="w-4 h-4" />
+                <span>Snap Live Photo</span>
+              </button>
+            )}
           </div>
 
-          {/* Real Browser Geolocation */}
+          {/* Live Browser Geolocation */}
           <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 space-y-1.5 text-xs">
             <div className="flex items-center justify-between">
               <span className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
@@ -794,7 +851,7 @@ export default function Attendance() {
                 </div>
                 <div>Lat: {geoLocation.latitude.toFixed(6)}, Long: {geoLocation.longitude.toFixed(6)}</div>
                 <div className="text-slate-400 text-[10px] font-sans">
-                  Accuracy radius: ±{Math.round(geoLocation.accuracy || 0)} meters
+                  Accuracy radius: ±{Math.round(geoLocation.accuracy || 0)} meters • Diameter: {geoLocation.diameter || Math.round(geoLocation.accuracy * 2)} meters
                 </div>
               </div>
             ) : (
@@ -815,7 +872,7 @@ export default function Attendance() {
             </button>
             <button
               type="submit"
-              disabled={submitting || !selectedEmployee}
+              disabled={submitting || (!selectedEmployee && !currentEmployee)}
               className={`px-5 py-2 rounded-xl text-white font-bold text-xs shadow-md transition disabled:opacity-50 ${
                 clockAction === 'clockIn' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-primary-500 hover:bg-primary-600'
               }`}
@@ -830,7 +887,248 @@ export default function Attendance() {
         </form>
       </Modal>
 
-      {/* View Selfie Preview Modal */}
+      {/* Complete Attendance Capture Information Modal (Images, Coordinates, Radius & Diameter) */}
+      <Modal
+        isOpen={Boolean(selectedAttendanceDetail)}
+        onClose={() => setSelectedAttendanceDetail(null)}
+        title="Complete Attendance Capture Information"
+        maxWidth="max-w-2xl"
+      >
+        {selectedAttendanceDetail && (
+          <div className="space-y-4">
+            {/* Employee Profile Header */}
+            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                {selectedAttendanceDetail.employee?.profileImage ? (
+                  <img
+                    src={selectedAttendanceDetail.employee.profileImage}
+                    alt={selectedAttendanceDetail.employee?.fullName}
+                    className="w-12 h-12 rounded-xl object-cover border border-slate-200 dark:border-slate-700"
+                  />
+                ) : (
+                  <div className="w-12 h-12 rounded-xl bg-primary-50 dark:bg-primary-950/40 text-primary-600 font-bold flex items-center justify-center border border-primary-500/20 text-sm">
+                    {selectedAttendanceDetail.employee?.fullName?.charAt(0) || 'E'}
+                  </div>
+                )}
+                <div>
+                  <h3 className="font-bold text-sm sm:text-base text-slate-900 dark:text-slate-100">
+                    {selectedAttendanceDetail.employee?.fullName || 'Employee'}
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    {selectedAttendanceDetail.employee?.department || '-'} •{' '}
+                    {selectedAttendanceDetail.employee?.position || 'Staff'}
+                  </p>
+                  {selectedAttendanceDetail.employee?.nationalId && (
+                    <span className="text-[10px] text-slate-400 font-mono">
+                      ID: {selectedAttendanceDetail.employee.nationalId}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex sm:flex-col items-center sm:items-end justify-between gap-1">
+                <Badge
+                  status={selectedAttendanceDetail.type || 'onTime'}
+                  text={selectedAttendanceDetail.type || 'On Time'}
+                />
+                <span className="text-xs text-slate-400">
+                  {new Date(selectedAttendanceDetail.date).toLocaleDateString()}
+                </span>
+              </div>
+            </div>
+
+            {/* Shift Timings Overview */}
+            <div className="grid grid-cols-3 gap-2 text-center text-xs">
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800">
+                <span className="text-slate-400 text-[10px] uppercase font-bold block mb-0.5">Clock In</span>
+                <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-sm">
+                  {formatTimeDisplay(selectedAttendanceDetail.startTime)}
+                </span>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800">
+                <span className="text-slate-400 text-[10px] uppercase font-bold block mb-0.5">Clock Out</span>
+                <span className="font-mono font-bold text-primary-500 text-sm">
+                  {formatTimeDisplay(selectedAttendanceDetail.endTime)}
+                </span>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800">
+                <span className="text-slate-400 text-[10px] uppercase font-bold block mb-0.5">Shift Duration</span>
+                <span className="font-bold text-slate-800 dark:text-slate-200 text-sm">
+                  {calculateDuration(selectedAttendanceDetail.startTime, selectedAttendanceDetail.endTime)}
+                </span>
+              </div>
+            </div>
+
+            {/* Clock-In Capture Details */}
+            <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
+                <h4 className="font-bold text-xs text-slate-800 dark:text-slate-200 flex items-center gap-1.5 uppercase tracking-wider">
+                  <LogIn className="w-4 h-4 text-emerald-500" />
+                  <span>Clock-In Verification Capture</span>
+                </h4>
+                {selectedAttendanceDetail.clockInSelfie?.capturedAt && (
+                  <span className="text-[11px] text-slate-400">
+                    {new Date(selectedAttendanceDetail.clockInSelfie.capturedAt).toLocaleTimeString()}
+                  </span>
+                )}
+              </div>
+
+              {selectedAttendanceDetail.clockInSelfie?.image ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
+                  {/* Photo */}
+                  <div className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-950 aspect-video sm:aspect-square flex items-center justify-center">
+                    <img
+                      src={selectedAttendanceDetail.clockInSelfie.image}
+                      alt="Clock In Selfie"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+
+                  {/* Location & Diameter details */}
+                  <div className="space-y-2 text-xs">
+                    <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800 space-y-1">
+                      <span className="text-[10px] uppercase font-bold text-slate-400 flex items-center gap-1">
+                        <MapPin className="w-3.5 h-3.5 text-emerald-500" />
+                        <span>GPS Coordinates & Radius</span>
+                      </span>
+                      {selectedAttendanceDetail.clockInSelfie?.location?.latitude ? (
+                        <>
+                          <div className="font-mono text-slate-800 dark:text-slate-200 font-semibold text-[11px]">
+                            Lat: {selectedAttendanceDetail.clockInSelfie.location.latitude.toFixed(6)}, Lng:{' '}
+                            {selectedAttendanceDetail.clockInSelfie.location.longitude.toFixed(6)}
+                          </div>
+                          <div className="text-[11px] text-slate-600 dark:text-slate-400">
+                            Accuracy Radius:{' '}
+                            <strong className="text-emerald-600 dark:text-emerald-400">
+                              ±{Math.round(selectedAttendanceDetail.clockInSelfie.location.accuracy || 15)}m
+                            </strong>
+                          </div>
+                          <div className="text-[11px] text-slate-600 dark:text-slate-400">
+                            Capture Diameter:{' '}
+                            <strong className="text-primary-600 dark:text-primary-400">
+                              {selectedAttendanceDetail.clockInSelfie.location.diameter ||
+                                Math.round((selectedAttendanceDetail.clockInSelfie.location.accuracy || 15) * 2)}
+                              m
+                            </strong>
+                          </div>
+                          <div className="pt-1.5">
+                            <a
+                              href={`https://www.google.com/maps?q=${selectedAttendanceDetail.clockInSelfie.location.latitude},${selectedAttendanceDetail.clockInSelfie.location.longitude}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary-600 dark:text-primary-400 hover:underline bg-primary-50 dark:bg-primary-950/60 px-2.5 py-1 rounded-lg"
+                            >
+                              <ExternalLink className="w-3 h-3" />
+                              <span>View On Google Maps</span>
+                            </a>
+                          </div>
+                        </>
+                      ) : (
+                        <p className="text-slate-400 italic text-[11px]">
+                          {selectedAttendanceDetail.clockInSelfie?.location?.address || 'GPS coordinates not recorded'}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-slate-400 italic">No live selfie recorded at clock-in.</p>
+              )}
+            </div>
+
+            {/* Clock-Out Capture Details (if present) */}
+            {selectedAttendanceDetail.endTime && (
+              <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
+                <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
+                  <h4 className="font-bold text-xs text-slate-800 dark:text-slate-200 flex items-center gap-1.5 uppercase tracking-wider">
+                    <LogOut className="w-4 h-4 text-primary-500" />
+                    <span>Clock-Out Verification Capture</span>
+                  </h4>
+                  {selectedAttendanceDetail.clockOutSelfie?.capturedAt && (
+                    <span className="text-[11px] text-slate-400">
+                      {new Date(selectedAttendanceDetail.clockOutSelfie.capturedAt).toLocaleTimeString()}
+                    </span>
+                  )}
+                </div>
+
+                {selectedAttendanceDetail.clockOutSelfie?.image ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
+                    {/* Photo */}
+                    <div className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-950 aspect-video sm:aspect-square flex items-center justify-center">
+                      <img
+                        src={selectedAttendanceDetail.clockOutSelfie.image}
+                        alt="Clock Out Selfie"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+
+                    {/* Location & Diameter details */}
+                    <div className="space-y-2 text-xs">
+                      <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800 space-y-1">
+                        <span className="text-[10px] uppercase font-bold text-slate-400 flex items-center gap-1">
+                          <MapPin className="w-3.5 h-3.5 text-primary-500" />
+                          <span>GPS Coordinates & Radius</span>
+                        </span>
+                        {selectedAttendanceDetail.clockOutSelfie?.location?.latitude ? (
+                          <>
+                            <div className="font-mono text-slate-800 dark:text-slate-200 font-semibold text-[11px]">
+                              Lat: {selectedAttendanceDetail.clockOutSelfie.location.latitude.toFixed(6)}, Lng:{' '}
+                              {selectedAttendanceDetail.clockOutSelfie.location.longitude.toFixed(6)}
+                            </div>
+                            <div className="text-[11px] text-slate-600 dark:text-slate-400">
+                              Accuracy Radius:{' '}
+                              <strong className="text-emerald-600 dark:text-emerald-400">
+                                ±{Math.round(selectedAttendanceDetail.clockOutSelfie.location.accuracy || 15)}m
+                              </strong>
+                            </div>
+                            <div className="text-[11px] text-slate-600 dark:text-slate-400">
+                              Capture Diameter:{' '}
+                              <strong className="text-primary-600 dark:text-primary-400">
+                                {selectedAttendanceDetail.clockOutSelfie.location.diameter ||
+                                  Math.round((selectedAttendanceDetail.clockOutSelfie.location.accuracy || 15) * 2)}
+                                m
+                              </strong>
+                            </div>
+                            <div className="pt-1.5">
+                              <a
+                                href={`https://www.google.com/maps?q=${selectedAttendanceDetail.clockOutSelfie.location.latitude},${selectedAttendanceDetail.clockOutSelfie.location.longitude}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary-600 dark:text-primary-400 hover:underline bg-primary-50 dark:bg-primary-950/60 px-2.5 py-1 rounded-lg"
+                              >
+                                <ExternalLink className="w-3 h-3" />
+                                <span>View On Google Maps</span>
+                              </a>
+                            </div>
+                          </>
+                        ) : (
+                          <p className="text-slate-400 italic text-[11px]">
+                            {selectedAttendanceDetail.clockOutSelfie?.location?.address || 'GPS coordinates not recorded'}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-400 italic">No live selfie recorded at clock-out.</p>
+                )}
+              </div>
+            )}
+
+            <div className="flex justify-end pt-2 border-t border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setSelectedAttendanceDetail(null)}
+                className="px-4 py-2 text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-xl transition"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Quick Selfie Viewer Modal */}
       <Modal
         isOpen={Boolean(viewSelfieModal)}
         onClose={() => setViewSelfieModal(null)}
@@ -879,7 +1177,7 @@ export default function Attendance() {
         )}
       </Modal>
 
-      {/* HR Manual Attendance Adjustment Modal */}
+      {/* HR Manual Attendance Adjustment Modal (HR / Admin only) */}
       <Modal
         isOpen={isManualModalOpen}
         onClose={() => setIsManualModalOpen(false)}
@@ -922,8 +1220,7 @@ export default function Attendance() {
               value={manualForm.date}
               onChange={(e) => setManualForm({ ...manualForm, date: e.target.value })}
               className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs sm:text-sm focus:ring-2 focus:ring-primary-500"
-            >
-            </input>
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-3">

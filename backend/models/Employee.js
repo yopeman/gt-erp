@@ -220,11 +220,14 @@ const employeeSchema = new mongoose.Schema(
   }
 );
 
+// Helper to lazily load User model safely across all import contexts
+const getUserModel = async () => mongoose.models.User || (await import('./User.js')).default;
+
 // Pre-save hook: auto-link with User or create default User account if none exists
 employeeSchema.pre('save', async function () {
   try {
     if (!this.user && this.email) {
-      const User = mongoose.models.User || mongoose.model('User');
+      const User = await getUserModel();
       let matchedUser = await User.findOne({ email: this.email.toLowerCase() });
       if (!matchedUser) {
         const { hashPassword } = await import('../utils/password.js');
@@ -249,7 +252,7 @@ employeeSchema.pre('save', async function () {
 employeeSchema.post('save', async function (doc) {
   try {
     if (doc && doc.user) {
-      const User = mongoose.models.User || mongoose.model('User');
+      const User = await getUserModel();
       await User.updateOne(
         { _id: doc.user },
         {
@@ -270,7 +273,7 @@ employeeSchema.post('save', async function (doc) {
 employeeSchema.post('findOneAndUpdate', async function (doc) {
   try {
     if (doc && doc.user) {
-      const User = mongoose.models.User || mongoose.model('User');
+      const User = await getUserModel();
       const updateData = {
         employee: doc._id,
         fullName: doc.fullName,
@@ -290,7 +293,7 @@ employeeSchema.post('findOneAndUpdate', async function (doc) {
 employeeSchema.post('findOneAndDelete', async function (doc) {
   try {
     if (doc) {
-      const User = mongoose.models.User || mongoose.model('User');
+      const User = await getUserModel();
       await User.updateMany(
         { employee: doc._id },
         { $set: { employee: null } }
