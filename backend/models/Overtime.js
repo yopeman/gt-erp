@@ -49,6 +49,15 @@ const overtimeSchema = new mongoose.Schema(
       type: Boolean,
       default: false
     },
+    decisionReason: {
+      type: String,
+      trim: true,
+      default: ''
+    },
+    reviewedAt: {
+      type: Date,
+      default: null
+    },
     approvedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',

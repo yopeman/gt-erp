@@ -58,6 +58,13 @@ export default function Overtime() {
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [selectedOvertime, setSelectedOvertime] = useState(null);
 
+  // Modal: Review Decision (Approve / Reject with remarks)
+  const [decisionModalOpen, setDecisionModalOpen] = useState(false);
+  const [decisionType, setDecisionType] = useState('approved'); // 'approved' | 'rejected'
+  const [decisionReason, setDecisionReason] = useState('');
+  const [decidingOvertime, setDecidingOvertime] = useState(null);
+  const [submittingDecision, setSubmittingDecision] = useState(false);
+
   // Identify current logged-in employee record
   const currentEmployee = useMemo(() => {
     return employees.find(
@@ -188,34 +195,46 @@ export default function Overtime() {
     }
   };
 
-  const handleReview = async (id, status, workedHours) => {
+  // Open Decision Prompt Modal (Approve or Reject with reason)
+  const openDecisionModal = (overtime, type) => {
+    setDecidingOvertime(overtime);
+    setDecisionType(type);
+    setDecisionReason('');
+    setDecisionModalOpen(true);
+  };
+
+  // Execute Review Decision (Approve / Reject with remarks)
+  const handleExecuteDecision = async (e) => {
+    e.preventDefault();
+    if (!decidingOvertime) return;
+
+    if (decisionType === 'rejected' && !decisionReason.trim()) {
+      alert('Please provide a reason for rejecting the overtime request.');
+      return;
+    }
+
+    setSubmittingDecision(true);
     try {
-      const response = await api.patch(`/overtimes/${id}/review`, {
-        status,
-        approvedHours: status === 'approved' ? workedHours : 0
+      const response = await api.patch(`/overtimes/${decidingOvertime._id}/review`, {
+        status: decisionType,
+        approvedHours: decisionType === 'approved' ? decidingOvertime.workedHours : 0,
+        decisionReason: decisionReason.trim()
       });
+
       if (response.success) {
+        setDecisionModalOpen(false);
+        const updatedRecord = response.data;
         setOvertimes((prev) =>
-          prev.map((o) =>
-            o._id === id
-              ? {
-                  ...o,
-                  status,
-                  approvedHours: status === 'approved' ? workedHours : 0
-                }
-              : o
-          )
+          prev.map((o) => (o._id === decidingOvertime._id ? updatedRecord : o))
         );
-        if (selectedOvertime?._id === id) {
-          setSelectedOvertime((prev) => ({
-            ...prev,
-            status,
-            approvedHours: status === 'approved' ? workedHours : 0
-          }));
+        if (selectedOvertime?._id === decidingOvertime._id) {
+          setSelectedOvertime(updatedRecord);
         }
       }
     } catch (err) {
-      alert(err.message || 'Review update failed');
+      alert(err.message || `Failed to ${decisionType} overtime`);
+    } finally {
+      setSubmittingDecision(false);
     }
   };
 
@@ -258,7 +277,7 @@ export default function Overtime() {
             <span>{t('nav.overtime')}</span>
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Section 2.9 • Extra hours logging, Ethiopian statutory rates (1.5x, 2.0x), and payroll integration.
+            Section 2.9 • Extra hours logging, Ethiopian statutory rates (1.5x, 2.0x), and approval remarks.
           </p>
         </div>
 
@@ -420,6 +439,21 @@ export default function Overtime() {
                   </div>
                 )}
 
+                {item.decisionReason && (
+                  <div
+                    className={`p-2 rounded-lg text-[11px] font-medium border ${
+                      item.status === 'rejected'
+                        ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-200/60 dark:border-rose-900/60'
+                        : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200/60 dark:border-emerald-900/60'
+                    }`}
+                  >
+                    <span className="font-bold">
+                      {item.status === 'rejected' ? 'Rejection Reason:' : 'Approval Remarks:'}
+                    </span>{' '}
+                    {item.decisionReason}
+                  </div>
+                )}
+
                 <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-700/60">
                   <button
                     onClick={() => {
@@ -436,13 +470,13 @@ export default function Overtime() {
                     {canReview && item.status === 'pending' && (
                       <>
                         <button
-                          onClick={() => handleReview(item._id, 'approved', item.workedHours)}
+                          onClick={() => openDecisionModal(item, 'approved')}
                           className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition"
                         >
                           Approve
                         </button>
                         <button
-                          onClick={() => handleReview(item._id, 'rejected', 0)}
+                          onClick={() => openDecisionModal(item, 'rejected')}
                           className="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold transition"
                         >
                           Reject
@@ -546,13 +580,13 @@ export default function Overtime() {
                         {canReview && item.status === 'pending' && (
                           <>
                             <button
-                              onClick={() => handleReview(item._id, 'approved', item.workedHours)}
+                              onClick={() => openDecisionModal(item, 'approved')}
                               className="px-2.5 py-1 text-xs font-bold text-emerald-700 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 rounded-lg transition"
                             >
                               Approve
                             </button>
                             <button
-                              onClick={() => handleReview(item._id, 'rejected', 0)}
+                              onClick={() => openDecisionModal(item, 'rejected')}
                               className="px-2.5 py-1 text-xs font-bold text-rose-700 bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 rounded-lg transition"
                             >
                               Reject
@@ -829,15 +863,41 @@ export default function Overtime() {
                   </p>
                 </div>
               )}
-              {selectedOvertime.approvedBy && (
-                <div className="border-t border-slate-200/60 dark:border-slate-800 pt-1.5 flex justify-between">
-                  <span className="text-slate-400 font-medium">Approved By:</span>
-                  <span className="text-slate-700 dark:text-slate-300 font-medium">
-                    {selectedOvertime.approvedBy?.fullName || 'Manager'}
+            </div>
+
+            {/* Review Decision Remarks / Rejection Reason Callout */}
+            {selectedOvertime.status !== 'pending' && (
+              <div
+                className={`p-3.5 rounded-xl border text-xs space-y-2 ${
+                  selectedOvertime.status === 'rejected'
+                    ? 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-900 text-rose-800 dark:text-rose-200'
+                    : 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-900 text-emerald-800 dark:text-emerald-200'
+                }`}
+              >
+                <div className="flex items-center justify-between font-bold">
+                  <span className="flex items-center gap-1.5">
+                    {selectedOvertime.status === 'rejected' ? (
+                      <XCircle className="w-4 h-4 text-rose-600" />
+                    ) : (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    )}
+                    <span>
+                      {selectedOvertime.status === 'rejected' ? 'Rejection Reason & Remarks' : 'Approval Remarks'}
+                    </span>
+                  </span>
+                  <span className="text-[11px] font-normal opacity-75">
+                    Reviewed by {selectedOvertime.approvedBy?.fullName || 'Manager'}
+                    {selectedOvertime.reviewedAt && ` • ${new Date(selectedOvertime.reviewedAt).toLocaleDateString()}`}
                   </span>
                 </div>
-              )}
-            </div>
+                <p className="text-xs font-medium leading-relaxed pl-5">
+                  {selectedOvertime.decisionReason ||
+                    (selectedOvertime.status === 'rejected'
+                      ? 'No formal rejection reason recorded.'
+                      : 'Overtime approved.')}
+                </p>
+              </div>
+            )}
 
             {/* Actions */}
             <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-800">
@@ -853,14 +913,14 @@ export default function Overtime() {
                 {canReview && selectedOvertime.status === 'pending' && (
                   <>
                     <button
-                      onClick={() => handleReview(selectedOvertime._id, 'approved', selectedOvertime.workedHours)}
+                      onClick={() => openDecisionModal(selectedOvertime, 'approved')}
                       className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5"
                     >
                       <CheckCircle2 className="w-3.5 h-3.5" />
                       <span>Approve</span>
                     </button>
                     <button
-                      onClick={() => handleReview(selectedOvertime._id, 'rejected', 0)}
+                      onClick={() => openDecisionModal(selectedOvertime, 'rejected')}
                       className="px-3.5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5"
                     >
                       <XCircle className="w-3.5 h-3.5" />
@@ -880,6 +940,70 @@ export default function Overtime() {
               </div>
             </div>
           </div>
+        </Modal>
+      )}
+
+      {/* Modal: Review Decision Prompt Modal */}
+      {decidingOvertime && (
+        <Modal
+          isOpen={decisionModalOpen}
+          onClose={() => setDecisionModalOpen(false)}
+          title={decisionType === 'approved' ? 'Approve Overtime Request' : 'Reject Overtime Request'}
+          maxWidth="max-w-md"
+          zIndex="z-60"
+        >
+          <form onSubmit={handleExecuteDecision} className="space-y-4">
+            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-xs">
+              <span className="text-slate-400">Target Staff:</span>{' '}
+              <span className="font-bold text-slate-800 dark:text-slate-200">
+                {decidingOvertime.employee?.fullName}
+              </span>{' '}
+              • <span className="capitalize">{decidingOvertime.type}</span> Overtime ({decidingOvertime.workedHours} hrs @ {decidingOvertime.calculationRate}x)
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                {decisionType === 'rejected' ? 'Rejection Reason *' : 'Approval Remarks (Optional)'}
+              </label>
+              <textarea
+                required={decisionType === 'rejected'}
+                rows="3"
+                value={decisionReason}
+                onChange={(e) => setDecisionReason(e.target.value)}
+                placeholder={
+                  decisionType === 'rejected'
+                    ? 'State the reason for rejecting this overtime request (required for employee notice)...'
+                    : 'Add any remarks or authorization notes...'
+                }
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs sm:text-sm focus:ring-2 focus:ring-primary-500"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setDecisionModalOpen(false)}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                {t('actions.cancel')}
+              </button>
+              <button
+                type="submit"
+                disabled={submittingDecision || (decisionType === 'rejected' && !decisionReason.trim())}
+                className={`px-5 py-2 rounded-xl text-white font-bold text-xs shadow-md transition disabled:opacity-50 ${
+                  decisionType === 'approved'
+                    ? 'bg-emerald-600 hover:bg-emerald-700'
+                    : 'bg-rose-600 hover:bg-rose-700'
+                }`}
+              >
+                {submittingDecision
+                  ? 'Processing...'
+                  : decisionType === 'approved'
+                  ? 'Confirm Approval'
+                  : 'Confirm Rejection'}
+              </button>
+            </div>
+          </form>
         </Modal>
       )}
     </div>

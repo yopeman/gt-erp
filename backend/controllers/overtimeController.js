@@ -248,7 +248,7 @@ export const updateOvertime = async (req, res) => {
 // Review / Approve / Reject overtime
 export const reviewOvertime = async (req, res) => {
   try {
-    const { status, approvedHours, approvedBy } = req.body;
+    const { status, approvedHours, approvedBy, decisionReason, reason, rejectionReason } = req.body;
 
     if (!status || !['approved', 'rejected', 'pending'].includes(status)) {
       return res.status(400).json({
@@ -257,13 +257,18 @@ export const reviewOvertime = async (req, res) => {
       });
     }
 
+    const finalReason = decisionReason || rejectionReason || reason || '';
+    const reviewerId = approvedBy || req.user?._id || null;
+
     const updateData = {
       status,
-      approvedBy: approvedBy || null
+      approvedBy: reviewerId,
+      reviewedAt: new Date(),
+      decisionReason: finalReason
     };
 
     if (approvedHours !== undefined) {
-      updateData.approvedHours = approvedHours;
+      updateData.approvedHours = status === 'approved' ? approvedHours : 0;
     }
 
     const overtime = await Overtime.findByIdAndUpdate(
@@ -271,7 +276,7 @@ export const reviewOvertime = async (req, res) => {
       updateData,
       { new: true, runValidators: true }
     )
-      .populate('employee', 'fullName email department position')
+      .populate('employee', 'fullName email department position profileImage nationalId')
       .populate('approvedBy', 'fullName email');
 
     if (!overtime) {
