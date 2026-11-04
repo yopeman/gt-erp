@@ -205,6 +205,22 @@ export const loginUser = async (req, res) => {
   }
 };
 
+// Get current logged-in user profile
+export const getMe = async (req, res) => {
+  try {
+    res.status(200).json({
+      success: true,
+      data: req.user
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch current user profile',
+      error: error.message
+    });
+  }
+};
+
 // Change password (mandatory if user logged in with temporary password)
 export const changePassword = async (req, res) => {
   try {
