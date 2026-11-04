@@ -46,6 +46,10 @@ const userSchema = new mongoose.Schema(
     isDeleted: {
       type: Boolean,
       default: false
+    },
+    fcmTokens: {
+      type: [String],
+      default: []
     }
   },
   {

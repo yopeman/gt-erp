@@ -22,12 +22,6 @@ import {
   Clock
 } from 'lucide-react';
 
-const OVERTIME_TYPES = [
-  { value: 'calendar', label: 'Standard Working Day (1.5x)', rate: 1.5 },
-  { value: 'weekend', label: 'Weekend / Rest Day (2.0x)', rate: 2.0 },
-  { value: 'holiday', label: 'Public Holiday (2.0x)', rate: 2.0 }
-];
-
 export default function Overtime() {
   const { t } = useTranslation();
   const { user, hasRole } = useAuth();
@@ -56,12 +50,50 @@ export default function Overtime() {
   const [formData, setFormData] = useState({
     employee: '',
     startAt: '',
-    workedHours: 2,
+    startTime: '',
+    endTime: '',
+    workedHours: '',
     reason: '',
     type: 'calendar',
-    calculationRate: 1.5,
+    calculationRate: 0,
     isPreApproved: true
   });
+
+  // Calculate worked hours from start and end time
+  const calculateDurationHours = (start, end) => {
+    if (!start || !end) return null;
+    const [sh, sm] = start.split(':').map(Number);
+    const [eh, em] = end.split(':').map(Number);
+    if (isNaN(sh) || isNaN(sm) || isNaN(eh) || isNaN(em)) return null;
+    let diffMinutes = (eh * 60 + em) - (sh * 60 + sm);
+    if (diffMinutes < 0) {
+      // Overtime crosses midnight into the next morning
+      diffMinutes += 24 * 60;
+    }
+    return Number((diffMinutes / 60).toFixed(2));
+  };
+
+  const handleStartTimeChange = (val) => {
+    setFormData((prev) => {
+      const hours = calculateDurationHours(val, prev.endTime);
+      return {
+        ...prev,
+        startTime: val,
+        workedHours: hours !== null && hours > 0 ? hours : prev.workedHours
+      };
+    });
+  };
+
+  const handleEndTimeChange = (val) => {
+    setFormData((prev) => {
+      const hours = calculateDurationHours(prev.startTime, val);
+      return {
+        ...prev,
+        endTime: val,
+        workedHours: hours !== null && hours > 0 ? hours : prev.workedHours
+      };
+    });
+  };
 
   // Modal: View Details
   const [detailModalOpen, setDetailModalOpen] = useState(false);
@@ -75,6 +107,7 @@ export default function Overtime() {
   const [decisionModalOpen, setDecisionModalOpen] = useState(false);
   const [decisionType, setDecisionType] = useState('approved'); // 'approved' | 'rejected'
   const [decisionReason, setDecisionReason] = useState('');
+  const [decisionApprovedHours, setDecisionApprovedHours] = useState('');
   const [decidingOvertime, setDecidingOvertime] = useState(null);
   const [submittingDecision, setSubmittingDecision] = useState(false);
 
@@ -140,37 +173,38 @@ export default function Overtime() {
 
   // Dynamic Overtime Types from company settings multipliers
   const overtimeTypes = useMemo(() => {
-    const reg = companySetting?.payrollSettings?.overtimeRateRegular ?? 1.5;
-    const wkd = companySetting?.payrollSettings?.overtimeRateWeekend ?? 1.5;
-    const hol = companySetting?.payrollSettings?.overtimeRateHoliday ?? 2.0;
+    const reg = companySetting?.payrollSettings?.overtimeRateRegular;
+    const wkd = companySetting?.payrollSettings?.overtimeRateWeekend;
+    const hol = companySetting?.payrollSettings?.overtimeRateHoliday;
     return [
-      { value: 'calendar', label: `Standard Working Day (${reg}x)`, rate: reg },
-      { value: 'weekend', label: `Weekend / Rest Day (${wkd}x)`, rate: wkd },
-      { value: 'holiday', label: `Public Holiday (${hol}x)`, rate: hol }
+      { value: 'calendar', label: reg ? `Standard Working Day (${reg}x)` : 'Standard Working Day', rate: reg || 0 },
+      { value: 'weekend', label: wkd ? `Weekend / Rest Day (${wkd}x)` : 'Weekend / Rest Day', rate: wkd || 0 },
+      { value: 'holiday', label: hol ? `Public Holiday (${hol}x)` : 'Public Holiday', rate: hol || 0 }
     ];
   }, [companySetting]);
 
-  // When opening modal, initialize employee and rate
+  // When opening modal, initialize employee and rate dynamically from policy
   useEffect(() => {
     if (isModalOpen) {
       setFormError('');
-      const defaultRate = companySetting?.payrollSettings?.overtimeRateRegular ?? 1.5;
+      const defaultRate = companySetting?.payrollSettings?.overtimeRateRegular ?? 0;
+      const defaultStart = companySetting?.workSchedule?.standardEndTime || '';
       if (!canManage) {
         setFormData((prev) => ({
           ...prev,
           employee: currentEmployee?._id || '',
-          type: 'calendar',
-          calculationRate: defaultRate
+          startTime: prev.startTime || defaultStart,
+          type: prev.type || 'calendar',
+          calculationRate: prev.calculationRate || defaultRate
         }));
       } else {
-        if (!formData.employee && employees.length > 0) {
-          setFormData((prev) => ({
-            ...prev,
-            employee: currentEmployee?._id || employees[0]._id,
-            type: 'calendar',
-            calculationRate: defaultRate
-          }));
-        }
+        setFormData((prev) => ({
+          ...prev,
+          employee: prev.employee || currentEmployee?._id || employees[0]?._id || '',
+          startTime: prev.startTime || defaultStart,
+          type: prev.type || 'calendar',
+          calculationRate: prev.calculationRate || defaultRate
+        }));
       }
     }
   }, [isModalOpen, currentEmployee, canManage, employees, companySetting]);
@@ -178,7 +212,7 @@ export default function Overtime() {
   // Handle type change and auto-select calculation rate from policy
   const handleTypeChange = (newType) => {
     const selected = overtimeTypes.find((t) => t.value === newType);
-    const rate = selected ? selected.rate : (companySetting?.payrollSettings?.overtimeRateRegular ?? 1.5);
+    const rate = selected ? selected.rate : (companySetting?.payrollSettings?.overtimeRateRegular ?? 0);
     setFormData((prev) => ({
       ...prev,
       type: newType,
@@ -198,8 +232,26 @@ export default function Overtime() {
         setAttendanceLookup(res.data);
         if (res.data.attendance) {
           const extra = res.data.attendance.suggestedExtraHours;
+          let suggestedStartTime = formData.startTime;
+          let suggestedEndTime = formData.endTime;
+
+          if (res.data.attendance.endTime) {
+            const outDate = new Date(res.data.attendance.endTime);
+            if (!isNaN(outDate.getTime())) {
+              suggestedStartTime = `${String(outDate.getHours()).padStart(2, '0')}:${String(outDate.getMinutes()).padStart(2, '0')}`;
+              if (extra > 0) {
+                const totalMinutes = outDate.getHours() * 60 + outDate.getMinutes() + Math.round(extra * 60);
+                const endH = Math.floor(totalMinutes / 60) % 24;
+                const endM = totalMinutes % 60;
+                suggestedEndTime = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+              }
+            }
+          }
+
           setFormData((prev) => ({
             ...prev,
+            startTime: suggestedStartTime,
+            endTime: suggestedEndTime,
             workedHours: extra > 0 ? extra : prev.workedHours,
             type: res.data.attendance.suggestedType || prev.type,
             calculationRate: res.data.attendance.suggestedRate || prev.calculationRate
@@ -240,9 +292,9 @@ export default function Overtime() {
         const workingDays = companySetting?.workSchedule?.workingDays || [1, 2, 3, 4, 5];
         const isRestDay = !workingDays.includes(targetDate.getDay());
 
-        const reg = companySetting?.payrollSettings?.overtimeRateRegular ?? 1.5;
-        const wkd = companySetting?.payrollSettings?.overtimeRateWeekend ?? 1.5;
-        const hol = companySetting?.payrollSettings?.overtimeRateHoliday ?? 2.0;
+        const reg = companySetting?.payrollSettings?.overtimeRateRegular ?? 0;
+        const wkd = companySetting?.payrollSettings?.overtimeRateWeekend ?? 0;
+        const hol = companySetting?.payrollSettings?.overtimeRateHoliday ?? 0;
 
         if (holidayMatch) {
           nextType = 'holiday';
@@ -279,7 +331,12 @@ export default function Overtime() {
     }
 
     if (!formData.startAt) {
-      setFormError('Please select the date and start time.');
+      setFormError('Please select the date.');
+      return;
+    }
+
+    if (!formData.startTime || !formData.endTime) {
+      setFormError('Please provide both Start Time and End Time.');
       return;
     }
 
@@ -293,6 +350,8 @@ export default function Overtime() {
       const payload = {
         ...formData,
         employee: targetEmpId,
+        startTime: formData.startTime,
+        endTime: formData.endTime,
         workedHours: Number(formData.workedHours),
         calculationRate: Number(formData.calculationRate)
       };
@@ -301,12 +360,14 @@ export default function Overtime() {
       if (response.success) {
         setIsModalOpen(false);
         setFormData({
-          employee: canManage ? employees[0]?._id || '' : currentEmployee?._id || '',
+          employee: canManage ? (employees[0]?._id || '') : (currentEmployee?._id || ''),
           startAt: '',
-          workedHours: 2,
+          startTime: companySetting?.workSchedule?.standardEndTime || '',
+          endTime: '',
+          workedHours: '',
           reason: '',
           type: 'calendar',
-          calculationRate: 1.5,
+          calculationRate: companySetting?.payrollSettings?.overtimeRateRegular || 0,
           isPreApproved: true
         });
         await fetchOvertimes();
@@ -325,6 +386,7 @@ export default function Overtime() {
     setDecidingOvertime(overtime);
     setDecisionType(type);
     setDecisionReason('');
+    setDecisionApprovedHours(overtime.workedHours !== undefined ? String(overtime.workedHours) : '');
     setDecisionModalOpen(true);
   };
 
@@ -340,9 +402,13 @@ export default function Overtime() {
 
     setSubmittingDecision(true);
     try {
+      const approvedHoursVal = decisionType === 'approved'
+        ? (decisionApprovedHours !== '' ? Number(decisionApprovedHours) : decidingOvertime.workedHours)
+        : 0;
+
       const response = await api.patch(`/overtimes/${decidingOvertime._id}/review`, {
         status: decisionType,
-        approvedHours: decisionType === 'approved' ? decidingOvertime.workedHours : 0,
+        approvedHours: approvedHoursVal,
         decisionReason: decisionReason.trim()
       });
 
@@ -402,7 +468,7 @@ export default function Overtime() {
             <span>{t('nav.overtime')}</span>
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Section 2.9 • Extra hours logging, Ethiopian statutory rates (1.5x, 2.0x), and approval remarks.
+            Extra hours tracking, company policy multipliers, and approval workflow.
           </p>
         </div>
 
@@ -431,19 +497,36 @@ export default function Overtime() {
         <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
           <span className="flex items-center gap-1.5 font-semibold">
             <Clock className="w-3.5 h-3.5 text-primary-500" />
-            <span>Standard Day: <strong className="text-slate-800 dark:text-slate-100">{companySetting?.payrollSettings?.overtimeRateRegular ?? 1.5}x</strong></span>
+            <span>
+              Standard Day:{' '}
+              <strong className="text-slate-800 dark:text-slate-100">
+                {companySetting?.payrollSettings?.overtimeRateRegular ? `${companySetting.payrollSettings.overtimeRateRegular}x` : '—'}
+              </strong>
+            </span>
           </span>
           <span className="text-slate-300 dark:text-slate-700 hidden sm:inline">•</span>
-          <span>Weekend / Rest Day: <strong className="text-slate-800 dark:text-slate-100">{companySetting?.payrollSettings?.overtimeRateWeekend ?? 1.5}x</strong></span>
+          <span>
+            Weekend / Rest Day:{' '}
+            <strong className="text-slate-800 dark:text-slate-100">
+              {companySetting?.payrollSettings?.overtimeRateWeekend ? `${companySetting.payrollSettings.overtimeRateWeekend}x` : '—'}
+            </strong>
+          </span>
           <span className="text-slate-300 dark:text-slate-700 hidden sm:inline">•</span>
           <span className="flex items-center gap-1">
             <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-            <span>Public Holiday: <strong className="text-amber-700 dark:text-amber-300">{companySetting?.payrollSettings?.overtimeRateHoliday ?? 2.0}x</strong></span>
+            <span>
+              Public Holiday:{' '}
+              <strong className="text-amber-700 dark:text-amber-300">
+                {companySetting?.payrollSettings?.overtimeRateHoliday ? `${companySetting.payrollSettings.overtimeRateHoliday}x` : '—'}
+              </strong>
+            </span>
           </span>
         </div>
-        <span className="text-[11px] text-slate-400">
-          Standard Shift Threshold: {companySetting?.workSchedule?.standardDailyHours || 8} hrs/day
-        </span>
+        {companySetting?.workSchedule?.standardDailyHours && (
+          <span className="text-[11px] text-slate-400">
+            Standard Shift Threshold: {companySetting.workSchedule.standardDailyHours} hrs/day
+          </span>
+        )}
       </div>
 
       {/* Filter Bar */}
@@ -573,8 +656,14 @@ export default function Overtime() {
                     </span>
                   </div>
                   <div>
-                    <span className="text-slate-400 font-medium">Date:</span>{' '}
-                    <span className="font-mono">{new Date(item.startAt).toLocaleDateString()}</span>
+                    <span className="text-slate-400 font-medium">Date & Time:</span>{' '}
+                    <span className="font-mono font-medium">{new Date(item.startAt).toLocaleDateString()}</span>
+                    {(item.startTime || item.endTime) && (
+                      <div className="text-[11px] text-slate-500 font-mono flex items-center gap-1 mt-0.5">
+                        <Clock className="w-3 h-3 text-primary-500 shrink-0" />
+                        <span>{item.startTime || '—'} – {item.endTime || '—'}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -691,8 +780,20 @@ export default function Overtime() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3.5 text-slate-500 font-mono">
-                      {new Date(item.startAt).toLocaleDateString()}
+                    <td className="px-4 py-3.5 text-slate-600 dark:text-slate-300">
+                      <div className="font-mono font-semibold text-slate-800 dark:text-slate-100">
+                        {new Date(item.startAt).toLocaleDateString()}
+                      </div>
+                      {(item.startTime || item.endTime || (item.startAt && new Date(item.startAt).getHours() !== 0)) && (
+                        <div className="text-[11px] text-slate-400 font-mono flex items-center gap-1 mt-0.5 whitespace-nowrap">
+                          <Clock className="w-3 h-3 text-primary-500 shrink-0" />
+                          <span>
+                            {item.startTime || new Date(item.startAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            {' – '}
+                            {item.endTime || (item.endAt ? new Date(item.endAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—')}
+                          </span>
+                        </div>
+                      )}
                     </td>
                     <td className="px-4 py-3.5 capitalize font-medium text-slate-700 dark:text-slate-300">
                       <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-xs">
@@ -838,7 +939,7 @@ export default function Overtime() {
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                 Date *
@@ -854,16 +955,54 @@ export default function Overtime() {
 
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Hours Worked *
+                Hours Worked (Duration) *
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  step="any"
+                  min="0.01"
+                  required
+                  value={formData.workedHours}
+                  onChange={(e) => setFormData({ ...formData, workedHours: e.target.value })}
+                  placeholder="e.g. 2.5"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs sm:text-sm focus:ring-2 focus:ring-primary-500 font-bold"
+                />
+                <span className="absolute right-3 top-2.5 text-xs text-slate-400 font-medium">hrs</span>
+              </div>
+              <p className="text-[10px] text-slate-400 mt-1">
+                Decimals allowed (e.g. 1.5 = 1 hr 30m, 2.75 = 2 hrs 45m).
+              </p>
+            </div>
+          </div>
+
+          {/* Start Time & End Time */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 text-primary-500" />
+                Start Time *
               </label>
               <input
-                type="number"
-                step="0.5"
-                min="0.5"
+                type="time"
                 required
-                value={formData.workedHours}
-                onChange={(e) => setFormData({ ...formData, workedHours: e.target.value })}
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs sm:text-sm focus:ring-2 focus:ring-primary-500 font-bold"
+                value={formData.startTime}
+                onChange={(e) => handleStartTimeChange(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs sm:text-sm focus:ring-2 focus:ring-primary-500 font-mono font-medium"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 text-primary-500" />
+                End Time *
+              </label>
+              <input
+                type="time"
+                required
+                value={formData.endTime}
+                onChange={(e) => handleEndTimeChange(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs sm:text-sm focus:ring-2 focus:ring-primary-500 font-mono font-medium"
               />
             </div>
           </div>
@@ -905,7 +1044,7 @@ export default function Overtime() {
             <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-xs text-amber-800 dark:text-amber-200 flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
               <span>
-                <strong>Public Holiday:</strong> {attendanceLookup?.holiday?.title || holidays.find(h => new Date(h.date).toISOString().split('T')[0] === formData.startAt)?.title || 'Holiday'}. Holiday multiplier ({companySetting?.payrollSettings?.overtimeRateHoliday ?? 2.0}x) automatically applied.
+                <strong>Public Holiday:</strong> {attendanceLookup?.holiday?.title || holidays.find(h => new Date(h.date).toISOString().split('T')[0] === formData.startAt)?.title || 'Holiday'}. Holiday multiplier ({companySetting?.payrollSettings?.overtimeRateHoliday ? `${companySetting.payrollSettings.overtimeRateHoliday}x` : 'policy'} rate) automatically applied.
               </span>
             </div>
           )}
@@ -1054,9 +1193,18 @@ export default function Overtime() {
               <div className="flex justify-between">
                 <span className="text-slate-400 font-medium">Date:</span>
                 <span className="font-mono text-slate-800 dark:text-slate-200">
-                  {new Date(selectedOvertime.startAt).toLocaleString()}
+                  {new Date(selectedOvertime.startAt).toLocaleDateString()}
                 </span>
               </div>
+              {(selectedOvertime.startTime || selectedOvertime.endTime) && (
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400 font-medium">Time Window:</span>
+                  <span className="font-mono font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-primary-500" />
+                    {selectedOvertime.startTime || '—'} – {selectedOvertime.endTime || '—'}
+                  </span>
+                </div>
+              )}
               {selectedOvertime.reason && (
                 <div className="border-t border-slate-200/60 dark:border-slate-800 pt-1.5">
                   <span className="text-slate-400 font-medium">Reason / Project:</span>
@@ -1162,6 +1310,27 @@ export default function Overtime() {
               </span>{' '}
               • <span className="capitalize">{decidingOvertime.type}</span> Overtime ({decidingOvertime.workedHours} hrs @ {decidingOvertime.calculationRate}x)
             </div>
+
+            {decisionType === 'approved' && (
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Approved Hours (Decimal hours allowed, e.g. 1.5, 2.75) *
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="any"
+                    min="0.01"
+                    required
+                    value={decisionApprovedHours}
+                    onChange={(e) => setDecisionApprovedHours(e.target.value)}
+                    placeholder="e.g. 2.5"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs sm:text-sm font-bold focus:ring-2 focus:ring-primary-500"
+                  />
+                  <span className="absolute right-3 top-2.5 text-xs text-slate-400 font-medium">hrs</span>
+                </div>
+              </div>
+            )}
 
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">

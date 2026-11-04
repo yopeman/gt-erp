@@ -3,6 +3,7 @@ import { useTranslation } from '../../i18n';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { Menu, Sun, Moon, LogOut, User as UserIcon, ShieldAlert } from 'lucide-react';
+import NotificationDropdown from './NotificationDropdown';
 
 export default function Header({ onToggleSidebar, backendConnected = true }) {
   const { t, lang, setLanguage } = useTranslation();
@@ -69,6 +70,9 @@ export default function Header({ onToggleSidebar, backendConnected = true }) {
             <Moon className="w-4 h-4 text-slate-700" />
           )}
         </button>
+
+        {/* Firebase Push & In-App Notification Bell */}
+        {user ? <NotificationDropdown /> : null}
 
         {/* User Profile Badge / Sign Out */}
         {user ? (

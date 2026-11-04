@@ -6,6 +6,7 @@ import CompanySetting from '../models/CompanySetting.js';
 import { calculateWorkingDays } from '../utils/dateUtils.js';
 import { uploadToCloudinary } from '../utils/cloudinary.js';
 import { recordApprovalEvent } from '../utils/approvalHelper.js';
+import { sendNotificationToRoles, sendNotificationToEmployee } from '../utils/notificationService.js';
 
 /**
  * Helper to resolve logged in employee ID safely
@@ -239,6 +240,24 @@ export const createLeaveRequest = async (req, res) => {
     const populated = await leaveRequest.populate([
       { path: 'employee', select: 'fullName email department position profileImage nationalId' }
     ]);
+
+    // Automatic notification to HR and Managers
+    try {
+      const empName = populated.employee?.fullName || 'An employee';
+      await sendNotificationToRoles({
+        roles: ['admin', 'hr', 'manager'],
+        title: 'New Leave Request',
+        body: `${empName} requested ${workingDays} day(s) of ${type} leave.`,
+        type: 'leave',
+        data: {
+          leaveRequestId: String(leaveRequest._id),
+          employeeId: String(targetEmployeeId),
+          link: '/hr/leave'
+        }
+      });
+    } catch (notifErr) {
+      console.warn('Leave request notification error:', notifErr.message);
+    }
 
     const resObj = populated.toObject();
     resObj.leaveBalance = balance
@@ -626,6 +645,28 @@ export const decideLeaveRequest = async (req, res) => {
       { path: 'decideBy', select: 'fullName email' },
       { path: 'hrReview.decidedBy', select: 'fullName email' }
     ]);
+
+    // Automatic notification to the employee
+    try {
+      const decisionTitle = decision === 'approved' ? 'Leave Request Approved' : 'Leave Request Rejected';
+      const decisionBody = decision === 'approved'
+        ? `Your request for ${leaveRequest.numberOfDays} day(s) of ${leaveRequest.type} leave has been approved.`
+        : `Your request for ${leaveRequest.numberOfDays} day(s) of ${leaveRequest.type} leave was rejected. ${finalReason ? 'Reason: ' + finalReason : ''}`;
+
+      await sendNotificationToEmployee({
+        employeeId: leaveRequest.employee,
+        title: decisionTitle,
+        body: decisionBody,
+        type: 'leave',
+        data: {
+          leaveRequestId: String(leaveRequest._id),
+          decision,
+          link: '/hr/leave'
+        }
+      });
+    } catch (notifErr) {
+      console.warn('Leave decision notification error:', notifErr.message);
+    }
 
     const resObj = populated.toObject();
     resObj.leaveBalance = balance

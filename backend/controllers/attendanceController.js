@@ -6,6 +6,7 @@ import Holiday from '../models/Holiday.js';
 import { uploadToCloudinary } from '../utils/cloudinary.js';
 import { classifyAttendance, calculateWorkedHours } from '../utils/dateUtils.js';
 import { checkGeofence } from '../utils/geoUtils.js';
+import { sendNotificationToEmployee } from '../utils/notificationService.js';
 
 /**
  * Resolve employee ID from request body or authenticated user.
@@ -373,10 +374,19 @@ export const clockOut = async (req, res) => {
 
         if (!existingOt) {
           const holidayTitle = holidayShift ? ` [Holiday: ${holidayShift.title}]` : '';
+          const formatTimeStr = (d) => {
+            if (!d) return '';
+            const dateObj = new Date(d);
+            return isNaN(dateObj.getTime()) ? '' : dateObj.toTimeString().slice(0, 5);
+          };
+
           const autoOt = await Overtime.create({
             employee: employeeId,
             attendance: attendance._id,
             startAt: attendance.startTime || attendance.date,
+            endAt: attendance.endTime || null,
+            startTime: formatTimeStr(attendance.startTime),
+            endTime: formatTimeStr(attendance.endTime),
             workedHours: extraHours,
             approvedHours: 0,
             type: otType,
@@ -386,6 +396,23 @@ export const clockOut = async (req, res) => {
             paymentStatus: 'unpaid'
           });
           attendance.linkedOvertime = autoOt._id;
+
+          // Automatic notification to the employee
+          try {
+            await sendNotificationToEmployee({
+              employeeId,
+              title: 'Overtime Shift Recorded',
+              body: `${extraHours} overtime hour(s) auto-recorded from your clock-out shift.`,
+              type: 'overtime',
+              data: {
+                overtimeId: String(autoOt._id),
+                attendanceId: String(attendance._id),
+                link: '/hr/overtimes'
+              }
+            });
+          } catch (notifErr) {
+            console.warn('Attendance overtime notification error:', notifErr.message);
+          }
         } else {
           attendance.linkedOvertime = existingOt._id;
           if (!existingOt.attendance) {

@@ -5,6 +5,7 @@ import LeaveRequest from '../models/LeaveRequest.js';
 import CompanySetting from '../models/CompanySetting.js';
 import { computePayslip } from '../utils/payrollCalculator.js';
 import { recordApprovalEvent } from '../utils/approvalHelper.js';
+import { sendNotificationToEmployee } from '../utils/notificationService.js';
 
 /**
  * Helper to resolve logged in employee ID safely
@@ -1052,6 +1053,25 @@ export const markPayrollAsPaid = async (req, res) => {
       { path: 'overtimeRecords', select: 'workedHours approvedHours calculationRate paymentStatus' },
       { path: 'leaveRecords', select: 'type startDate endDate reason' }
     ]);
+
+    // Automatic notification to the employee
+    try {
+      const empTarget = payroll.employeeId?._id || payroll.employeeId;
+      await sendNotificationToEmployee({
+        employeeId: empTarget,
+        title: 'Payslip Payment Disbursed',
+        body: `Your salary payment of ${payroll.totalNet} ${payroll.currency} has been marked as paid.`,
+        type: 'payroll',
+        data: {
+          payrollId: String(payroll._id),
+          totalNet: payroll.totalNet,
+          currency: payroll.currency,
+          link: '/hr/payroll'
+        }
+      });
+    } catch (notifErr) {
+      console.warn('Payroll notification error:', notifErr.message);
+    }
 
     res.status(200).json({
       success: true,

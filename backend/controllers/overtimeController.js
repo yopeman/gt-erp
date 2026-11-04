@@ -4,6 +4,7 @@ import Attendance from '../models/Attendance.js';
 import CompanySetting from '../models/CompanySetting.js';
 import Holiday from '../models/Holiday.js';
 import { recordApprovalEvent } from '../utils/approvalHelper.js';
+import { sendNotificationToRoles, sendNotificationToEmployee } from '../utils/notificationService.js';
 
 /**
  * Helper to resolve logged in employee ID safely
@@ -64,6 +65,9 @@ export const createOvertime = async (req, res) => {
     const {
       employee,
       startAt,
+      endAt,
+      startTime,
+      endTime,
       workedHours,
       reason,
       type,
@@ -96,18 +100,59 @@ export const createOvertime = async (req, res) => {
       targetEmployeeId = await resolveEmployeeId(req);
     }
 
-    if (!targetEmployeeId || !startAt || workedHours === undefined) {
+    if (!targetEmployeeId || !startAt) {
       return res.status(400).json({
         success: false,
-        message: 'employee, startAt, and workedHours are required'
+        message: 'employee and startAt are required'
       });
     }
 
-    const hours = Number(workedHours) || 0;
+    let calculatedStartAt = new Date(startAt);
+    let calculatedEndAt = endAt ? new Date(endAt) : null;
+    let effectiveStartTime = startTime ? String(startTime).trim() : '';
+    let effectiveEndTime = endTime ? String(endTime).trim() : '';
+
+    if (effectiveStartTime && !isNaN(calculatedStartAt.getTime())) {
+      const [sHour, sMin] = effectiveStartTime.split(':').map(Number);
+      if (!isNaN(sHour) && !isNaN(sMin)) {
+        calculatedStartAt.setHours(sHour, sMin, 0, 0);
+      }
+    } else if (!effectiveStartTime && !isNaN(calculatedStartAt.getTime())) {
+      const h = calculatedStartAt.getHours();
+      const m = calculatedStartAt.getMinutes();
+      if (h !== 0 || m !== 0) {
+        effectiveStartTime = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+      }
+    }
+
+    if (effectiveEndTime && !isNaN(calculatedStartAt.getTime())) {
+      const [eHour, eMin] = effectiveEndTime.split(':').map(Number);
+      if (!isNaN(eHour) && !isNaN(eMin)) {
+        calculatedEndAt = new Date(calculatedStartAt);
+        calculatedEndAt.setHours(eHour, eMin, 0, 0);
+        // Handle overnight shifts (e.g. 23:00 to 03:00)
+        if (calculatedEndAt <= calculatedStartAt) {
+          calculatedEndAt.setDate(calculatedEndAt.getDate() + 1);
+        }
+      }
+    } else if (calculatedEndAt && !effectiveEndTime && !isNaN(calculatedEndAt.getTime())) {
+      const h = calculatedEndAt.getHours();
+      const m = calculatedEndAt.getMinutes();
+      effectiveEndTime = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    }
+
+    let hours = Number(workedHours) || 0;
+    if (hours <= 0 && calculatedEndAt && calculatedStartAt) {
+      const diffMs = calculatedEndAt.getTime() - calculatedStartAt.getTime();
+      if (diffMs > 0) {
+        hours = Math.round((diffMs / (1000 * 60 * 60)) * 100) / 100;
+      }
+    }
+
     if (hours <= 0) {
       return res.status(400).json({
         success: false,
-        message: 'workedHours must be greater than 0'
+        message: 'workedHours must be greater than 0 (or provide valid startTime and endTime)'
       });
     }
 
@@ -119,7 +164,7 @@ export const createOvertime = async (req, res) => {
     const otRateHoliday = setting?.payrollSettings?.overtimeRateHoliday || 2.0;
 
     const holidays = await Holiday.find({ isActive: true });
-    const shiftDate = new Date(startAt);
+    const shiftDate = new Date(calculatedStartAt);
     const dateStr = shiftDate.toISOString().split('T')[0];
     const monthDayStr = dateStr.slice(5);
 
@@ -162,7 +207,10 @@ export const createOvertime = async (req, res) => {
 
     const overtime = await Overtime.create({
       employee: targetEmployeeId,
-      startAt,
+      startAt: calculatedStartAt,
+      endAt: calculatedEndAt,
+      startTime: effectiveStartTime,
+      endTime: effectiveEndTime,
       workedHours: hours,
       approvedHours: isPreApproved ? hours : 0,
       reason,
@@ -197,6 +245,24 @@ export const createOvertime = async (req, res) => {
       { path: 'employee', select: 'fullName email department position profileImage nationalId baseSalary' },
       { path: 'attendance', select: 'date startTime endTime workedHours type' }
     ]);
+
+    // Automatic push & in-app notification to HR and Managers
+    try {
+      const empName = populated.employee?.fullName || 'An employee';
+      await sendNotificationToRoles({
+        roles: ['admin', 'hr', 'manager'],
+        title: 'New Overtime Request',
+        body: `${empName} requested ${hours} hrs overtime (${finalType} rate ${finalRate}x).`,
+        type: 'overtime',
+        data: {
+          overtimeId: String(overtime._id),
+          employeeId: String(targetEmployeeId),
+          link: '/hr/overtimes'
+        }
+      });
+    } catch (notifErr) {
+      console.warn('Overtime notification error:', notifErr.message);
+    }
 
     res.status(201).json({
       success: true,
@@ -491,6 +557,38 @@ export const updateOvertime = async (req, res) => {
       updateData.calculationRate = OVERTIME_TYPE_RATES[updateData.type] || 1.5;
     }
 
+    if (updateData.startTime || updateData.endTime || updateData.startAt) {
+      const existing = await Overtime.findById(req.params.id);
+      if (existing) {
+        const baseDate = updateData.startAt ? new Date(updateData.startAt) : new Date(existing.startAt);
+        const sTime = updateData.startTime !== undefined ? updateData.startTime : existing.startTime;
+        const eTime = updateData.endTime !== undefined ? updateData.endTime : existing.endTime;
+
+        if (sTime) {
+          const [sh, sm] = String(sTime).split(':').map(Number);
+          if (!isNaN(sh) && !isNaN(sm)) {
+            baseDate.setHours(sh, sm, 0, 0);
+            updateData.startAt = baseDate;
+          }
+        }
+
+        if (eTime) {
+          const [eh, em] = String(eTime).split(':').map(Number);
+          if (!isNaN(eh) && !isNaN(em)) {
+            const endDate = new Date(baseDate);
+            endDate.setHours(eh, em, 0, 0);
+            if (endDate <= baseDate) {
+              endDate.setDate(endDate.getDate() + 1);
+            }
+            updateData.endAt = endDate;
+            if (!updateData.workedHours) {
+              updateData.workedHours = Math.round(((endDate - baseDate) / (1000 * 60 * 60)) * 100) / 100;
+            }
+          }
+        }
+      }
+    }
+
     const overtime = await Overtime.findByIdAndUpdate(
       req.params.id,
       { $set: updateData },
@@ -571,6 +669,28 @@ export const reviewOvertime = async (req, res) => {
       });
     } catch (histErr) {
       console.warn('Approval history logging warning:', histErr.message);
+    }
+
+    // Automatic notification to the employee
+    try {
+      const statusTitle = status === 'approved' ? 'Overtime Request Approved' : 'Overtime Request Rejected';
+      const statusBody = status === 'approved'
+        ? `Your overtime request for ${existing.workedHours} hrs on ${new Date(existing.startAt).toLocaleDateString()} has been approved (${finalApprovedHours} hrs approved).`
+        : `Your overtime request for ${existing.workedHours} hrs on ${new Date(existing.startAt).toLocaleDateString()} was rejected. ${finalReason ? 'Reason: ' + finalReason : ''}`;
+
+      await sendNotificationToEmployee({
+        employeeId: existing.employee,
+        title: statusTitle,
+        body: statusBody,
+        type: 'overtime',
+        data: {
+          overtimeId: String(existing._id),
+          status,
+          link: '/hr/overtimes'
+        }
+      });
+    } catch (notifErr) {
+      console.warn('Overtime review notification error:', notifErr.message);
     }
 
     res.status(200).json({

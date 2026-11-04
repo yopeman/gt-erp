@@ -2,6 +2,7 @@ import PurchaseRequest from '../models/PurchaseRequest.js';
 import PurchaseOrder from '../models/PurchaseOrder.js';
 import { sendSuccess, sendError } from '../utils/apiResponse.js';
 import { generateCode, recordApproval } from '../utils/inventoryHelper.js';
+import { sendNotificationToRoles, sendNotificationToUser } from '../utils/notificationService.js';
 
 // Create purchase request
 export const createPurchaseRequest = async (req, res) => {
@@ -68,6 +69,24 @@ export const createPurchaseRequest = async (req, res) => {
       { path: 'items.preferredSupplier', select: 'supplierName supplierCode' },
       { path: 'requestedBy', select: 'fullName email department' }
     ]);
+
+    // Automatic notification to Managers, Approvers, and Procurement
+    try {
+      const requesterName = populated.requestedBy?.fullName || 'A staff member';
+      await sendNotificationToRoles({
+        roles: ['admin', 'manager', 'procurement'],
+        title: 'New Purchase Request',
+        body: `${requesterName} submitted ${requestNumber} for ${department} (${purchaseRequest.currency} ${estimatedTotalAmount.toLocaleString()}).`,
+        type: 'approval',
+        data: {
+          purchaseRequestId: String(purchaseRequest._id),
+          requestNumber,
+          link: '/procurement/purchase-requests'
+        }
+      });
+    } catch (notifErr) {
+      console.warn('Purchase request notification error:', notifErr.message);
+    }
 
     return sendSuccess(res, 'Purchase request created successfully', populated, 201);
   } catch (error) {
@@ -164,6 +183,31 @@ export const handleApproval = async (req, res) => {
       actionBy: req.user?._id,
       comment: comment || `Purchase request ${status}`
     });
+
+    // Automatic notification to the requester
+    try {
+      if (request.requestedBy) {
+        const notifTitle = `Purchase Request ${request.requestNumber} ${status.toUpperCase()}`;
+        const notifBody = status === 'approved'
+          ? `Your purchase request ${request.requestNumber} has been approved.`
+          : `Your purchase request ${request.requestNumber} was ${status}. ${rejectionReason ? 'Reason: ' + rejectionReason : ''}`;
+
+        await sendNotificationToUser({
+          userId: request.requestedBy,
+          title: notifTitle,
+          body: notifBody,
+          type: 'approval',
+          data: {
+            purchaseRequestId: String(request._id),
+            requestNumber: request.requestNumber,
+            status,
+            link: '/procurement/purchase-requests'
+          }
+        });
+      }
+    } catch (notifErr) {
+      console.warn('Purchase request approval notification error:', notifErr.message);
+    }
 
     return sendSuccess(res, `Purchase request ${status} successfully`, request);
   } catch (error) {

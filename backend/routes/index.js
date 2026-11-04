@@ -35,6 +35,7 @@ import supplierReturnRoutes from './supplierReturnRoutes.js';
 // System Support Routes
 import approvalHistoryRoutes from './approvalHistoryRoutes.js';
 import inventoryAuditLogRoutes from './inventoryAuditLogRoutes.js';
+import notificationRoutes from './notificationRoutes.js';
 
 const router = express.Router();
 
@@ -78,5 +79,6 @@ router.use('/supplier-returns', supplierReturnRoutes);
 router.use('/approval-history', approvalHistoryRoutes);
 router.use('/approval-histories', approvalHistoryRoutes);
 router.use('/inventory-audit-logs', inventoryAuditLogRoutes);
+router.use('/notifications', notificationRoutes);
 
 export default router;

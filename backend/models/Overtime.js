@@ -11,6 +11,20 @@ const overtimeSchema = new mongoose.Schema(
       type: Date,
       required: [true, 'Start date/time is required']
     },
+    endAt: {
+      type: Date,
+      default: null
+    },
+    startTime: {
+      type: String,
+      trim: true,
+      default: ''
+    },
+    endTime: {
+      type: String,
+      trim: true,
+      default: ''
+    },
     workedHours: {
       type: Number,
       required: [true, 'Worked hours is required'],
@@ -82,4 +96,3 @@ const overtimeSchema = new mongoose.Schema(
 const Overtime = mongoose.model('Overtime', overtimeSchema);
 
 export default Overtime;
-
