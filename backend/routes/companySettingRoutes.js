@@ -7,6 +7,7 @@ import {
   deleteOfficeLocation,
   getHolidays,
   createHoliday,
+  updateHoliday,
   deleteHoliday
 } from '../controllers/companySettingController.js';
 import { protect } from '../middleware/auth.js';
@@ -26,6 +27,7 @@ router.delete('/office-locations/:id', authorizeRoles('admin', 'hr'), deleteOffi
 // Public Holidays
 router.get('/holidays', getHolidays);
 router.post('/holidays', authorizeRoles('admin', 'hr'), createHoliday);
+router.put('/holidays/:id', authorizeRoles('admin', 'hr'), updateHoliday);
 router.delete('/holidays/:id', authorizeRoles('admin', 'hr'), deleteHoliday);
 
 export default router;

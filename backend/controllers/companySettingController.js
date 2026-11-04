@@ -293,10 +293,14 @@ export const deleteOfficeLocation = async (req, res) => {
 // Holiday Management
 export const getHolidays = async (req, res) => {
   try {
-    const { year } = req.query;
-    const query = { isActive: true };
+    const { year, includeInactive, all } = req.query;
+    const query = {};
 
-    if (year) {
+    if (includeInactive !== 'true' && all !== 'true') {
+      query.isActive = true;
+    }
+
+    if (year && year !== 'all') {
       const startOfYear = new Date(Number(year), 0, 1);
       const endOfYear = new Date(Number(year), 11, 31, 23, 59, 59);
       query.date = { $gte: startOfYear, $lte: endOfYear };
@@ -319,7 +323,7 @@ export const getHolidays = async (req, res) => {
 
 export const createHoliday = async (req, res) => {
   try {
-    const { title, date, isRecurringYearly, description } = req.body;
+    const { title, date, isRecurringYearly, description, isActive } = req.body;
 
     if (!title || !date) {
       return res.status(400).json({
@@ -332,7 +336,8 @@ export const createHoliday = async (req, res) => {
       title,
       date: new Date(date),
       isRecurringYearly: Boolean(isRecurringYearly),
-      description
+      description,
+      isActive: isActive !== undefined ? Boolean(isActive) : true
     });
 
     res.status(201).json({
@@ -344,6 +349,40 @@ export const createHoliday = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to create holiday',
+      error: error.message
+    });
+  }
+};
+
+export const updateHoliday = async (req, res) => {
+  try {
+    const { title, date, isRecurringYearly, description, isActive } = req.body;
+
+    const holiday = await Holiday.findById(req.params.id);
+    if (!holiday) {
+      return res.status(404).json({
+        success: false,
+        message: 'Holiday not found'
+      });
+    }
+
+    if (title !== undefined) holiday.title = title;
+    if (date !== undefined) holiday.date = new Date(date);
+    if (isRecurringYearly !== undefined) holiday.isRecurringYearly = Boolean(isRecurringYearly);
+    if (description !== undefined) holiday.description = description;
+    if (isActive !== undefined) holiday.isActive = Boolean(isActive);
+
+    await holiday.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Holiday updated successfully',
+      data: holiday
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update holiday',
       error: error.message
     });
   }
