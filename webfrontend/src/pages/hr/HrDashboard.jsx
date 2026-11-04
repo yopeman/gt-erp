@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from '../../i18n';
 import StatCard from '../../components/common/StatCard';
 import Badge from '../../components/common/Badge';
@@ -19,6 +19,7 @@ import {
 
 export default function HrDashboard() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
@@ -117,6 +118,7 @@ export default function HrDashboard() {
           subtitle={`${stats.activeEmployees} active workforce`}
           icon={Users}
           tag="Staff"
+          onClick={() => navigate('/hr/employees')}
         />
         <StatCard
           title={t('nav.attendance')}
@@ -124,6 +126,7 @@ export default function HrDashboard() {
           subtitle="Today's attendance log"
           icon={Clock}
           tag="Daily"
+          onClick={() => navigate('/hr/attendance')}
         />
         <StatCard
           title={t('nav.leave')}
@@ -131,6 +134,7 @@ export default function HrDashboard() {
           subtitle="Pending decision"
           icon={CalendarDays}
           tag="Approvals"
+          onClick={() => navigate('/hr/leave')}
         />
         <StatCard
           title={t('nav.clearances')}
@@ -138,6 +142,7 @@ export default function HrDashboard() {
           subtitle="Ongoing exit signoffs"
           icon={FileCheck2}
           tag="Clearance"
+          onClick={() => navigate('/hr/clearances')}
         />
       </div>
 
@@ -151,7 +156,7 @@ export default function HrDashboard() {
               <span>{t('nav.leave')} ({recentLeaves.length})</span>
             </h3>
             <Link 
-              to="/hr/leave-requests" 
+              to="/hr/leave" 
               className="text-xs text-primary-500 font-semibold hover:underline flex items-center gap-1"
             >
               <span>{t('actions.viewDetails')}</span>
