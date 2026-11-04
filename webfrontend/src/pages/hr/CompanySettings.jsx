@@ -1205,24 +1205,17 @@ export default function CompanySettings() {
             </span>
           </div>
 
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="isDefaultLocationCheck"
-                checked={locationForm.isDefault}
-                onChange={(e) => setLocationForm({ ...locationForm, isDefault: e.target.checked })}
-                className="rounded text-primary-600 focus:ring-primary-500"
-              />
-              <label htmlFor="isDefaultLocationCheck" className="text-xs text-slate-700 dark:text-slate-300 font-semibold">
-                Set as primary headquarters (default office)
-              </label>
-            </div>
-            {locationForm.isDefault && (
-              <p className="text-[11px] text-amber-600 dark:text-amber-400 pl-6">
-                Setting this will establish it as the only Default HQ and remove default status from all other locations.
-              </p>
-            )}
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="isDefaultLocationCheck"
+              checked={locationForm.isDefault}
+              onChange={(e) => setLocationForm({ ...locationForm, isDefault: e.target.checked })}
+              className="rounded text-primary-600 focus:ring-primary-500"
+            />
+            <label htmlFor="isDefaultLocationCheck" className="text-xs text-slate-700 dark:text-slate-300 font-semibold">
+              Set as primary headquarters (default office)
+            </label>
           </div>
 
           <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
@@ -1459,24 +1452,17 @@ export default function CompanySettings() {
                 </label>
               </div>
 
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="editIsDefaultCheck"
-                    checked={editLocationForm.isDefault}
-                    onChange={(e) => setEditLocationForm({ ...editLocationForm, isDefault: e.target.checked })}
-                    className="rounded text-primary-600 focus:ring-primary-500"
-                  />
-                  <label htmlFor="editIsDefaultCheck" className="text-xs text-slate-700 dark:text-slate-300 font-bold">
-                    Set as primary headquarters (Default HQ)
-                  </label>
-                </div>
-                {editLocationForm.isDefault && (
-                  <p className="text-[11px] text-amber-600 dark:text-amber-400 pl-6">
-                    Setting this will establish it as the only Default HQ and remove default status from all other locations.
-                  </p>
-                )}
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="editIsDefaultCheck"
+                  checked={editLocationForm.isDefault}
+                  onChange={(e) => setEditLocationForm({ ...editLocationForm, isDefault: e.target.checked })}
+                  className="rounded text-primary-600 focus:ring-primary-500"
+                />
+                <label htmlFor="editIsDefaultCheck" className="text-xs text-slate-700 dark:text-slate-300 font-bold">
+                  Set as primary headquarters (Default HQ)
+                </label>
               </div>
             </div>
 
