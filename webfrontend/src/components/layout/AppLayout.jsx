@@ -11,7 +11,11 @@ export default function AppLayout() {
   // Check backend server liveness
   useEffect(() => {
     const checkBackend = () => {
-      fetch(`${SERVER_BASE_URL || ''}/`)
+      fetch(`${SERVER_BASE_URL || ''}/`, {
+        headers: {
+          'ngrok-skip-browser-warning': 'true',
+        },
+      })
         .then((res) => res.text())
         .then(() => setBackendConnected(true))
         .catch(() => setBackendConnected(false));

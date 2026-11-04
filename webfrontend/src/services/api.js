@@ -23,6 +23,8 @@ export async function apiRequest(endpoint, options = {}) {
   const headers = {
     ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    // Bypass ngrok free-tier browser interstitial warning page which lacks CORS headers
+    'ngrok-skip-browser-warning': 'true',
     ...options.headers,
   };
 
