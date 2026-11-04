@@ -15,7 +15,17 @@ const selfieCaptureSchema = new mongoose.Schema(
       longitude: { type: Number },
       address: { type: String, trim: true },
       accuracy: { type: Number },
-      diameter: { type: Number }
+      diameter: { type: Number },
+      distanceFromOfficeMeters: { type: Number },
+      withinGeofence: { type: Boolean, default: true }
+    },
+    deviceInfo: {
+      type: String,
+      trim: true
+    },
+    ipAddress: {
+      type: String,
+      trim: true
     }
   },
   { _id: false }
@@ -40,11 +50,26 @@ const attendanceSchema = new mongoose.Schema(
       type: Date,
       default: null
     },
+    workedHours: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
     type: {
       type: String,
       enum: ['late', 'absent', 'overtime', 'on time'],
       required: [true, 'Attendance type is required'],
       default: 'on time'
+    },
+    status: {
+      type: String,
+      enum: ['present', 'late', 'half_day', 'absent', 'on_leave', 'overtime'],
+      default: 'present'
+    },
+    workShift: {
+      name: { type: String, default: 'Standard' },
+      expectedStartTime: { type: String, default: '09:00' },
+      expectedEndTime: { type: String, default: '17:00' }
     },
     clockInSelfie: selfieCaptureSchema,
     clockOutSelfie: selfieCaptureSchema,
@@ -61,6 +86,10 @@ const attendanceSchema = new mongoose.Schema(
       type: Boolean,
       default: true
     },
+    notes: {
+      type: String,
+      trim: true
+    },
     isDeleted: {
       type: Boolean,
       default: false
@@ -70,6 +99,9 @@ const attendanceSchema = new mongoose.Schema(
     timestamps: true
   }
 );
+
+attendanceSchema.index({ employee: 1, date: 1 });
+attendanceSchema.index({ date: -1 });
 
 const Attendance = mongoose.model('Attendance', attendanceSchema);
 

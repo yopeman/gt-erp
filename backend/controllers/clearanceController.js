@@ -1,13 +1,17 @@
 import Clearance from '../models/Clearance.js';
 import Employee from '../models/Employee.js';
+import { recordApprovalEvent } from '../utils/approvalHelper.js';
 
 /**
  * Helper to resolve logged in employee ID safely
  */
 const resolveUserEmployeeId = async (user) => {
   if (!user) return null;
+  if (user.employee?._id) {
+    return user.employee._id;
+  }
   if (user.employee) {
-    return user.employee._id || user.employee;
+    return user.employee;
   }
   const emp = await Employee.findOne({
     $or: [
@@ -39,19 +43,23 @@ export const createClearance = async (req, res) => {
       }
       targetEmployeeId = myEmpId;
     } else if (!targetEmployeeId) {
+      targetEmployeeId = await resolveUserEmployeeId(req.user);
+    }
+
+    if (!targetEmployeeId) {
       return res.status(400).json({
         success: false,
         message: 'employee reference is required'
       });
     }
 
-    // Default checklist items if none provided
+    // Default standard enterprise exit checklist
     const defaultChecklist = [
-      { title: 'Department Equipment & Files' },
-      { title: 'Store & Inventory Assets' },
-      { title: 'IT & System Access / Laptop' },
-      { title: 'Finance & Salary Advances' },
-      { title: 'HR & ID Card Return' }
+      { title: 'Department Equipment, Projects & Files' },
+      { title: 'Store & Inventory Borrowed Tools/Assets' },
+      { title: 'IT & System Access Deactivation / Laptop Return' },
+      { title: 'Finance, Loan Settlements & Salary Advances' },
+      { title: 'HR ID Card, Medical Card & Exit Interview' }
     ];
 
     const clearance = await Clearance.create({
@@ -60,6 +68,19 @@ export const createClearance = async (req, res) => {
       status: 'pending',
       checklist: checklist && checklist.length > 0 ? checklist : defaultChecklist
     });
+
+    // Record submission in ApprovalHistory
+    try {
+      await recordApprovalEvent({
+        referenceType: 'clearance',
+        referenceId: clearance._id,
+        action: 'submitted',
+        user: req.user,
+        comment: reason || 'Exit clearance initialized'
+      });
+    } catch (histErr) {
+      console.warn('Approval history logging warning:', histErr.message);
+    }
 
     const populated = await clearance.populate('employee', 'fullName email department position');
 
@@ -72,6 +93,35 @@ export const createClearance = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to create clearance request',
+      error: error.message
+    });
+  }
+};
+
+// Get current user's clearance status
+export const getMyClearance = async (req, res) => {
+  try {
+    const employeeId = await resolveUserEmployeeId(req.user);
+    if (!employeeId) {
+      return res.status(404).json({
+        success: false,
+        message: 'No employee profile linked to user'
+      });
+    }
+
+    const clearance = await Clearance.findOne({ employee: employeeId })
+      .populate('checklist.confirmedBy', 'fullName email')
+      .populate('finalApprovedBy', 'fullName email')
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      data: clearance
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch clearance status',
       error: error.message
     });
   }
@@ -112,7 +162,7 @@ export const getClearances = async (req, res) => {
     const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
     const total = await Clearance.countDocuments(query);
     const clearances = await Clearance.find(query)
-      .populate('employee', 'fullName email department position')
+      .populate('employee', 'fullName email department position profileImage')
       .populate('checklist.confirmedBy', 'fullName email')
       .populate('finalApprovedBy', 'fullName email')
       .sort({ createdAt: -1 })
@@ -131,7 +181,7 @@ export const getClearances = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch clearances',
+      message: 'Failed to fetch clearance records',
       error: error.message
     });
   }
@@ -141,7 +191,7 @@ export const getClearances = async (req, res) => {
 export const getClearanceById = async (req, res) => {
   try {
     const clearance = await Clearance.findById(req.params.id)
-      .populate('employee', 'fullName email department position detailAddress phoneNumber')
+      .populate('employee', 'fullName email department position profileImage')
       .populate('checklist.confirmedBy', 'fullName email')
       .populate('finalApprovedBy', 'fullName email');
 
@@ -256,6 +306,19 @@ export const updateChecklistItem = async (req, res) => {
 
     await clearance.save();
 
+    // Log action in ApprovalHistory
+    try {
+      await recordApprovalEvent({
+        referenceType: 'clearance',
+        referenceId: clearance._id,
+        action: newStatus === 'cleared' ? 'cleared' : newStatus === 'rejected' ? 'rejected' : 'returned for correction',
+        user: req.user,
+        comment: `Checklist item '${item.title}' marked as ${newStatus}. ${remarks || ''}`
+      });
+    } catch (histErr) {
+      console.warn('Approval history logging warning:', histErr.message);
+    }
+
     const populated = await clearance.populate([
       { path: 'employee', select: 'fullName email department position' },
       { path: 'checklist.confirmedBy', select: 'fullName email' }
@@ -275,18 +338,12 @@ export const updateChecklistItem = async (req, res) => {
   }
 };
 
-// Final approval for clearance
+// Final approval for clearance and auto-offboarding
 export const finalApproveClearance = async (req, res) => {
   try {
     const finalApprovedBy = req.body?.finalApprovedBy || req.user?._id;
     const status = req.body?.status || 'approved';
-
-    if (!finalApprovedBy) {
-      return res.status(400).json({
-        success: false,
-        message: 'finalApprovedBy user reference is required'
-      });
-    }
+    const remarks = req.body?.remarks || '';
 
     const clearance = await Clearance.findById(req.params.id);
     if (!clearance) {
@@ -311,23 +368,38 @@ export const finalApproveClearance = async (req, res) => {
 
     await clearance.save();
 
-    // Mark employee as terminated upon finalized clearance
-    if (clearance.employee) {
+    // When clearance is officially completed/approved, automatically mark employee status as 'terminated'
+    if (['approved', 'completed'].includes(status) && clearance.employee) {
       try {
-        await Employee.findByIdAndUpdate(clearance.employee, { status: 'terminated' });
+        await Employee.findByIdAndUpdate(clearance.employee, {
+          status: 'terminated'
+        });
       } catch (empErr) {
         console.warn('Could not update employee status upon final clearance:', empErr.message);
       }
     }
 
+    // Log in ApprovalHistory
+    try {
+      await recordApprovalEvent({
+        referenceType: 'clearance',
+        referenceId: clearance._id,
+        action: ['approved', 'completed'].includes(status) ? 'approved' : 'rejected',
+        user: req.user,
+        comment: remarks || `Final exit clearance marked as ${status}. Employee status updated to terminated.`
+      });
+    } catch (histErr) {
+      console.warn('Approval history logging warning:', histErr.message);
+    }
+
     const populated = await clearance.populate([
-      { path: 'employee', select: 'fullName email department position' },
+      { path: 'employee', select: 'fullName email department position status' },
       { path: 'finalApprovedBy', select: 'fullName email' }
     ]);
 
     res.status(200).json({
       success: true,
-      message: `Clearance marked as ${status}`,
+      message: `Clearance marked as ${status} and employee status updated`,
       data: populated
     });
   } catch (error) {
@@ -362,4 +434,3 @@ export const deleteClearance = async (req, res) => {
     });
   }
 };
-

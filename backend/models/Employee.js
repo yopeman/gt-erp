@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+
 const documentSchema = new mongoose.Schema(
   {
     type: {
@@ -84,6 +85,17 @@ const bankAccountSchema = new mongoose.Schema(
 
 const employeeSchema = new mongoose.Schema(
   {
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null
+    },
+    employeeCode: {
+      type: String,
+      trim: true,
+      unique: true,
+      sparse: true
+    },
     fullName: {
       type: String,
       required: [true, 'Full name is required'],
@@ -98,13 +110,13 @@ const employeeSchema = new mongoose.Schema(
     },
     department: {
       type: String,
-      required: [true, 'Department is required'],
-      trim: true
+      trim: true,
+      default: 'Unassigned'
     },
     position: {
       type: String,
-      required: [true, 'Position is required'],
-      trim: true
+      trim: true,
+      default: 'Employee'
     },
     gender: {
       type: String,
@@ -117,8 +129,8 @@ const employeeSchema = new mongoose.Schema(
     },
     phoneNumber: {
       type: String,
-      required: [true, 'Phone number is required'],
-      trim: true
+      trim: true,
+      default: ''
     },
     detailAddress: {
       location: {
@@ -151,7 +163,7 @@ const employeeSchema = new mongoose.Schema(
     type: {
       type: String,
       enum: ['remote', 'part time', 'full time', 'contract', 'intern'],
-      required: [true, 'Employment type is required']
+      default: 'full time'
     },
     profileImage: {
       type: String,
@@ -163,7 +175,7 @@ const employeeSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['active', 'inactive', 'suspended', 'terminated'],
+      enum: ['active', 'inactive', 'suspended', 'terminated', 'pending_profile'],
       default: 'active'
     },
     documents: [documentSchema],
@@ -304,7 +316,9 @@ employeeSchema.post('findOneAndDelete', async function (doc) {
   }
 });
 
+employeeSchema.index({ email: 1 });
+employeeSchema.index({ user: 1 });
+
 const Employee = mongoose.model('Employee', employeeSchema);
 
 export default Employee;
-

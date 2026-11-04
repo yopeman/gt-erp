@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+
 const userSchema = new mongoose.Schema(
   {
     fullName: {
@@ -29,6 +30,18 @@ const userSchema = new mongoose.Schema(
         unique: true,
         partialFilterExpression: { employee: { $type: 'objectId' } }
       }
+    },
+    mustChangePassword: {
+      type: Boolean,
+      default: false
+    },
+    isTemporaryPassword: {
+      type: Boolean,
+      default: false
+    },
+    lastPasswordChangeAt: {
+      type: Date,
+      default: null
     },
     isDeleted: {
       type: Boolean,
@@ -111,7 +124,8 @@ userSchema.post('findOneAndDelete', async function (doc) {
   }
 });
 
+userSchema.index({ email: 1 });
+
 const User = mongoose.model('User', userSchema);
 
 export default User;
-

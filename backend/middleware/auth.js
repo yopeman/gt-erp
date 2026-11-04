@@ -1,8 +1,10 @@
 import { verifyToken } from '../utils/token.js';
 import User from '../models/User.js';
+import Employee from '../models/Employee.js';
 
 /**
  * Protect routes by validating JWT Bearer token in headers
+ * Automatically populates the linked Employee profile onto req.user
  */
 export const protect = async (req, res, next) => {
   try {
@@ -23,7 +25,7 @@ export const protect = async (req, res, next) => {
 
     const user = await User.findById(decoded.id || decoded._id)
       .select('-password')
-      .populate('employee', 'fullName email department position status branch profileImage');
+      .populate('employee');
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -36,6 +38,18 @@ export const protect = async (req, res, next) => {
         success: false,
         message: 'User account has been deactivated'
       });
+    }
+
+    // Self-healing link: If user has no employee reference yet, attempt to link via email
+    if (!user.employee) {
+      const employee = await Employee.findOne({ email: user.email.toLowerCase() });
+      if (employee) {
+        user.employee = employee;
+        await User.findByIdAndUpdate(user._id, { employee: employee._id });
+        if (!employee.user) {
+          await Employee.findByIdAndUpdate(employee._id, { user: user._id });
+        }
+      }
     }
 
     req.user = user;
@@ -57,7 +71,10 @@ export const optionalAuth = async (req, res, next) => {
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
       const token = req.headers.authorization.split(' ')[1];
       const decoded = verifyToken(token);
-      const user = await User.findById(decoded.id || decoded._id).select('-password');
+      const user = await User.findById(decoded.id || decoded._id)
+        .select('-password')
+        .populate('employee');
+
       if (user && !user.isDeleted) {
         req.user = user;
       }
@@ -72,4 +89,3 @@ export default {
   protect,
   optionalAuth
 };
-

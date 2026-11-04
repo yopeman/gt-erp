@@ -1,15 +1,48 @@
 import LeaveRequest from '../models/LeaveRequest.js';
 import LeaveBalance from '../models/LeaveBalance.js';
 import Employee from '../models/Employee.js';
+import Holiday from '../models/Holiday.js';
+import { calculateWorkingDays } from '../utils/dateUtils.js';
+import { uploadToCloudinary } from '../utils/cloudinary.js';
+import { recordApprovalEvent } from '../utils/approvalHelper.js';
 
 /**
  * Helper to resolve logged in employee ID safely
  */
+const resolveEmployeeId = async (req) => {
+  const userRoles = req.user?.roles || [];
+  const canManage = userRoles.some((r) => ['admin', 'hr', 'manager'].includes(r));
+
+  if (canManage && req.body?.employee) {
+    return req.body.employee;
+  }
+  if (req.user?.employee?._id) {
+    return req.user.employee._id;
+  }
+  if (req.user?.employee) {
+    return req.user.employee;
+  }
+  if (req.user) {
+    const employee = await Employee.findOne({
+      $or: [
+        { user: req.user._id },
+        { email: req.user.email?.toLowerCase() }
+      ]
+    });
+    if (employee) {
+      return employee._id;
+    }
+  }
+  if (canManage && req.body?.employee) {
+    return req.body.employee;
+  }
+  return null;
+};
+
 const resolveUserEmployeeId = async (user) => {
   if (!user) return null;
-  if (user.employee) {
-    return user.employee._id || user.employee;
-  }
+  if (user.employee?._id) return user.employee._id;
+  if (user.employee) return user.employee;
   const emp = await Employee.findOne({
     $or: [
       { user: user._id },
@@ -19,10 +52,19 @@ const resolveUserEmployeeId = async (user) => {
   return emp ? emp._id : null;
 };
 
-// Create a new leave request
+// Create a new leave request with balance verification and attachment support
 export const createLeaveRequest = async (req, res) => {
   try {
-    const { employee, type, startDate, endDate, reason } = req.body;
+    const {
+      employee,
+      type,
+      startDate,
+      endDate,
+      reason,
+      attachment,
+      attachmentName
+    } = req.body;
+
     const userRoles = req.user?.roles || [];
     const canManage = userRoles.some((r) => ['admin', 'hr', 'manager'].includes(r));
 
@@ -44,6 +86,8 @@ export const createLeaveRequest = async (req, res) => {
         });
       }
       targetEmployeeId = myEmpId;
+    } else if (!targetEmployeeId) {
+      targetEmployeeId = await resolveEmployeeId(req);
     }
 
     if (!targetEmployeeId || !type || !startDate || !endDate) {
@@ -56,35 +100,79 @@ export const createLeaveRequest = async (req, res) => {
     const start = new Date(startDate);
     const end = new Date(endDate);
 
-    if (start > end) {
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
       return res.status(400).json({
         success: false,
-        message: 'startDate cannot be after endDate'
+        message: 'Invalid date format'
       });
     }
 
-    // Calculate requested duration in calendar days
-    const diffTime = Math.abs(end - start);
-    const requestedDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    if (end < start) {
+      return res.status(400).json({
+        success: false,
+        message: 'endDate cannot be before startDate'
+      });
+    }
 
-    // Balance check: prevent requests exceeding available remaining quota to avoid negative balance
-    const year = start.getFullYear();
+    // Fetch active public holidays to exclude from working days
+    const holidays = await Holiday.find({ isActive: true });
+    const holidayDates = holidays.map((h) => h.date);
+
+    // Calculate actual working days excluding weekends & holidays
+    let workingDays = calculateWorkingDays(start, end, holidayDates);
+    if (workingDays <= 0) {
+      const diffTime = Math.abs(end - start);
+      workingDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    }
+
+    // Check for overlapping pending or accepted leave requests
+    const overlapping = await LeaveRequest.findOne({
+      employee: targetEmployeeId,
+      decision: { $in: ['pending', 'manager_approved', 'accepted'] },
+      $or: [
+        { startDate: { $lte: end }, endDate: { $gte: start } }
+      ]
+    });
+
+    if (overlapping) {
+      return res.status(409).json({
+        success: false,
+        message: 'You already have an active or pending leave request covering these dates'
+      });
+    }
+
+    // Balance verification for deductible leave types
+    const requestYear = start.getFullYear();
     const balance = await LeaveBalance.findOne({
       employee: targetEmployeeId,
-      year,
+      year: requestYear,
       type,
       isDeleted: false
     });
 
     if (type !== 'unpaid' && balance) {
-      if (balance.remaining < requestedDays) {
+      if (balance.remaining < workingDays) {
         return res.status(400).json({
           success: false,
-          message: `Insufficient leave balance for ${type} leave. Available: ${balance.remaining} days, requested: ${requestedDays} days.`,
+          message: `Insufficient leave balance for ${type} leave. Available: ${balance.remaining} days, requested: ${workingDays} working days.`,
           availableDays: balance.remaining,
-          requestedDays
+          requestedDays: workingDays
         });
       }
+    }
+
+    // Handle document upload if provided (e.g. medical certificates)
+    const attachments = [];
+    if (attachment) {
+      const uploadResult = await uploadToCloudinary(attachment, {
+        folder: 'gt_erp/leave_attachments',
+        resourceType: 'auto'
+      });
+      attachments.push({
+        name: attachmentName || `${type}_leave_document`,
+        url: uploadResult.secureUrl || uploadResult.url,
+        uploadedAt: new Date()
+      });
     }
 
     const leaveRequest = await LeaveRequest.create({
@@ -92,9 +180,24 @@ export const createLeaveRequest = async (req, res) => {
       type,
       startDate: start,
       endDate: end,
+      numberOfDays: workingDays,
       reason,
+      attachments,
       decision: 'pending'
     });
+
+    // Record submission in ApprovalHistory
+    try {
+      await recordApprovalEvent({
+        referenceType: 'leave request',
+        referenceId: leaveRequest._id,
+        action: 'submitted',
+        user: req.user,
+        comment: `Leave request of ${workingDays} day(s) submitted`
+      });
+    } catch (histErr) {
+      console.warn('Approval history logging warning:', histErr.message);
+    }
 
     const populated = await leaveRequest.populate([
       { path: 'employee', select: 'fullName email department position profileImage nationalId' }
@@ -107,7 +210,7 @@ export const createLeaveRequest = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: 'Leave request created successfully',
+      message: `Leave request for ${workingDays} day(s) submitted successfully`,
       data: resObj
     });
   } catch (error) {
@@ -119,8 +222,51 @@ export const createLeaveRequest = async (req, res) => {
   }
 };
 
+// Get current employee's leave requests
+export const getMyLeaveRequests = async (req, res) => {
+  try {
+    const employeeId = await resolveEmployeeId(req);
+    if (!employeeId) {
+      return res.status(404).json({
+        success: false,
+        message: 'No employee profile linked to user'
+      });
+    }
+
+    const { page = 1, limit = 20, decision, type } = req.query;
+    const query = { employee: employeeId };
+    if (decision) query.decision = decision;
+    if (type) query.type = type;
+
+    const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+    const total = await LeaveRequest.countDocuments(query);
+    const leaveRequests = await LeaveRequest.find(query)
+      .populate('decideBy', 'fullName email')
+      .populate('managerReview.decidedBy', 'fullName email')
+      .populate('hrReview.decidedBy', 'fullName email')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit, 10));
+
+    res.status(200).json({
+      success: true,
+      data: leaveRequests,
+      pagination: {
+        total,
+        page: parseInt(page, 10),
+        pages: Math.ceil(total / parseInt(limit, 10))
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch your leave requests',
+      error: error.message
+    });
+  }
+};
+
 // Get all leave requests with filters & pagination
-// Regular employees can only see their own leave requests; HR/Manager can see all
 export const getLeaveRequests = async (req, res) => {
   try {
     const {
@@ -166,32 +312,15 @@ export const getLeaveRequests = async (req, res) => {
     const leaveRequests = await LeaveRequest.find(query)
       .populate('employee', 'fullName email department position profileImage nationalId')
       .populate('decideBy', 'fullName email')
+      .populate('managerReview.decidedBy', 'fullName email')
+      .populate('hrReview.decidedBy', 'fullName email')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit, 10));
 
-    // Attach current leave balance for each request to show in the table directly
-    const requestsWithBalance = await Promise.all(
-      leaveRequests.map(async (lr) => {
-        const obj = lr.toObject();
-        const year = new Date(lr.startDate).getFullYear();
-        const empId = lr.employee?._id || lr.employee;
-        const bal = await LeaveBalance.findOne({
-          employee: empId,
-          year,
-          type: lr.type,
-          isDeleted: false
-        });
-        obj.leaveBalance = bal
-          ? { total: bal.total, remaining: bal.remaining, totalUsed: bal.totalUsed }
-          : null;
-        return obj;
-      })
-    );
-
     res.status(200).json({
       success: true,
-      data: requestsWithBalance,
+      data: leaveRequests,
       pagination: {
         total,
         page: parseInt(page, 10),
@@ -215,7 +344,9 @@ export const getLeaveRequestById = async (req, res) => {
 
     const leaveRequest = await LeaveRequest.findById(req.params.id)
       .populate('employee', 'fullName email department position profileImage nationalId')
-      .populate('decideBy', 'fullName email');
+      .populate('decideBy', 'fullName email')
+      .populate('managerReview.decidedBy', 'fullName email')
+      .populate('hrReview.decidedBy', 'fullName email');
 
     if (!leaveRequest) {
       return res.status(404).json({
@@ -224,7 +355,6 @@ export const getLeaveRequestById = async (req, res) => {
       });
     }
 
-    // Permission check for regular employee
     if (!canManage) {
       const myEmpId = await resolveUserEmployeeId(req.user);
       const reqEmpId = leaveRequest.employee?._id || leaveRequest.employee;
@@ -236,23 +366,9 @@ export const getLeaveRequestById = async (req, res) => {
       }
     }
 
-    const year = new Date(leaveRequest.startDate).getFullYear();
-    const empId = leaveRequest.employee?._id || leaveRequest.employee;
-    const bal = await LeaveBalance.findOne({
-      employee: empId,
-      year,
-      type: leaveRequest.type,
-      isDeleted: false
-    });
-
-    const resObj = leaveRequest.toObject();
-    resObj.leaveBalance = bal
-      ? { total: bal.total, remaining: bal.remaining, totalUsed: bal.totalUsed }
-      : null;
-
     res.status(200).json({
       success: true,
-      data: resObj
+      data: leaveRequest
     });
   } catch (error) {
     res.status(500).json({
@@ -263,17 +379,9 @@ export const getLeaveRequestById = async (req, res) => {
   }
 };
 
-// Update leave request
+// Update leave request details
 export const updateLeaveRequest = async (req, res) => {
   try {
-    const { startDate, endDate } = req.body;
-    if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
-      return res.status(400).json({
-        success: false,
-        message: 'startDate cannot be after endDate'
-      });
-    }
-
     const leaveRequest = await LeaveRequest.findByIdAndUpdate(
       req.params.id,
       { $set: req.body },
@@ -303,10 +411,75 @@ export const updateLeaveRequest = async (req, res) => {
   }
 };
 
-// Decide on leave request (accept/reject with decision reason and negative balance prevention)
+// Department Manager review step
+export const managerReviewLeaveRequest = async (req, res) => {
+  try {
+    const { decision, notes } = req.body; // 'manager_approved' or 'rejected'
+
+    if (!['manager_approved', 'rejected'].includes(decision)) {
+      return res.status(400).json({
+        success: false,
+        message: "Decision must be either 'manager_approved' or 'rejected'"
+      });
+    }
+
+    const leaveRequest = await LeaveRequest.findById(req.params.id);
+    if (!leaveRequest) {
+      return res.status(404).json({
+        success: false,
+        message: 'Leave request not found'
+      });
+    }
+
+    leaveRequest.decision = decision;
+    leaveRequest.managerReview = {
+      decidedBy: req.user?._id || null,
+      decidedAt: new Date(),
+      notes: notes || ''
+    };
+
+    if (decision === 'rejected') {
+      leaveRequest.rejectionReason = notes || 'Rejected by Department Manager';
+    }
+
+    await leaveRequest.save();
+
+    // Log in ApprovalHistory
+    try {
+      await recordApprovalEvent({
+        referenceType: 'leave request',
+        referenceId: leaveRequest._id,
+        action: decision,
+        user: req.user,
+        comment: notes || `Manager review: ${decision}`
+      });
+    } catch (histErr) {
+      console.warn('Approval history logging warning:', histErr.message);
+    }
+
+    const populated = await leaveRequest.populate([
+      { path: 'employee', select: 'fullName email department position' },
+      { path: 'managerReview.decidedBy', select: 'fullName email' }
+    ]);
+
+    res.status(200).json({
+      success: true,
+      message: `Leave request has been marked as ${decision}`,
+      data: populated
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to record manager review',
+      error: error.message
+    });
+  }
+};
+
+// Final HR Decision on leave request (accept / reject)
 export const decideLeaveRequest = async (req, res) => {
   try {
-    const { decision, decisionReason, rejectionReason, reason, decideBy } = req.body;
+    const { decision, notes, rejectionReason, decisionReason, reason, decideBy } = req.body;
 
     if (!decision || !['accepted', 'rejected'].includes(decision)) {
       return res.status(400).json({
@@ -324,11 +497,10 @@ export const decideLeaveRequest = async (req, res) => {
     }
 
     const previousDecision = leaveRequest.decision;
-    const finalReason = decisionReason || rejectionReason || reason || '';
+    const finalReason = decisionReason || rejectionReason || notes || reason || '';
 
     const year = new Date(leaveRequest.startDate).getFullYear();
-    const diffTime = Math.abs(new Date(leaveRequest.endDate) - new Date(leaveRequest.startDate));
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    const diffDays = leaveRequest.numberOfDays || Math.ceil(Math.abs(new Date(leaveRequest.endDate) - new Date(leaveRequest.startDate)) / (1000 * 60 * 60 * 24)) + 1;
 
     // Check Leave Balance
     const balance = await LeaveBalance.findOne({
@@ -364,12 +536,35 @@ export const decideLeaveRequest = async (req, res) => {
     leaveRequest.decisionReason = finalReason;
     leaveRequest.decideBy = req.user?._id || decideBy || null;
     leaveRequest.decideAt = new Date();
+    leaveRequest.hrReview = {
+      decidedBy: req.user?._id || decideBy || null,
+      decidedAt: new Date(),
+      notes: notes || finalReason
+    };
+
+    if (decision === 'rejected') {
+      leaveRequest.rejectionReason = finalReason || 'Rejected by HR';
+    }
 
     await leaveRequest.save();
 
+    // Log action in ApprovalHistory
+    try {
+      await recordApprovalEvent({
+        referenceType: 'leave request',
+        referenceId: leaveRequest._id,
+        action: decision,
+        user: req.user,
+        comment: notes || finalReason || `HR decision: ${decision}`
+      });
+    } catch (histErr) {
+      console.warn('Approval history logging warning:', histErr.message);
+    }
+
     const populated = await leaveRequest.populate([
       { path: 'employee', select: 'fullName email department position profileImage nationalId' },
-      { path: 'decideBy', select: 'fullName email' }
+      { path: 'decideBy', select: 'fullName email' },
+      { path: 'hrReview.decidedBy', select: 'fullName email' }
     ]);
 
     const resObj = populated.toObject();
@@ -391,7 +586,69 @@ export const decideLeaveRequest = async (req, res) => {
   }
 };
 
-// Delete leave request
+// Employee Cancel leave request
+export const cancelMyLeaveRequest = async (req, res) => {
+  try {
+    const employeeId = await resolveEmployeeId(req);
+    const leaveRequest = await LeaveRequest.findById(req.params.id);
+
+    if (!leaveRequest) {
+      return res.status(404).json({
+        success: false,
+        message: 'Leave request not found'
+      });
+    }
+
+    if (leaveRequest.employee.toString() !== employeeId?.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'You can only cancel your own leave request'
+      });
+    }
+
+    if (leaveRequest.decision === 'accepted') {
+      // Restore leave balance
+      const year = new Date(leaveRequest.startDate).getFullYear();
+      const restoreDays = leaveRequest.numberOfDays || 1;
+
+      await LeaveBalance.findOneAndUpdate(
+        { employee: leaveRequest.employee, year, type: leaveRequest.type, isDeleted: false },
+        {
+          $inc: { totalUsed: -restoreDays, remaining: restoreDays }
+        }
+      );
+    }
+
+    leaveRequest.decision = 'cancelled';
+    await leaveRequest.save();
+
+    try {
+      await recordApprovalEvent({
+        referenceType: 'leave request',
+        referenceId: leaveRequest._id,
+        action: 'cancelled',
+        user: req.user,
+        comment: 'Cancelled by employee'
+      });
+    } catch (histErr) {
+      console.warn('Approval history logging warning:', histErr.message);
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Leave request cancelled and balance restored',
+      data: leaveRequest
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to cancel leave request',
+      error: error.message
+    });
+  }
+};
+
+// Delete leave request (Admin/HR only)
 export const deleteLeaveRequest = async (req, res) => {
   try {
     const leaveRequest = await LeaveRequest.findById(req.params.id);
@@ -405,8 +662,7 @@ export const deleteLeaveRequest = async (req, res) => {
     // If deleting an accepted request, refund the balance
     if (leaveRequest.decision === 'accepted') {
       const year = new Date(leaveRequest.startDate).getFullYear();
-      const diffTime = Math.abs(new Date(leaveRequest.endDate) - new Date(leaveRequest.startDate));
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+      const diffDays = leaveRequest.numberOfDays || Math.ceil(Math.abs(new Date(leaveRequest.endDate) - new Date(leaveRequest.startDate)) / (1000 * 60 * 60 * 24)) + 1;
       await LeaveBalance.findOneAndUpdate(
         { employee: leaveRequest.employee, year, type: leaveRequest.type, isDeleted: false },
         { $inc: { totalUsed: -diffDays, remaining: diffDays } }
@@ -427,4 +683,3 @@ export const deleteLeaveRequest = async (req, res) => {
     });
   }
 };
-

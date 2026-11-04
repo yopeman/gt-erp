@@ -38,8 +38,22 @@ export const comparePassword = (plainPassword, storedHash) => {
   return crypto.timingSafeEqual(keyBuffer, derivedKey);
 };
 
-export default {
-  hashPassword,
-  comparePassword
+/**
+ * Generate a secure, user-friendly temporary password
+ * Default shape: Gt@ + 6 alphanumeric characters (e.g. Gt@K9mX2b)
+ */
+export const generateTemporaryPassword = (prefix = 'Gt@', length = 6) => {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+  let randomPart = '';
+  const randomBytes = crypto.randomBytes(length);
+  for (let i = 0; i < length; i++) {
+    randomPart += chars[randomBytes[i] % chars.length];
+  }
+  return `${prefix}${randomPart}`;
 };
 
+export default {
+  hashPassword,
+  comparePassword,
+  generateTemporaryPassword
+};

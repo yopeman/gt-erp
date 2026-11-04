@@ -9,6 +9,7 @@ import * as jobApplicationController from './jobApplicationController.js';
 import * as internshipController from './internshipController.js';
 import * as clearanceController from './clearanceController.js';
 import * as leaveBalanceController from './leaveBalanceController.js';
+import * as companySettingController from './companySettingController.js';
 
 export {
   userController,
@@ -21,7 +22,8 @@ export {
   jobApplicationController,
   internshipController,
   clearanceController,
-  leaveBalanceController
+  leaveBalanceController,
+  companySettingController
 };
 
 export default {
@@ -35,6 +37,6 @@ export default {
   jobApplicationController,
   internshipController,
   clearanceController,
-  leaveBalanceController
+  leaveBalanceController,
+  companySettingController
 };
-

@@ -1,6 +1,9 @@
 import Employee from '../models/Employee.js';
 import User from '../models/User.js';
+import LeaveBalance from '../models/LeaveBalance.js';
+import CompanySetting from '../models/CompanySetting.js';
 import { uploadToCloudinary } from '../utils/cloudinary.js';
+import { hashPassword, generateTemporaryPassword } from '../utils/password.js';
 
 /**
  * Normalizes account details array ensuring strictly ONE primary account
@@ -47,7 +50,53 @@ const processMediaUrl = async (urlOrBase64, folder, resourceType = 'auto') => {
   return urlOrBase64;
 };
 
-// Create a new employee
+// Get profile of current logged-in user
+export const getMyProfile = async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required'
+      });
+    }
+
+    let employee = null;
+
+    if (req.user.employee) {
+      employee = await Employee.findById(req.user.employee)
+        .populate('manager', 'fullName email position department phoneNumber')
+        .populate('user', 'fullName email roles mustChangePassword')
+        .populate('documents.uploadedBy', 'fullName email');
+    }
+
+    if (!employee) {
+      employee = await Employee.findOne({ email: req.user.email.toLowerCase() })
+        .populate('manager', 'fullName email position department phoneNumber')
+        .populate('user', 'fullName email roles mustChangePassword')
+        .populate('documents.uploadedBy', 'fullName email');
+    }
+
+    if (!employee) {
+      return res.status(404).json({
+        success: false,
+        message: 'No employee record associated with current user account'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: employee
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch employee profile',
+      error: error.message
+    });
+  }
+};
+
+// Create a new employee with full details and auto-link/provision user account
 export const createEmployee = async (req, res) => {
   try {
     const {
@@ -72,50 +121,64 @@ export const createEmployee = async (req, res) => {
       warranty,
       educations,
       accountDetails,
-      baseSalary
+      baseSalary,
+      password,
+      roles,
+      autoCreateUser = true
     } = req.body;
 
-    if (!fullName || !email || !department || !position || !phoneNumber || !type) {
+    if (!fullName || !email) {
       return res.status(400).json({
         success: false,
-        message: 'fullName, email, department, position, phoneNumber, and type are required'
+        message: 'fullName and email are required fields'
       });
     }
 
-    const existingEmployee = await Employee.findOne({ email: email.toLowerCase() });
-    if (existingEmployee) {
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // Check if an active employee with this email already exists
+    let employee = await Employee.findOne({ email: normalizedEmail });
+    if (employee && employee.status !== 'terminated') {
       return res.status(409).json({
         success: false,
-        message: 'An employee with this email already exists'
+        message: 'An active employee with this email already exists'
       });
     }
 
-    // Determine linked user if specified or auto-create system user account by default
-    let linkedUserId = user || null;
-    if (!linkedUserId && email) {
-      let matchedUser = await User.findOne({ email: email.toLowerCase() });
-      if (!matchedUser) {
-        const { hashPassword } = await import('../utils/password.js');
-        const defaultPassword = 'password123';
-        matchedUser = await User.create({
-          fullName,
-          email: email.toLowerCase(),
-          password: hashPassword(defaultPassword),
-          roles: ['employee']
-        });
-      }
-      linkedUserId = matchedUser._id;
+    // Determine linked user if specified or auto-create system user account
+    let userAccount = null;
+    let temporaryPassword = null;
+    let isNewUserCreated = false;
+
+    if (user) {
+      userAccount = await User.findById(user);
+    } else {
+      userAccount = await User.findOne({ email: normalizedEmail });
     }
 
     // Enforce 1-to-1 unique relationship: ensure user is not already linked to another employee
-    if (linkedUserId) {
-      const existingLink = await Employee.findOne({ user: linkedUserId });
+    if (userAccount) {
+      const existingLink = await Employee.findOne({
+        user: userAccount._id,
+        ...(employee ? { _id: { $ne: employee._id } } : {})
+      });
       if (existingLink) {
         return res.status(409).json({
           success: false,
           message: `User account is already linked to employee '${existingLink.fullName}'. A one-to-one relationship is required.`
         });
       }
+    } else if (autoCreateUser) {
+      temporaryPassword = password || generateTemporaryPassword();
+      userAccount = await User.create({
+        fullName: fullName.trim(),
+        email: normalizedEmail,
+        password: hashPassword(temporaryPassword),
+        roles: roles && roles.length > 0 ? roles : ['employee'],
+        mustChangePassword: true,
+        isTemporaryPassword: true
+      });
+      isNewUserCreated = true;
     }
 
     // Process profile image (Cloudinary with local fallback)
@@ -135,49 +198,183 @@ export const createEmployee = async (req, res) => {
     // Normalize bank accounts ensuring exactly one primary
     const processedAccounts = normalizeAccountDetails(accountDetails);
 
-    const employee = await Employee.create({
-      fullName,
-      email: email.toLowerCase(),
-      department,
-      position,
+    const employeeData = {
+      user: userAccount ? userAccount._id : null,
+      fullName: fullName.trim(),
+      email: normalizedEmail,
+      department: department || 'General',
+      position: position || 'Employee',
       gender,
       branch,
-      phoneNumber,
-      detailAddress,
-      hiredAt,
+      phoneNumber: phoneNumber || '',
+      detailAddress: detailAddress || {},
+      hiredAt: hiredAt || new Date(),
       manager: manager || null,
-      user: linkedUserId,
-      type,
+      type: type || 'full time',
       profileImage: finalProfileImage || null,
       dateOfBirth,
       status: status || 'active',
       documents: processedDocuments,
       nationalId,
-      emergency,
-      warranty,
+      emergency: emergency || {},
+      warranty: warranty || {},
       educations: educations || [],
       accountDetails: processedAccounts,
       baseSalary: baseSalary || 0
-    });
+    };
 
-    // Ensure linked user points back to this employee
-    if (linkedUserId) {
-      await User.updateOne({ _id: linkedUserId }, { $set: { employee: employee._id } });
+    if (employee) {
+      // Complete existing pending profile
+      employee = await Employee.findByIdAndUpdate(employee._id, { $set: employeeData }, { new: true });
+    } else {
+      // Create new employee document
+      employee = await Employee.create(employeeData);
     }
 
-    const populatedEmployee = await Employee.findById(employee._id)
-      .populate('manager', 'fullName email position department')
-      .populate('user', 'fullName email roles isDeleted');
+    // Ensure User references this Employee
+    if (userAccount) {
+      userAccount.employee = employee._id;
+      if (roles && roles.length > 0) userAccount.roles = roles;
+      await userAccount.save();
+    }
+
+    // Auto-initialize standard leave balances for the employee
+    try {
+      const currentYear = new Date().getFullYear();
+      const setting = await CompanySetting.findOne().sort({ createdAt: -1 });
+      const standardBalances = [
+        { type: 'annual', total: setting?.leaveSettings?.annualDaysPerYear || 16, isPayable: true },
+        { type: 'sick', total: setting?.leaveSettings?.sickDaysPerYear || 15, isPayable: false },
+        { type: 'emergency', total: setting?.leaveSettings?.emergencyDaysPerYear || 5, isPayable: false },
+        { type: 'casual', total: setting?.leaveSettings?.casualDaysPerYear || 3, isPayable: false }
+      ];
+
+      if (employee.gender === 'female') {
+        standardBalances.push({ type: 'maternity', total: setting?.leaveSettings?.maternityDays || 90, isPayable: true });
+      } else if (employee.gender === 'male') {
+        standardBalances.push({ type: 'paternity', total: setting?.leaveSettings?.paternityDays || 5, isPayable: false });
+      }
+
+      for (const item of standardBalances) {
+        const existingBal = await LeaveBalance.findOne({
+          employee: employee._id,
+          year: currentYear,
+          type: item.type
+        });
+        if (!existingBal) {
+          await LeaveBalance.create({
+            employee: employee._id,
+            year: currentYear,
+            type: item.type,
+            isPayable: item.isPayable,
+            total: item.total,
+            remaining: item.total,
+            totalUsed: 0
+          });
+        }
+      }
+    } catch (balanceErr) {
+      console.warn('Auto leave balance init skipped:', balanceErr.message);
+    }
+
+    const populated = await Employee.findById(employee._id)
+      .populate('user', 'fullName email roles mustChangePassword isDeleted')
+      .populate('manager', 'fullName email department position');
 
     res.status(201).json({
       success: true,
-      message: 'Employee created successfully',
-      data: populatedEmployee
+      message: isNewUserCreated
+        ? 'Employee details filled and linked with new User account (temporary password generated).'
+        : 'Employee created and successfully linked with User account.',
+      credentials: isNewUserCreated
+        ? {
+            email: normalizedEmail,
+            temporaryPassword,
+            roles: userAccount.roles,
+            mustChangePassword: true
+          }
+        : null,
+      data: populated
     });
   } catch (error) {
     res.status(500).json({
       success: false,
       message: 'Failed to create employee',
+      error: error.message
+    });
+  }
+};
+
+// Link an existing employee to a user account or generate temporary credentials
+export const linkUserAccount = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { userId, roles, customPassword } = req.body;
+
+    const employee = await Employee.findById(id);
+    if (!employee) {
+      return res.status(404).json({
+        success: false,
+        message: 'Employee not found'
+      });
+    }
+
+    let user = null;
+    let temporaryPassword = null;
+
+    if (userId) {
+      user = await User.findById(userId);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: 'Specified User not found'
+        });
+      }
+    } else {
+      // Find by employee's email or create new
+      user = await User.findOne({ email: employee.email.toLowerCase() });
+      if (!user) {
+        temporaryPassword = customPassword || generateTemporaryPassword();
+        user = await User.create({
+          fullName: employee.fullName,
+          email: employee.email.toLowerCase(),
+          password: hashPassword(temporaryPassword),
+          roles: roles && roles.length > 0 ? roles : ['employee'],
+          mustChangePassword: true,
+          isTemporaryPassword: true
+        });
+      }
+    }
+
+    // Bidirectional link
+    employee.user = user._id;
+    await employee.save();
+
+    user.employee = employee._id;
+    if (roles && roles.length > 0) user.roles = roles;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Employee and User linked bidirectionally',
+      temporaryPassword,
+      credentials: temporaryPassword
+        ? {
+            email: user.email,
+            temporaryPassword,
+            roles: user.roles
+          }
+        : null,
+      data: {
+        employeeId: employee._id,
+        userId: user._id,
+        roles: user.roles
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to link user account',
       error: error.message
     });
   }
@@ -220,7 +417,7 @@ export const getEmployees = async (req, res) => {
     const total = await Employee.countDocuments(query);
     const employees = await Employee.find(query)
       .populate('manager', 'fullName email position department')
-      .populate('user', 'fullName email roles isDeleted')
+      .populate('user', 'fullName email roles mustChangePassword isDeleted')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit, 10));
@@ -248,7 +445,7 @@ export const getEmployeeById = async (req, res) => {
   try {
     const employee = await Employee.findById(req.params.id)
       .populate('manager', 'fullName email position department phoneNumber')
-      .populate('user', 'fullName email roles isDeleted')
+      .populate('user', 'fullName email roles mustChangePassword isDeleted')
       .populate('documents.uploadedBy', 'fullName email');
 
     if (!employee) {
@@ -271,27 +468,50 @@ export const getEmployeeById = async (req, res) => {
   }
 };
 
-// Update employee
+// Update employee & keep user account synchronized
 export const updateEmployee = async (req, res) => {
   try {
-    if (req.body.email) {
-      req.body.email = req.body.email.toLowerCase();
+    const updateData = { ...req.body };
+
+    const employee = await Employee.findById(req.params.id);
+    if (!employee) {
+      return res.status(404).json({
+        success: false,
+        message: 'Employee not found'
+      });
+    }
+
+    if (updateData.email) {
+      updateData.email = updateData.email.toLowerCase().trim();
+      // Prevent direct modification of email to an existing one
+      if (updateData.email !== employee.email.toLowerCase()) {
+        const existing = await Employee.findOne({
+          email: updateData.email,
+          _id: { $ne: req.params.id }
+        });
+        if (existing) {
+          return res.status(409).json({
+            success: false,
+            message: 'Another employee with this email already exists'
+          });
+        }
+      }
     }
 
     // Process profile image if base64
-    if (req.body.profileImage) {
-      req.body.profileImage = await processMediaUrl(req.body.profileImage, 'gt_erp/employees/profiles', 'image');
+    if (updateData.profileImage) {
+      updateData.profileImage = await processMediaUrl(updateData.profileImage, 'gt_erp/employees/profiles', 'image');
     }
 
     // Normalize bank accounts ensuring strictly one primary
-    if (req.body.accountDetails) {
-      req.body.accountDetails = normalizeAccountDetails(req.body.accountDetails);
+    if (updateData.accountDetails) {
+      updateData.accountDetails = normalizeAccountDetails(updateData.accountDetails);
     }
 
     // Process any base64 document URLs
-    if (Array.isArray(req.body.documents)) {
-      req.body.documents = await Promise.all(
-        req.body.documents.map(async (doc) => ({
+    if (Array.isArray(updateData.documents)) {
+      updateData.documents = await Promise.all(
+        updateData.documents.map(async (doc) => ({
           ...doc,
           url: await processMediaUrl(doc.url, 'gt_erp/documents', 'auto')
         }))
@@ -299,14 +519,13 @@ export const updateEmployee = async (req, res) => {
     }
 
     // Handle user link consistency if user field is explicitly updated
-    if (req.body.user !== undefined) {
-      const currentEmployee = await Employee.findById(req.params.id);
-      const newUserId = req.body.user || null;
-      req.body.user = newUserId;
+    if (updateData.user !== undefined) {
+      const newUserId = updateData.user || null;
+      updateData.user = newUserId;
 
-      if (currentEmployee && currentEmployee.user && String(currentEmployee.user) !== String(newUserId)) {
+      if (employee.user && String(employee.user) !== String(newUserId)) {
         // Unlink previous user
-        await User.updateOne({ _id: currentEmployee.user }, { $set: { employee: null } });
+        await User.updateOne({ _id: employee.user }, { $set: { employee: null } });
       }
 
       if (newUserId) {
@@ -319,38 +538,37 @@ export const updateEmployee = async (req, res) => {
       }
     }
 
-    const employee = await Employee.findByIdAndUpdate(
+    const updatedEmployee = await Employee.findByIdAndUpdate(
       req.params.id,
-      { $set: req.body },
+      { $set: updateData },
       { new: true, runValidators: true }
     )
-      .populate('manager', 'fullName email position department')
-      .populate('user', 'fullName email roles isDeleted');
+      .populate('user', 'fullName email roles mustChangePassword isDeleted')
+      .populate('manager', 'fullName email position department');
 
-    if (!employee) {
-      return res.status(404).json({
-        success: false,
-        message: 'Employee not found'
-      });
-    }
+    // Synchronize linked User account details
+    const linkedUserId = updatedEmployee.user?._id || employee.user;
+    if (linkedUserId) {
+      const userUpdate = {};
+      if (updateData.fullName) userUpdate.fullName = updateData.fullName.trim();
+      if (updateData.email) userUpdate.email = updateData.email;
 
-    // Keep linked user details synchronized with updated employee info
-    if (employee.user) {
-      const linkedUserId = employee.user._id || employee.user;
-      const userUpdate = {
-        fullName: employee.fullName,
-        email: employee.email
-      };
-      if (employee.status === 'terminated') {
+      // If employee is terminated or inactive, deactivate their login account
+      if (updateData.status === 'terminated' || updateData.status === 'inactive') {
         userUpdate.isDeleted = true;
+      } else if (updateData.status === 'active') {
+        userUpdate.isDeleted = false;
       }
-      await User.updateOne({ _id: linkedUserId }, { $set: userUpdate });
+
+      if (Object.keys(userUpdate).length > 0) {
+        await User.findByIdAndUpdate(linkedUserId, { $set: userUpdate });
+      }
     }
 
     res.status(200).json({
       success: true,
-      message: 'Employee updated successfully',
-      data: employee
+      message: 'Employee updated successfully and synchronized with User account',
+      data: updatedEmployee
     });
   } catch (error) {
     res.status(500).json({
@@ -361,7 +579,7 @@ export const updateEmployee = async (req, res) => {
   }
 };
 
-// Delete employee (or terminate)
+// Delete employee (supports soft delete and permanent delete)
 export const deleteEmployee = async (req, res) => {
   try {
     const { permanent } = req.query;
@@ -396,21 +614,14 @@ export const deleteEmployee = async (req, res) => {
       });
     }
 
-    // Soft deactivation of linked user account on termination
+    // Soft-delete / deactivate linked User account on termination
     if (employee.user) {
-      await User.updateOne({ _id: employee.user }, { $set: { isDeleted: true } });
-    }
-
-    if (!employee) {
-      return res.status(404).json({
-        success: false,
-        message: 'Employee not found'
-      });
+      await User.findByIdAndUpdate(employee.user, { $set: { isDeleted: true } });
     }
 
     res.status(200).json({
       success: true,
-      message: 'Employee status changed to terminated',
+      message: 'Employee terminated and user account deactivated successfully',
       data: employee
     });
   } catch (error) {
@@ -422,10 +633,10 @@ export const deleteEmployee = async (req, res) => {
   }
 };
 
-// Add a document to an employee
+// Add document to employee
 export const addDocument = async (req, res) => {
   try {
-    const { type, name, url, file, issuedAt, uploadedBy, expiresAt, approvedAt } = req.body;
+    const { type, name, url, file, issuedAt, uploadedBy, expiresAt } = req.body;
     const rawDocumentData = file || url;
     const finalUrl = await processMediaUrl(rawDocumentData, 'gt_erp/documents', 'auto');
 
@@ -438,9 +649,8 @@ export const addDocument = async (req, res) => {
             name,
             url: finalUrl,
             issuedAt,
-            uploadedBy,
-            expiresAt,
-            approvedAt
+            uploadedBy: req.user?._id || uploadedBy || null,
+            expiresAt
           }
         }
       },

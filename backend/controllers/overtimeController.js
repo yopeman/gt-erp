@@ -1,16 +1,45 @@
 import Overtime from '../models/Overtime.js';
 import Employee from '../models/Employee.js';
 import Attendance from '../models/Attendance.js';
-import { calculateWorkedHours } from '../utils/dateUtils.js';
+import { recordApprovalEvent } from '../utils/approvalHelper.js';
 
 /**
  * Helper to resolve logged in employee ID safely
  */
+const resolveEmployeeId = async (req) => {
+  const userRoles = req.user?.roles || [];
+  const canManage = userRoles.some((r) => ['admin', 'hr', 'manager'].includes(r));
+
+  if (canManage && req.body?.employee) {
+    return req.body.employee;
+  }
+  if (req.user?.employee?._id) {
+    return req.user.employee._id;
+  }
+  if (req.user?.employee) {
+    return req.user.employee;
+  }
+  if (req.user) {
+    const employee = await Employee.findOne({
+      $or: [
+        { user: req.user._id },
+        { email: req.user.email?.toLowerCase() }
+      ]
+    });
+    if (employee) {
+      return employee._id;
+    }
+  }
+  if (canManage && req.body?.employee) {
+    return req.body.employee;
+  }
+  return null;
+};
+
 const resolveUserEmployeeId = async (user) => {
   if (!user) return null;
-  if (user.employee) {
-    return user.employee._id || user.employee;
-  }
+  if (user.employee?._id) return user.employee._id;
+  if (user.employee) return user.employee;
   const emp = await Employee.findOne({
     $or: [
       { user: user._id },
@@ -35,7 +64,7 @@ export const createOvertime = async (req, res) => {
       startAt,
       workedHours,
       reason,
-      type = 'calendar',
+      type,
       calculationRate,
       isPreApproved
     } = req.body;
@@ -61,12 +90,22 @@ export const createOvertime = async (req, res) => {
         });
       }
       targetEmployeeId = myEmpId;
+    } else if (!targetEmployeeId) {
+      targetEmployeeId = await resolveEmployeeId(req);
     }
 
     if (!targetEmployeeId || !startAt || workedHours === undefined) {
       return res.status(400).json({
         success: false,
         message: 'employee, startAt, and workedHours are required'
+      });
+    }
+
+    const hours = Number(workedHours) || 0;
+    if (hours <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'workedHours must be greater than 0'
       });
     }
 
@@ -89,8 +128,8 @@ export const createOvertime = async (req, res) => {
     const overtime = await Overtime.create({
       employee: targetEmployeeId,
       startAt,
-      workedHours: Number(workedHours),
-      approvedHours: isPreApproved ? Number(workedHours) : 0,
+      workedHours: hours,
+      approvedHours: isPreApproved ? hours : 0,
       reason,
       type: type || 'calendar',
       calculationRate: finalRate,
@@ -106,8 +145,21 @@ export const createOvertime = async (req, res) => {
       await matchingAttendance.save();
     }
 
+    // Record submission in ApprovalHistory
+    try {
+      await recordApprovalEvent({
+        referenceType: 'overtime',
+        referenceId: overtime._id,
+        action: 'submitted',
+        user: req.user,
+        comment: `Overtime request for ${hours} hours submitted. Reason: ${reason || 'N/A'}`
+      });
+    } catch (histErr) {
+      console.warn('Approval history logging warning:', histErr.message);
+    }
+
     const populated = await overtime.populate([
-      { path: 'employee', select: 'fullName email department position profileImage nationalId' },
+      { path: 'employee', select: 'fullName email department position profileImage nationalId baseSalary' },
       { path: 'attendance', select: 'date startTime endTime workedHours type' }
     ]);
 
@@ -119,35 +171,37 @@ export const createOvertime = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: 'Failed to create overtime request',
+      message: 'Failed to create overtime record',
       error: error.message
     });
   }
 };
 
-// Lookup attendance for an overtime date to auto-calculate worked and overtime hours
+// Lookup attendance for a specific employee and date
 export const lookupAttendanceForOvertime = async (req, res) => {
   try {
     const { employee, date } = req.query;
-    const userRoles = req.user?.roles || [];
-    const canManage = userRoles.some((r) => ['admin', 'hr', 'manager'].includes(r));
 
-    let targetEmployeeId = employee;
-    if (!canManage || !targetEmployeeId) {
-      targetEmployeeId = await resolveUserEmployeeId(req.user);
-    }
-
-    if (!targetEmployeeId || !date) {
+    if (!date) {
       return res.status(400).json({
         success: false,
-        message: 'employee and date are required'
+        message: 'date parameter is required'
       });
     }
 
-    const d = new Date(date);
-    const startOfDay = new Date(d);
+    const targetEmployeeId = employee || (await resolveEmployeeId(req));
+    if (!targetEmployeeId) {
+      return res.status(400).json({
+        success: false,
+        message: 'employee could not be determined'
+      });
+    }
+
+    const queryDate = new Date(date);
+    const startOfDay = new Date(queryDate);
     startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(d);
+
+    const endOfDay = new Date(queryDate);
     endOfDay.setHours(23, 59, 59, 999);
 
     const attendance = await Attendance.findOne({
@@ -159,29 +213,28 @@ export const lookupAttendanceForOvertime = async (req, res) => {
     if (!attendance) {
       return res.status(200).json({
         success: true,
-        data: null,
-        message: 'No attendance record found for this date'
+        found: false,
+        attendance: null
       });
     }
 
-    let workedHours = attendance.workedHours || 0;
-    if (!workedHours && attendance.startTime && attendance.endTime) {
-      workedHours = calculateWorkedHours(attendance.startTime, attendance.endTime);
-    }
+    const workedHours = attendance.workedHours || 0;
+    const suggestedExtraHours = workedHours > 8 ? Number((workedHours - 8).toFixed(2)) : 0;
 
-    const suggestedOvertime = workedHours > 8 ? Number((workedHours - 8).toFixed(2)) : 0;
-    const isWeekend = [0, 6].includes(d.getDay());
+    const dayOfWeek = queryDate.getDay();
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
     const suggestedType = isWeekend ? 'weekend' : 'calendar';
     const suggestedRate = isWeekend ? 2.0 : 1.5;
 
     res.status(200).json({
       success: true,
-      data: {
-        attendanceId: attendance._id,
+      found: true,
+      attendance: {
+        _id: attendance._id,
         startTime: attendance.startTime,
         endTime: attendance.endTime,
         workedHours,
-        suggestedOvertime,
+        suggestedExtraHours,
         suggestedType,
         suggestedRate
       }
@@ -195,7 +248,51 @@ export const lookupAttendanceForOvertime = async (req, res) => {
   }
 };
 
-// Get all overtimes with filters and pagination
+// Get current user's overtime records
+export const getMyOvertimes = async (req, res) => {
+  try {
+    const employeeId = await resolveEmployeeId(req);
+    if (!employeeId) {
+      return res.status(404).json({
+        success: false,
+        message: 'No matching employee profile found for user'
+      });
+    }
+
+    const { page = 1, limit = 20, status, type } = req.query;
+    const query = { employee: employeeId };
+    if (status) query.status = status;
+    if (type) query.type = type;
+
+    const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+    const total = await Overtime.countDocuments(query);
+    const overtimes = await Overtime.find(query)
+      .populate('approvedBy', 'fullName email')
+      .populate('attendance', 'date startTime endTime workedHours type')
+      .populate('payroll', 'fromDate toDate status paidAt totalNet')
+      .sort({ startAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit, 10));
+
+    res.status(200).json({
+      success: true,
+      data: overtimes,
+      pagination: {
+        total,
+        page: parseInt(page, 10),
+        pages: Math.ceil(total / parseInt(limit, 10))
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch your overtime records',
+      error: error.message
+    });
+  }
+};
+
+// Get all overtime records with filters and pagination
 export const getOvertimes = async (req, res) => {
   try {
     const {
@@ -203,8 +300,8 @@ export const getOvertimes = async (req, res) => {
       limit = 20,
       employee,
       status,
-      paymentStatus,
       type,
+      paymentStatus,
       startDate,
       endDate
     } = req.query;
@@ -214,7 +311,7 @@ export const getOvertimes = async (req, res) => {
 
     const query = {};
 
-    // Scoped visibility: Regular employees can only see their own overtime records
+    // Scoped visibility: regular employees can only see their own overtimes
     if (!canManage) {
       const myEmpId = await resolveUserEmployeeId(req.user);
       if (!myEmpId) {
@@ -230,8 +327,8 @@ export const getOvertimes = async (req, res) => {
     }
 
     if (status) query.status = status;
-    if (paymentStatus) query.paymentStatus = paymentStatus;
     if (type) query.type = type;
+    if (paymentStatus) query.paymentStatus = paymentStatus;
 
     if (startDate || endDate) {
       query.startAt = {};
@@ -242,7 +339,7 @@ export const getOvertimes = async (req, res) => {
     const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
     const total = await Overtime.countDocuments(query);
     const overtimes = await Overtime.find(query)
-      .populate('employee', 'fullName email department position profileImage nationalId')
+      .populate('employee', 'fullName email department position profileImage nationalId baseSalary')
       .populate('approvedBy', 'fullName email')
       .populate('attendance', 'date startTime endTime workedHours type')
       .populate('payroll', 'fromDate toDate status paidAt totalNet')
@@ -275,7 +372,7 @@ export const getOvertimeById = async (req, res) => {
     const canManage = userRoles.some((r) => ['admin', 'hr', 'manager', 'finance'].includes(r));
 
     const overtime = await Overtime.findById(req.params.id)
-      .populate('employee', 'fullName email department position profileImage nationalId')
+      .populate('employee', 'fullName email department position profileImage nationalId baseSalary')
       .populate('approvedBy', 'fullName email')
       .populate('attendance', 'date startTime endTime workedHours type')
       .populate('payroll', 'fromDate toDate status paidAt totalNet');
@@ -287,7 +384,6 @@ export const getOvertimeById = async (req, res) => {
       });
     }
 
-    // Permission check for regular employee
     if (!canManage) {
       const myEmpId = await resolveUserEmployeeId(req.user);
       const otEmpId = overtime.employee?._id || overtime.employee;
@@ -312,15 +408,20 @@ export const getOvertimeById = async (req, res) => {
   }
 };
 
-// Update overtime request
+// Update overtime record
 export const updateOvertime = async (req, res) => {
   try {
+    const updateData = { ...req.body };
+    if (updateData.type && !updateData.calculationRate) {
+      updateData.calculationRate = OVERTIME_TYPE_RATES[updateData.type] || 1.5;
+    }
+
     const overtime = await Overtime.findByIdAndUpdate(
       req.params.id,
-      { $set: req.body },
+      { $set: updateData },
       { new: true, runValidators: true }
     )
-      .populate('employee', 'fullName email department position')
+      .populate('employee', 'fullName email department position profileImage nationalId baseSalary')
       .populate('approvedBy', 'fullName email');
 
     if (!overtime) {
@@ -332,7 +433,7 @@ export const updateOvertime = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: 'Overtime record updated successfully',
+      message: 'Overtime updated successfully',
       data: overtime
     });
   } catch (error) {
@@ -347,7 +448,7 @@ export const updateOvertime = async (req, res) => {
 // Review / Approve / Reject overtime
 export const reviewOvertime = async (req, res) => {
   try {
-    const { status, approvedHours, approvedBy, decisionReason, reason, rejectionReason } = req.body;
+    const { status, approvedHours, approvedBy, decisionReason, reason, rejectionReason, notes } = req.body;
 
     if (!status || !['approved', 'rejected', 'pending'].includes(status)) {
       return res.status(400).json({
@@ -356,33 +457,45 @@ export const reviewOvertime = async (req, res) => {
       });
     }
 
-    const finalReason = decisionReason || rejectionReason || reason || '';
+    const existing = await Overtime.findById(req.params.id);
+    if (!existing) {
+      return res.status(404).json({
+        success: false,
+        message: 'Overtime record not found'
+      });
+    }
+
+    const finalReason = decisionReason || rejectionReason || notes || reason || '';
     const reviewerId = approvedBy || req.user?._id || null;
+    const finalApprovedHours = approvedHours !== undefined ? Number(approvedHours) : existing.workedHours;
 
     const updateData = {
       status,
       approvedBy: reviewerId,
       reviewedAt: new Date(),
-      decisionReason: finalReason
+      decisionReason: finalReason,
+      approvedHours: status === 'approved' ? finalApprovedHours : 0
     };
-
-    if (approvedHours !== undefined) {
-      updateData.approvedHours = status === 'approved' ? approvedHours : 0;
-    }
 
     const overtime = await Overtime.findByIdAndUpdate(
       req.params.id,
       updateData,
       { new: true, runValidators: true }
     )
-      .populate('employee', 'fullName email department position profileImage nationalId')
+      .populate('employee', 'fullName email department position profileImage nationalId baseSalary')
       .populate('approvedBy', 'fullName email');
 
-    if (!overtime) {
-      return res.status(404).json({
-        success: false,
-        message: 'Overtime record not found'
+    // Record action in ApprovalHistory
+    try {
+      await recordApprovalEvent({
+        referenceType: 'overtime',
+        referenceId: overtime._id,
+        action: status === 'approved' ? 'approved' : status === 'rejected' ? 'rejected' : 'returned for correction',
+        user: req.user,
+        comment: notes || finalReason || `Overtime ${status} with ${updateData.approvedHours} approved hours`
       });
+    } catch (histErr) {
+      console.warn('Approval history logging warning:', histErr.message);
     }
 
     res.status(200).json({
@@ -426,28 +539,37 @@ export const updateOvertimePaymentStatus = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: 'Overtime payment status updated successfully',
+      message: `Payment status updated to ${paymentStatus}`,
       data: overtime
     });
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: 'Failed to update overtime payment status',
+      message: 'Failed to update payment status',
       error: error.message
     });
   }
 };
 
-// Delete overtime
+// Delete overtime record
 export const deleteOvertime = async (req, res) => {
   try {
-    const overtime = await Overtime.findByIdAndDelete(req.params.id);
+    const overtime = await Overtime.findById(req.params.id);
     if (!overtime) {
       return res.status(404).json({
         success: false,
         message: 'Overtime record not found'
       });
     }
+
+    // If attendance was linked, unlink it
+    if (overtime.attendance) {
+      await Attendance.findByIdAndUpdate(overtime.attendance, {
+        $set: { linkedOvertime: null }
+      });
+    }
+
+    await Overtime.findByIdAndDelete(req.params.id);
 
     res.status(200).json({
       success: true,
@@ -461,4 +583,3 @@ export const deleteOvertime = async (req, res) => {
     });
   }
 };
-

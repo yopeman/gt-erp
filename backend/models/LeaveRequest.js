@@ -1,5 +1,23 @@
 import mongoose from 'mongoose';
 
+const attachmentSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      trim: true
+    },
+    url: {
+      type: String,
+      trim: true
+    },
+    uploadedAt: {
+      type: Date,
+      default: Date.now
+    }
+  },
+  { _id: false }
+);
+
 const leaveRequestSchema = new mongoose.Schema(
   {
     employee: {
@@ -21,14 +39,24 @@ const leaveRequestSchema = new mongoose.Schema(
       type: Date,
       required: [true, 'End date is required']
     },
+    numberOfDays: {
+      type: Number,
+      default: 1,
+      min: [0.5, 'Leave duration must be at least half a day']
+    },
     reason: {
       type: String,
       trim: true
     },
+    attachments: [attachmentSchema],
     decision: {
       type: String,
-      enum: ['pending', 'rejected', 'accepted'],
+      enum: ['pending', 'manager_approved', 'accepted', 'rejected', 'cancelled'],
       default: 'pending'
+    },
+    rejectionReason: {
+      type: String,
+      trim: true
     },
     decideBy: {
       type: mongoose.Schema.Types.ObjectId,
@@ -43,6 +71,36 @@ const leaveRequestSchema = new mongoose.Schema(
       type: String,
       trim: true,
       default: ''
+    },
+    managerReview: {
+      decidedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        default: null
+      },
+      decidedAt: {
+        type: Date,
+        default: null
+      },
+      notes: {
+        type: String,
+        trim: true
+      }
+    },
+    hrReview: {
+      decidedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        default: null
+      },
+      decidedAt: {
+        type: Date,
+        default: null
+      },
+      notes: {
+        type: String,
+        trim: true
+      }
     }
   },
   {
@@ -50,7 +108,9 @@ const leaveRequestSchema = new mongoose.Schema(
   }
 );
 
+leaveRequestSchema.index({ employee: 1, startDate: 1 });
+leaveRequestSchema.index({ decision: 1 });
+
 const LeaveRequest = mongoose.model('LeaveRequest', leaveRequestSchema);
 
 export default LeaveRequest;
-

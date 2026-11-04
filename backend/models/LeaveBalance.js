@@ -54,6 +54,16 @@ const leaveBalanceSchema = new mongoose.Schema(
       default: 0,
       min: [0, 'Total used leave cannot be negative']
     },
+    carryForward: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    accrued: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
     total: {
       type: Number,
       default: 0,
@@ -87,4 +97,3 @@ leaveBalanceSchema.index({ employee: 1, year: 1, type: 1 }, { unique: true });
 const LeaveBalance = mongoose.model('LeaveBalance', leaveBalanceSchema);
 
 export default LeaveBalance;
-
