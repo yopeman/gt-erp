@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useTranslation } from '../../i18n';
 import { useAuth } from '../../context/AuthContext';
 import Modal from '../../components/common/Modal';

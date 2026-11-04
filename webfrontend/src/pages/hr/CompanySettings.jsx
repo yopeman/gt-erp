@@ -525,11 +525,10 @@ export default function CompanySettings() {
       await api.put('/company-settings', settings);
       const res = await api.post('/leave-balances/sync-policy', { year: yr });
       if (res.success) {
-        setSuccessMsg(res.message);
-        setTimeout(() => setSuccessMsg(''), 5000);
+        setAlertMessage({ type: 'success', text: res.message || 'Policy quotas synchronized successfully.' });
       }
     } catch (err) {
-      setErrorMsg(err.message || 'Failed to sync policy quotas to employee balances');
+      setAlertMessage({ type: 'error', text: err.message || 'Failed to sync policy quotas to employee balances' });
     } finally {
       setSyncingPolicy(false);
     }

@@ -219,6 +219,16 @@ export default function LeaveManagement({ initialTab = 'requests' }) {
     }
   }, [isInitBalanceModalOpen, employees]);
 
+  // Calculate requested duration in calendar days
+  const calculateDurationDays = (startDate, endDate) => {
+    if (!startDate || !endDate) return 0;
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    if (isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) return 0;
+    const diffTime = Math.abs(end.getTime() - start.getTime());
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+  };
+
   // Calculate requested duration in calendar days, working days, and public holiday exclusions
   const durationBreakdown = useMemo(() => {
     if (!applyForm.startDate || !applyForm.endDate) {
