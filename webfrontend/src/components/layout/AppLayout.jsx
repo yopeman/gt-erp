@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import Header from './Header';
 import Sidebar from './Sidebar';
+import { SERVER_BASE_URL } from '../../services/api';
 
 export default function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -10,7 +11,7 @@ export default function AppLayout() {
   // Check backend server liveness
   useEffect(() => {
     const checkBackend = () => {
-      fetch('http://localhost:5000/')
+      fetch(`${SERVER_BASE_URL || ''}/`)
         .then((res) => res.text())
         .then(() => setBackendConnected(true))
         .catch(() => setBackendConnected(false));
