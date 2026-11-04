@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import Modal from '../../components/common/Modal';
 import Badge from '../../components/common/Badge';
 import EmptyState from '../../components/common/EmptyState';
+import ApprovalHistoryModal from '../../components/common/ApprovalHistoryModal';
 import api from '../../services/api';
 import {
   CreditCard,
@@ -18,7 +19,8 @@ import {
   FileText,
   Pencil,
   Clock,
-  CalendarCheck2
+  CalendarCheck2,
+  History
 } from 'lucide-react';
 
 // Statutory Ethiopian Employment Tax Calculation (Proclamation 979/2016)
@@ -69,6 +71,7 @@ export default function Payroll() {
   // Print Slip Modal
   const [isSlipOpen, setIsSlipOpen] = useState(false);
   const [selectedSlip, setSelectedSlip] = useState(null);
+  const [activeHistoryId, setActiveHistoryId] = useState(null);
 
   // New item inputs in single modal
   const [newEarningName, setNewEarningName] = useState('');
@@ -548,6 +551,14 @@ export default function Payroll() {
                   </button>
 
                   <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setActiveHistoryId(item._id)}
+                      className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 transition"
+                      title="View Approval Audit Trail"
+                    >
+                      <History className="w-3.5 h-3.5" />
+                    </button>
+
                     {/* Edit button: shown if NOT approved and user has HR/Admin role */}
                     {!item.approvedBy && canApprove && (
                       <button
@@ -654,6 +665,14 @@ export default function Payroll() {
                       >
                         <Printer className="w-3.5 h-3.5 text-primary-500" />
                         <span>Slip</span>
+                      </button>
+
+                      <button
+                        onClick={() => setActiveHistoryId(item._id)}
+                        className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition inline-flex items-center"
+                        title="View Approval Audit Trail"
+                      >
+                        <History className="w-3.5 h-3.5" />
                       </button>
 
                       {/* Edit Button: shown if NOT approved and user has HR/Admin role */}
@@ -1310,6 +1329,15 @@ export default function Payroll() {
           </div>
         )}
       </Modal>
+
+      {/* Approval Audit Trail Modal */}
+      <ApprovalHistoryModal
+        isOpen={Boolean(activeHistoryId)}
+        onClose={() => setActiveHistoryId(null)}
+        referenceType="payroll"
+        referenceId={activeHistoryId}
+        title="Payroll Disbursement Audit Trail"
+      />
     </div>
   );
 }

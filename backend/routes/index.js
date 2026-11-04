@@ -43,14 +43,18 @@ router.use('/users', userRoutes);
 router.use('/employees', employeeRoutes);
 router.use('/leave-requests', leaveRequestRoutes);
 router.use('/attendances', attendanceRoutes);
+router.use('/attendance', attendanceRoutes);
 router.use('/overtimes', overtimeRoutes);
+router.use('/overtime', overtimeRoutes);
 router.use('/payrolls', payrollRoutes);
+router.use('/payroll', payrollRoutes);
 router.use('/job-positions', jobPositionRoutes);
 router.use('/job-applications', jobApplicationRoutes);
 router.use('/internships', internshipRoutes);
 router.use('/clearances', clearanceRoutes);
 router.use('/leave-balances', leaveBalanceRoutes);
 router.use('/company-settings', companySettingRoutes);
+router.use('/company-setting', companySettingRoutes);
 
 // Store & Inventory Module
 router.use('/warehouses', warehouseRoutes);
@@ -72,6 +76,7 @@ router.use('/supplier-returns', supplierReturnRoutes);
 
 // System Support
 router.use('/approval-history', approvalHistoryRoutes);
+router.use('/approval-histories', approvalHistoryRoutes);
 router.use('/inventory-audit-logs', inventoryAuditLogRoutes);
 
 export default router;

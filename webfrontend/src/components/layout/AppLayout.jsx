@@ -3,8 +3,11 @@ import { Outlet } from 'react-router-dom';
 import Header from './Header';
 import Sidebar from './Sidebar';
 import { SERVER_BASE_URL } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
+import ChangePasswordModal from '../auth/ChangePasswordModal';
 
 export default function AppLayout() {
+  const { user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [backendConnected, setBackendConnected] = useState(true);
 
@@ -45,6 +48,11 @@ export default function AppLayout() {
           <Outlet />
         </main>
       </div>
+
+      {/* Mandatory Password Change Modal for temporary passwords */}
+      {user?.mustChangePassword && (
+        <ChangePasswordModal isOpen={true} isMandatory={true} />
+      )}
     </div>
   );
 }

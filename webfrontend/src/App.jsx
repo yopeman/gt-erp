@@ -18,6 +18,7 @@ import Payroll from './pages/hr/Payroll';
 import Recruitment from './pages/hr/Recruitment';
 import Internships from './pages/hr/Internships';
 import Clearances from './pages/hr/Clearances';
+import CompanySettings from './pages/hr/CompanySettings';
 
 // Admin Pages (Section 7.1)
 import UsersPage from './pages/admin/Users';
@@ -64,6 +65,14 @@ export default function App() {
           <Route path="hr/recruitment" element={<Recruitment />} />
           <Route path="hr/internships" element={<Internships />} />
           <Route path="hr/clearances" element={<Clearances />} />
+          <Route
+            path="hr/settings"
+            element={
+              <ProtectedRoute roles={['admin', 'hr']}>
+                <CompanySettings />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Central Admin Subroutes */}
           <Route

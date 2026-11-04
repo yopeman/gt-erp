@@ -99,69 +99,71 @@ export const createLeaveBalance = async (req, res) => {
   }
 };
 
-// Initialize full yearly standard leave balances for an employee
+// Initialize full yearly standard leave balances for an employee or all active employees
 export const initializeEmployeeYearlyBalances = async (req, res) => {
   try {
     const { employeeId, year } = req.body;
     const targetYear = Number(year) || new Date().getFullYear();
 
-    if (!employeeId) {
-      return res.status(400).json({
-        success: false,
-        message: 'employeeId is required'
-      });
+    const setting = await CompanySetting.findOne().sort({ createdAt: -1 });
+
+    let employees = [];
+    if (!employeeId || employeeId === 'all') {
+      employees = await Employee.find({ status: { $ne: 'terminated' } });
+    } else {
+      const emp = await Employee.findById(employeeId);
+      if (emp) employees = [emp];
     }
 
-    const emp = await Employee.findById(employeeId);
-    if (!emp) {
+    if (employees.length === 0) {
       return res.status(404).json({
         success: false,
-        message: 'Employee not found'
+        message: 'No eligible employees found to initialize leave balances'
       });
     }
 
-    const setting = await CompanySetting.findOne().sort({ createdAt: -1 });
-    const standardBalances = [
-      { type: 'annual', total: setting?.leaveSettings?.annualDaysPerYear || 16, isPayable: true },
-      { type: 'sick', total: setting?.leaveSettings?.sickDaysPerYear || 15, isPayable: false },
-      { type: 'emergency', total: setting?.leaveSettings?.emergencyDaysPerYear || 5, isPayable: false },
-      { type: 'casual', total: setting?.leaveSettings?.casualDaysPerYear || 3, isPayable: false }
-    ];
+    let createdCount = 0;
+    for (const emp of employees) {
+      const standardBalances = [
+        { type: 'annual', total: setting?.leaveSettings?.annualDaysPerYear || 16, isPayable: true },
+        { type: 'sick', total: setting?.leaveSettings?.sickDaysPerYear || 15, isPayable: false },
+        { type: 'emergency', total: setting?.leaveSettings?.emergencyDaysPerYear || 5, isPayable: false },
+        { type: 'casual', total: setting?.leaveSettings?.casualDaysPerYear || 3, isPayable: false }
+      ];
 
-    if (emp.gender === 'female') {
-      standardBalances.push({ type: 'maternity', total: setting?.leaveSettings?.maternityDays || 90, isPayable: true });
-    } else if (emp.gender === 'male') {
-      standardBalances.push({ type: 'paternity', total: setting?.leaveSettings?.paternityDays || 5, isPayable: false });
-    }
+      if (emp.gender === 'female') {
+        standardBalances.push({ type: 'maternity', total: setting?.leaveSettings?.maternityDays || 90, isPayable: true });
+      } else if (emp.gender === 'male') {
+        standardBalances.push({ type: 'paternity', total: setting?.leaveSettings?.paternityDays || 5, isPayable: false });
+      }
 
-    const results = [];
-    for (const item of standardBalances) {
-      const existing = await LeaveBalance.findOne({
-        employee: employeeId,
-        year: targetYear,
-        type: item.type
-      });
-
-      if (!existing) {
-        const created = await LeaveBalance.create({
-          employee: employeeId,
+      for (const item of standardBalances) {
+        const existing = await LeaveBalance.findOne({
+          employee: emp._id,
           year: targetYear,
-          type: item.type,
-          isPayable: item.isPayable,
-          total: item.total,
-          remaining: item.total,
-          totalUsed: 0
+          type: item.type
         });
-        results.push(created);
-      } else {
-        results.push(existing);
+
+        if (!existing) {
+          await LeaveBalance.create({
+            employee: emp._id,
+            year: targetYear,
+            type: item.type,
+            isPayable: item.isPayable,
+            total: item.total,
+            remaining: item.total,
+            totalUsed: 0
+          });
+          createdCount++;
+        }
       }
     }
 
     res.status(200).json({
       success: true,
-      message: `Yearly balances initialized for year ${targetYear}`,
-      data: results
+      message: `Yearly balances initialized for year ${targetYear} (${createdCount} records created across ${employees.length} employee(s)).`,
+      createdCount,
+      employeeCount: employees.length
     });
   } catch (error) {
     res.status(500).json({

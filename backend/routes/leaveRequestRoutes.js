@@ -25,6 +25,7 @@ router.post('/:id/cancel', cancelMyLeaveRequest);
 // Manager & HR Review Routes
 router.patch('/:id/manager-review', authorizeRoles('admin', 'hr', 'manager'), managerReviewLeaveRequest);
 router.patch('/:id/decision', authorizeRoles('admin', 'hr'), decideLeaveRequest);
+router.patch('/:id/decide', authorizeRoles('admin', 'hr'), decideLeaveRequest);
 
 // Standard CRUD
 router.get('/', getLeaveRequests);

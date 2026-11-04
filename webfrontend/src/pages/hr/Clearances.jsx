@@ -4,8 +4,9 @@ import { useAuth } from '../../context/AuthContext';
 import Modal from '../../components/common/Modal';
 import Badge from '../../components/common/Badge';
 import EmptyState from '../../components/common/EmptyState';
+import ApprovalHistoryModal from '../../components/common/ApprovalHistoryModal';
 import api from '../../services/api';
-import { FileCheck2, Plus, CheckCircle2, Circle, RefreshCw, AlertCircle } from 'lucide-react';
+import { FileCheck2, Plus, CheckCircle2, Circle, RefreshCw, AlertCircle, History } from 'lucide-react';
 
 export default function Clearances() {
   const { t } = useTranslation();
@@ -15,6 +16,7 @@ export default function Clearances() {
   const [clearances, setClearances] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activeHistoryId, setActiveHistoryId] = useState(null);
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -226,6 +228,15 @@ export default function Clearances() {
                   <div className="flex items-center gap-2.5">
                     <Badge status={item.status} text={item.status} />
 
+                    <button
+                      type="button"
+                      onClick={() => setActiveHistoryId(item._id)}
+                      className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 transition"
+                      title="View Approval Audit Trail"
+                    >
+                      <History className="w-4 h-4" />
+                    </button>
+
                     {/* Final HR Approval Action */}
                     {canApprove && !isAlreadyApproved && (
                       <button
@@ -390,6 +401,15 @@ export default function Clearances() {
           </div>
         </form>
       </Modal>
+
+      {/* Approval Audit Trail Modal */}
+      <ApprovalHistoryModal
+        isOpen={Boolean(activeHistoryId)}
+        onClose={() => setActiveHistoryId(null)}
+        referenceType="clearance"
+        referenceId={activeHistoryId}
+        title="Exit Clearance Audit Trail"
+      />
     </div>
   );
 }

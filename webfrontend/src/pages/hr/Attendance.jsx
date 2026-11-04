@@ -575,7 +575,7 @@ export default function Attendance() {
 
                 {/* Verification badges & View Complete Action */}
                 <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-700/60 text-[11px]">
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5 flex-wrap">
                     {att.clockInSelfie?.image && (
                       <span className="px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 flex items-center gap-1 font-semibold text-[10px]">
                         <Camera className="w-3 h-3" />
@@ -586,6 +586,27 @@ export default function Attendance() {
                       <span className="px-2 py-0.5 rounded-md bg-sky-50 dark:bg-sky-950/50 text-sky-700 dark:text-sky-300 flex items-center gap-1 font-semibold text-[10px]">
                         <MapPin className="w-3 h-3" />
                         <span>GPS</span>
+                      </span>
+                    )}
+                    {att.clockInSelfie?.location?.withinGeofence !== undefined && (
+                      <span
+                        className={`px-2 py-0.5 rounded-md flex items-center gap-1 font-semibold text-[10px] ${
+                          att.clockInSelfie.location.withinGeofence
+                            ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300'
+                            : 'bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300'
+                        }`}
+                      >
+                        {att.clockInSelfie.location.withinGeofence ? (
+                          <>
+                            <ShieldCheck className="w-3 h-3" />
+                            <span>In Perimeter</span>
+                          </>
+                        ) : (
+                          <>
+                            <AlertCircle className="w-3 h-3" />
+                            <span>Outside ({Math.round(att.clockInSelfie.location.distanceFromOfficeMeters || 0)}m)</span>
+                          </>
+                        )}
                       </span>
                     )}
                   </div>
@@ -614,6 +635,7 @@ export default function Attendance() {
                   <th className="px-4 py-3">Clock Out</th>
                   <th className="px-4 py-3">Duration</th>
                   <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3">Perimeter</th>
                   <th className="px-4 py-3 text-right">Actions</th>
                 </tr>
               </thead>
@@ -666,6 +688,27 @@ export default function Attendance() {
 
                     <td className="px-4 py-3">
                       <Badge status={att.type || 'onTime'} text={att.type || 'On Time'} />
+                    </td>
+
+                    <td className="px-4 py-3">
+                      {att.clockInSelfie?.location?.withinGeofence !== undefined ? (
+                        att.clockInSelfie.location.withinGeofence ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                            <ShieldCheck className="w-3 h-3" />
+                            <span>In Perimeter</span>
+                          </span>
+                        ) : (
+                          <span
+                            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400 border border-rose-200 dark:border-rose-800"
+                            title={`Outside geofence: ~${Math.round(att.clockInSelfie.location.distanceFromOfficeMeters || 0)}m`}
+                          >
+                            <AlertCircle className="w-3 h-3" />
+                            <span>Outside ({Math.round(att.clockInSelfie.location.distanceFromOfficeMeters || 0)}m)</span>
+                          </span>
+                        )
+                      ) : (
+                        <span className="text-slate-400 text-xs italic">-</span>
+                      )}
                     </td>
 
                     <td className="px-4 py-3 text-right">
@@ -1011,6 +1054,22 @@ export default function Attendance() {
                               m
                             </strong>
                           </div>
+                          {selectedAttendanceDetail.clockInSelfie.location.withinGeofence !== undefined && (
+                            <div className="text-[11px] text-slate-600 dark:text-slate-400">
+                              Office Perimeter:{' '}
+                              <strong
+                                className={
+                                  selectedAttendanceDetail.clockInSelfie.location.withinGeofence
+                                    ? 'text-emerald-600 dark:text-emerald-400'
+                                    : 'text-rose-600 dark:text-rose-400'
+                                }
+                              >
+                                {selectedAttendanceDetail.clockInSelfie.location.withinGeofence
+                                  ? 'Within Office Geofence'
+                                  : `Outside Office Perimeter (${Math.round(selectedAttendanceDetail.clockInSelfie.location.distanceFromOfficeMeters || 0)}m away)`}
+                              </strong>
+                            </div>
+                          )}
                           <div className="pt-1.5">
                             <a
                               href={`https://www.google.com/maps?q=${selectedAttendanceDetail.clockInSelfie.location.latitude},${selectedAttendanceDetail.clockInSelfie.location.longitude}`}

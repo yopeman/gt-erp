@@ -21,6 +21,7 @@ export const ERP_MODULES = [
       { id: 'careers', path: '/careers', titleKey: 'nav.careers', icon: 'Globe', requiredRoles: [], status: 'active' },
       { id: 'internships', path: '/hr/internships', titleKey: 'nav.internships', icon: 'GraduationCap', requiredRoles: ['admin', 'hr', 'manager'], status: 'active' },
       { id: 'clearances', path: '/hr/clearances', titleKey: 'nav.clearances', icon: 'FileCheck2', requiredRoles: ['admin', 'hr', 'manager', 'employee'], status: 'active' },
+      { id: 'settings', path: '/hr/settings', titleKey: 'nav.companySettings', icon: 'Building2', requiredRoles: ['admin', 'hr'], status: 'active' },
     ]
   },
   {

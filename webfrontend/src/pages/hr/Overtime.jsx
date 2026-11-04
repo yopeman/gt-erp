@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import Modal from '../../components/common/Modal';
 import Badge from '../../components/common/Badge';
 import EmptyState from '../../components/common/EmptyState';
+import ApprovalHistoryModal from '../../components/common/ApprovalHistoryModal';
 import api from '../../services/api';
 import {
   Timer,
@@ -15,7 +16,8 @@ import {
   Eye,
   AlertCircle,
   Calendar,
-  Check
+  Check,
+  History
 } from 'lucide-react';
 
 const OVERTIME_TYPES = [
@@ -39,6 +41,7 @@ export default function Overtime() {
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterType, setFilterType] = useState('all');
   const [filterEmp, setFilterEmp] = useState('all');
+  const [activeHistoryId, setActiveHistoryId] = useState(null);
 
   // Modal: Log Overtime
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -504,6 +507,13 @@ export default function Overtime() {
                   </button>
 
                   <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => setActiveHistoryId(item._id)}
+                      className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 transition"
+                      title="View Approval Audit Trail"
+                    >
+                      <History className="w-3.5 h-3.5" />
+                    </button>
                     {canReview && item.status === 'pending' && (
                       <>
                         <button
@@ -612,6 +622,14 @@ export default function Overtime() {
                           className="p-1.5 text-slate-600 dark:text-slate-300 hover:text-primary-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition"
                         >
                           <Eye className="w-4 h-4" />
+                        </button>
+
+                        <button
+                          onClick={() => setActiveHistoryId(item._id)}
+                          className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition"
+                          title="View Approval Audit Trail"
+                        >
+                          <History className="w-4 h-4" />
                         </button>
 
                         {canReview && item.status === 'pending' && (
@@ -1071,6 +1089,15 @@ export default function Overtime() {
           </form>
         </Modal>
       )}
+
+      {/* Approval Audit Trail Modal */}
+      <ApprovalHistoryModal
+        isOpen={Boolean(activeHistoryId)}
+        onClose={() => setActiveHistoryId(null)}
+        referenceType="overtime"
+        referenceId={activeHistoryId}
+        title="Overtime Approval Audit Trail"
+      />
     </div>
   );
 }

@@ -32,7 +32,9 @@ import {
   Camera,
   Upload,
   User,
-  Check
+  Check,
+  KeyRound,
+  Copy
 } from 'lucide-react';
 
 const ETHIOPIAN_BANKS = [
@@ -135,6 +137,11 @@ export default function Employees() {
 
   // ID Card Generator Modal State
   const [idCardEmployee, setIdCardEmployee] = useState(null);
+
+  // Temporary Password Reset Modal State
+  const [resetModalData, setResetModalData] = useState(null);
+  const [resettingPassword, setResettingPassword] = useState(false);
+  const [copiedPassword, setCopiedPassword] = useState(false);
 
   const [docForm, setDocForm] = useState({
     type: 'contract',
@@ -406,6 +413,35 @@ export default function Employees() {
     }
   };
 
+  const handleResetPassword = async (emp) => {
+    const userId = emp.user?._id || emp.user;
+    if (!userId) {
+      alert('This employee does not have a linked user login account.');
+      return;
+    }
+    if (!window.confirm(`Are you sure you want to generate a new temporary password for ${emp.fullName}? Their previous credentials will be replaced.`)) {
+      return;
+    }
+    setResettingPassword(true);
+    try {
+      const response = await api.post(`/users/${userId}/reset-temporary-password`);
+      if (response.success && response.temporaryPassword) {
+        setResetModalData({
+          employee: emp,
+          temporaryPassword: response.temporaryPassword,
+          email: response.credentials?.email || emp.email
+        });
+        setCopiedPassword(false);
+      } else {
+        alert(response.message || 'Failed to reset temporary password');
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || err.message || 'Error resetting temporary password');
+    } finally {
+      setResettingPassword(false);
+    }
+  };
+
   const handleAddDocument = async (e) => {
     e.preventDefault();
     if (!selectedEmployee) return;
@@ -644,6 +680,17 @@ export default function Employees() {
                       <CreditCard className="w-3.5 h-3.5 text-sky-500" />
                       <span>ID Card</span>
                     </button>
+                    {canManage && emp.user && (
+                      <button
+                        onClick={() => handleResetPassword(emp)}
+                        disabled={resettingPassword}
+                        className="px-2 py-1.5 rounded-lg text-xs font-semibold text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition flex items-center gap-1"
+                        title="Reset Temporary Password"
+                      >
+                        <KeyRound className="w-3.5 h-3.5" />
+                        <span>Reset Pwd</span>
+                      </button>
+                    )}
                     {canManage && (
                       <button
                         onClick={() => handleOpenEditModal(emp)}
@@ -759,6 +806,16 @@ export default function Employees() {
                       >
                         <CreditCard className="w-4 h-4" />
                       </button>
+                      {canManage && emp.user && (
+                        <button
+                          onClick={() => handleResetPassword(emp)}
+                          disabled={resettingPassword}
+                          className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40 rounded-lg transition"
+                          title="Reset Temporary Password"
+                        >
+                          <KeyRound className="w-4 h-4" />
+                        </button>
+                      )}
                       {canManage && (
                         <button
                           onClick={() => handleOpenEditModal(emp)}
@@ -2067,6 +2124,67 @@ export default function Employees() {
         onClose={() => setIdCardEmployee(null)}
         employee={idCardEmployee}
       />
+
+      {/* Temporary Password Reset Output Modal */}
+      {resetModalData && (
+        <Modal
+          isOpen={Boolean(resetModalData)}
+          onClose={() => setResetModalData(null)}
+          title="Temporary Password Generated"
+          maxWidth="max-w-md"
+        >
+          <div className="space-y-4">
+            <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-xl flex items-start gap-2.5 text-xs text-amber-800 dark:text-amber-300">
+              <KeyRound className="w-4 h-4 shrink-0 mt-0.5" />
+              <span>
+                A new temporary password was generated for <strong>{resetModalData.employee?.fullName}</strong>. They will be required to change this upon next login.
+              </span>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                Login Account Email
+              </label>
+              <div className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-mono text-slate-800 dark:text-slate-200">
+                {resetModalData.email}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                New Temporary Password
+              </label>
+              <div className="flex items-center gap-2">
+                <div className="flex-1 p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 font-mono text-sm font-bold text-primary-600 dark:text-primary-400 tracking-wider">
+                  {resetModalData.temporaryPassword}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(resetModalData.temporaryPassword);
+                    setCopiedPassword(true);
+                    setTimeout(() => setCopiedPassword(false), 2000);
+                  }}
+                  className="px-3 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition active:scale-95 shadow-xs"
+                >
+                  {copiedPassword ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copiedPassword ? 'Copied' : 'Copy'}</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setResetModalData(null)}
+                className="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-semibold text-xs rounded-xl transition"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
