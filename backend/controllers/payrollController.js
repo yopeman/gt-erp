@@ -2,6 +2,7 @@ import Payroll from '../models/Payroll.js';
 import Employee from '../models/Employee.js';
 import Overtime from '../models/Overtime.js';
 import LeaveRequest from '../models/LeaveRequest.js';
+import CompanySetting from '../models/CompanySetting.js';
 import { computePayslip } from '../utils/payrollCalculator.js';
 import { recordApprovalEvent } from '../utils/approvalHelper.js';
 
@@ -80,6 +81,15 @@ export const computePayrollBreakdown = async ({
   const employee = await Employee.findById(employeeId);
   if (!employee) throw new Error('Employee not found');
 
+  // Load company settings for statutory rates, working hours, and currency
+  const setting = await CompanySetting.findOne().sort({ createdAt: -1 });
+  const empPensionPercent = setting?.payrollSettings?.employeePensionPercent ?? 7;
+  const employerPensionPercent = setting?.payrollSettings?.employerPensionPercent ?? 11;
+  const standardDailyHours = setting?.workSchedule?.standardDailyHours ?? 8;
+  const otRateRegular = setting?.payrollSettings?.overtimeRateRegular ?? 1.5;
+  const otRateWeekend = setting?.payrollSettings?.overtimeRateWeekend ?? 1.5;
+  const otRateHoliday = setting?.payrollSettings?.overtimeRateHoliday ?? 2.0;
+
   const baseSalary = Number(employee.baseSalary) || 15000;
   const earnings = [{ name: 'Base Salary', amount: baseSalary }];
   const deductions = [];
@@ -95,12 +105,18 @@ export const computePayrollBreakdown = async ({
 
   let totalOtHours = 0;
   let totalOtAmount = 0;
-  // Standard working hours = 208 hrs / month (26 days * 8 hours)
-  const hourlyRate = baseSalary / 208;
+  // Standard monthly working hours = 26 working days * standard daily hours
+  const monthlyWorkingHours = 26 * standardDailyHours;
+  const hourlyRate = baseSalary / (monthlyWorkingHours || 208);
 
   for (const ot of approvedOvertimes) {
     const hours = ot.approvedHours > 0 ? ot.approvedHours : ot.workedHours;
-    const rate = ot.calculationRate || 1.5;
+    let rate = ot.calculationRate;
+    if (!rate || isNaN(rate)) {
+      if (ot.type === 'holiday') rate = otRateHoliday;
+      else if (ot.type === 'weekend') rate = otRateWeekend;
+      else rate = otRateRegular;
+    }
     const amount = Math.round(hours * hourlyRate * rate);
     totalOtHours += hours;
     totalOtAmount += amount;
@@ -165,12 +181,14 @@ export const computePayrollBreakdown = async ({
     });
   }
 
-  // 3. Statutory Deductions (Pension 7% & Income Tax)
-  const pension = Math.round(baseSalary * 0.07);
+  // 3. Statutory Deductions (Pension configured % & Income Tax)
+  const pension = Math.round((baseSalary * empPensionPercent) / 100);
   deductions.push({
-    name: 'Pension Contribution (7%)',
+    name: `Pension Contribution (${empPensionPercent}%)`,
     amount: pension
   });
+
+  const employerPension = Math.round((baseSalary * employerPensionPercent) / 100);
 
   // Calculate gross before tax
   const totalGross = earnings.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
@@ -212,6 +230,9 @@ export const computePayrollBreakdown = async ({
     totalGross,
     totalDeduction,
     totalNet,
+    employerContributions: {
+      pensionEmployer: employerPension
+    },
     overtimeRecords: approvedOvertimes.map((o) => o._id),
     leaveRecords: acceptedLeaves.map((l) => l._id),
     summary: {
@@ -221,7 +242,10 @@ export const computePayrollBreakdown = async ({
       unpaidLeaveDays,
       unpaidLeaveDeduction,
       paidLeaveDays,
-      leaveCount: acceptedLeaves.length
+      leaveCount: acceptedLeaves.length,
+      empPensionPercent,
+      employerPensionPercent,
+      employerPensionContribution: employerPension
     }
   };
 };
@@ -327,14 +351,25 @@ export const createPayroll = async (req, res) => {
     const parsedYear = year || new Date(fromDate).getFullYear();
     const payslipReference = customReference || `PAY-${parsedYear}-${String(parsedMonth).padStart(2, '0')}-${employee._id.toString().slice(-4).toUpperCase()}`;
 
+    // Load company settings
+    const setting = await CompanySetting.findOne().sort({ createdAt: -1 });
+    const empPensionRate = setting?.payrollSettings?.employeePensionPercent ?? 7;
+    const orgPensionRate = setting?.payrollSettings?.employerPensionPercent ?? 11;
+    const standardDailyHours = setting?.workSchedule?.standardDailyHours ?? 8;
+    const defaultOtRate = setting?.payrollSettings?.overtimeRateRegular ?? 1.5;
+    const companyCurrency = setting?.currency || 'ETB';
+
     // Compute automatic statutory deductions & net
     const computed = computePayslip({
       baseSalary: effectiveBaseSalary,
       overtimeHours: overtimeHours !== undefined ? Number(overtimeHours) : approvedOvertimes.reduce((s, o) => s + (o.approvedHours || o.workedHours || 0), 0),
-      overtimeRate: Number(overtimeRate) || 1.5,
+      overtimeRate: Number(overtimeRate) || defaultOtRate,
       allowances: allowances || {},
       deductions: typeof deductions === 'object' && !Array.isArray(deductions) ? deductions : {},
-      unpaidLeaveDays: unpaidLeaveDays !== undefined ? Number(unpaidLeaveDays) : 0
+      unpaidLeaveDays: unpaidLeaveDays !== undefined ? Number(unpaidLeaveDays) : 0,
+      dailyHours: standardDailyHours,
+      employeePensionPercent: empPensionRate,
+      employerPensionPercent: orgPensionRate
     });
 
     const finalGross = totalGross !== undefined
@@ -360,7 +395,7 @@ export const createPayroll = async (req, res) => {
       year: parsedYear,
       fromDate: from,
       toDate: to,
-      currency: currency || 'ETB',
+      currency: currency || companyCurrency,
       type: type || 'salary',
       baseSalary: effectiveBaseSalary,
       overtimeHours: computed.overtimeHours,
@@ -437,6 +472,14 @@ export const generateMonthlyPayroll = async (req, res) => {
     const generatedPayrolls = [];
     const skippedPayrolls = [];
 
+    // Load company settings
+    const setting = await CompanySetting.findOne().sort({ createdAt: -1 });
+    const empPensionRate = setting?.payrollSettings?.employeePensionPercent ?? 7;
+    const orgPensionRate = setting?.payrollSettings?.employerPensionPercent ?? 11;
+    const standardDailyHours = setting?.workSchedule?.standardDailyHours ?? 8;
+    const defaultOtRate = setting?.payrollSettings?.overtimeRateRegular ?? 1.5;
+    const companyCurrency = setting?.currency || 'ETB';
+
     for (const emp of activeEmployees) {
       // Check if payroll already exists for this employee for this month/year
       const existing = await Payroll.findOne({
@@ -465,16 +508,42 @@ export const generateMonthlyPayroll = async (req, res) => {
         0
       );
 
+      // Find accepted unpaid leaves for this period
+      const acceptedLeaves = await LeaveRequest.find({
+        employee: emp._id,
+        decision: 'accepted',
+        startDate: { $lte: endPeriod },
+        endDate: { $gte: startPeriod }
+      });
+
+      let unpaidLeaveDays = 0;
+      for (const leave of acceptedLeaves) {
+        if (leave.type === 'unpaid') {
+          const lStart = new Date(Math.max(new Date(leave.startDate), startPeriod));
+          const lEnd = new Date(Math.min(new Date(leave.endDate), endPeriod));
+          if (lEnd >= lStart) {
+            unpaidLeaveDays += Math.ceil((lEnd - lStart) / (1000 * 60 * 60 * 24)) + 1;
+          }
+        }
+      }
+
       // Compute statutory deductions, income tax, pension, and net
       const computed = computePayslip({
         baseSalary: emp.baseSalary || 0,
         overtimeHours: totalApprovedOvertimeHours,
-        overtimeRate: 1.5,
+        overtimeRate: defaultOtRate,
         allowances: {},
-        deductions: {}
+        deductions: {},
+        unpaidLeaveDays,
+        dailyHours: standardDailyHours,
+        employeePensionPercent: empPensionRate,
+        employerPensionPercent: orgPensionRate
       });
 
       const payslipReference = `PAY-${targetYear}-${String(targetMonth).padStart(2, '0')}-${emp._id.toString().slice(-4).toUpperCase()}`;
+
+      const overtimeIds = overtimes.map((o) => o._id);
+      const leaveIds = acceptedLeaves.map((l) => l._id);
 
       const payroll = await Payroll.create({
         employeeId: emp._id,
@@ -483,7 +552,7 @@ export const generateMonthlyPayroll = async (req, res) => {
         year: targetYear,
         fromDate: startPeriod,
         toDate: endPeriod,
-        currency: 'ETB',
+        currency: companyCurrency,
         type: 'salary',
         baseSalary: computed.baseSalary,
         overtimeHours: computed.overtimeHours,
@@ -491,6 +560,8 @@ export const generateMonthlyPayroll = async (req, res) => {
         allowances: computed.allowances,
         deductions: computed.deductions,
         employerContributions: computed.employerContributions,
+        overtimeRecords: overtimeIds,
+        leaveRecords: leaveIds,
         totalGross: computed.totalGross,
         totalDeduction: computed.totalDeduction,
         totalNet: computed.totalNet,
@@ -503,6 +574,14 @@ export const generateMonthlyPayroll = async (req, res) => {
         createdBy: req.user?._id || null,
         status: 'unpaid'
       });
+
+      // Link overtime records to this payroll
+      if (overtimeIds.length > 0) {
+        await Overtime.updateMany(
+          { _id: { $in: overtimeIds } },
+          { payroll: payroll._id }
+        );
+      }
 
       generatedPayrolls.push(payroll);
     }

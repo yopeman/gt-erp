@@ -2,6 +2,7 @@ import LeaveRequest from '../models/LeaveRequest.js';
 import LeaveBalance from '../models/LeaveBalance.js';
 import Employee from '../models/Employee.js';
 import Holiday from '../models/Holiday.js';
+import CompanySetting from '../models/CompanySetting.js';
 import { calculateWorkingDays } from '../utils/dateUtils.js';
 import { uploadToCloudinary } from '../utils/cloudinary.js';
 import { recordApprovalEvent } from '../utils/approvalHelper.js';
@@ -114,15 +115,25 @@ export const createLeaveRequest = async (req, res) => {
       });
     }
 
-    // Fetch active public holidays to exclude from working days
+    // Load company settings & active holidays
+    const setting = await CompanySetting.findOne().sort({ createdAt: -1 });
+    const workingDaysOfWeek = setting?.workSchedule?.workingDays || [1, 2, 3, 4, 5];
     const holidays = await Holiday.find({ isActive: true });
-    const holidayDates = holidays.map((h) => h.date);
 
-    // Calculate actual working days excluding weekends & holidays
-    let workingDays = calculateWorkingDays(start, end, holidayDates);
+    // Calculate actual working days excluding weekends & company public holidays
+    let workingDays = calculateWorkingDays(start, end, holidays, workingDaysOfWeek);
     if (workingDays <= 0) {
       const diffTime = Math.abs(end - start);
       workingDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    }
+
+    // Check company policy: Require attachment for sick leave
+    const requireAttachment = setting?.leaveSettings?.requireAttachmentForSickLeave !== false;
+    if (type === 'sick' && requireAttachment && !attachment) {
+      return res.status(400).json({
+        success: false,
+        message: 'Supporting medical certificate attachment is required for sick leave requests as per company policy.'
+      });
     }
 
     // Check for overlapping pending or accepted leave requests
@@ -143,15 +154,41 @@ export const createLeaveRequest = async (req, res) => {
 
     // Balance verification for deductible leave types
     const requestYear = start.getFullYear();
-    const balance = await LeaveBalance.findOne({
+    let balance = await LeaveBalance.findOne({
       employee: targetEmployeeId,
       year: requestYear,
       type,
       isDeleted: false
     });
 
+    // Lazy initialize balance if missing from Company Settings
+    if (!balance && type !== 'unpaid') {
+      const quotaMap = {
+        annual: setting?.leaveSettings?.annualDaysPerYear || 16,
+        sick: setting?.leaveSettings?.sickDaysPerYear || 15,
+        emergency: setting?.leaveSettings?.emergencyDaysPerYear || 5,
+        casual: setting?.leaveSettings?.casualDaysPerYear || 3,
+        maternity: setting?.leaveSettings?.maternityDays || 90,
+        paternity: setting?.leaveSettings?.paternityDays || 5
+      };
+      const standardQuota = quotaMap[type] || 0;
+      if (standardQuota > 0) {
+        balance = await LeaveBalance.create({
+          employee: targetEmployeeId,
+          year: requestYear,
+          type,
+          isPayable: ['annual', 'maternity'].includes(type),
+          total: standardQuota,
+          remaining: standardQuota,
+          totalUsed: 0
+        });
+      }
+    }
+
+    const allowNegative = Boolean(setting?.leaveSettings?.allowNegativeBalance);
+
     if (type !== 'unpaid' && balance) {
-      if (balance.remaining < workingDays) {
+      if (!allowNegative && balance.remaining < workingDays) {
         return res.status(400).json({
           success: false,
           message: `Insufficient leave balance for ${type} leave. Available: ${balance.remaining} days, requested: ${workingDays} working days.`,
@@ -502,8 +539,11 @@ export const decideLeaveRequest = async (req, res) => {
     const year = new Date(leaveRequest.startDate).getFullYear();
     const diffDays = leaveRequest.numberOfDays || Math.ceil(Math.abs(new Date(leaveRequest.endDate) - new Date(leaveRequest.startDate)) / (1000 * 60 * 60 * 24)) + 1;
 
+    const setting = await CompanySetting.findOne().sort({ createdAt: -1 });
+    const allowNegative = Boolean(setting?.leaveSettings?.allowNegativeBalance);
+
     // Check Leave Balance
-    const balance = await LeaveBalance.findOne({
+    let balance = await LeaveBalance.findOne({
       employee: leaveRequest.employee,
       year,
       type: leaveRequest.type,
@@ -511,15 +551,35 @@ export const decideLeaveRequest = async (req, res) => {
     });
 
     if (decision === 'accepted' && previousDecision !== 'accepted') {
-      // Prevent negative balance upon approval
-      if (leaveRequest.type !== 'unpaid' && balance) {
-        if (balance.remaining < diffDays) {
+      if (leaveRequest.type !== 'unpaid') {
+        if (!balance) {
+          const quotaMap = {
+            annual: setting?.leaveSettings?.annualDaysPerYear || 16,
+            sick: setting?.leaveSettings?.sickDaysPerYear || 15,
+            emergency: setting?.leaveSettings?.emergencyDaysPerYear || 5,
+            casual: setting?.leaveSettings?.casualDaysPerYear || 3,
+            maternity: setting?.leaveSettings?.maternityDays || 90,
+            paternity: setting?.leaveSettings?.paternityDays || 5
+          };
+          const standardQuota = quotaMap[leaveRequest.type] || 0;
+          balance = await LeaveBalance.create({
+            employee: leaveRequest.employee,
+            year,
+            type: leaveRequest.type,
+            isPayable: ['annual', 'maternity'].includes(leaveRequest.type),
+            total: standardQuota,
+            remaining: standardQuota,
+            totalUsed: 0
+          });
+        }
+
+        if (!allowNegative && balance.remaining < diffDays) {
           return res.status(400).json({
             success: false,
             message: `Cannot approve leave: Insufficient balance. Available: ${balance.remaining} days, Required: ${diffDays} days.`
           });
         }
-        balance.remaining = Math.max(0, balance.remaining - diffDays);
+        balance.remaining = balance.remaining - diffDays;
         balance.totalUsed += diffDays;
         await balance.save();
       }

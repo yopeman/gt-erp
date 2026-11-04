@@ -29,7 +29,8 @@ import {
   ExternalLink,
   Ban,
   Layers,
-  FileUp
+  FileUp,
+  Sparkles
 } from 'lucide-react';
 
 const LEAVE_TYPES = [
@@ -58,6 +59,12 @@ export default function LeaveManagement({ initialTab = 'requests' }) {
   const [balances, setBalances] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Company HR settings & Holiday Calendar integration
+  const [companySetting, setCompanySetting] = useState(null);
+  const [holidays, setHolidays] = useState([]);
+  const [syncingPolicy, setSyncingPolicy] = useState(false);
+  const [syncSuccessMsg, setSyncSuccessMsg] = useState('');
 
   // Filters
   const [requestFilterStatus, setRequestFilterStatus] = useState('all');
@@ -142,14 +149,16 @@ export default function LeaveManagement({ initialTab = 'requests' }) {
     );
   }, [employees, user]);
 
-  // Fetch all initial data
+  // Fetch all initial data including company settings and holiday calendar
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [leavesRes, balancesRes, empsRes] = await Promise.allSettled([
+      const [leavesRes, balancesRes, empsRes, settingsRes, holidaysRes] = await Promise.allSettled([
         api.get('/leave-requests?limit=200'),
         api.get(`/leave-balances?limit=200&year=${balanceFilterYear}`),
-        api.get('/employees?limit=300')
+        api.get('/employees?limit=300'),
+        api.get('/company-settings'),
+        api.get('/company-settings/holidays')
       ]);
 
       if (leavesRes.status === 'fulfilled' && leavesRes.value?.data) {
@@ -161,6 +170,12 @@ export default function LeaveManagement({ initialTab = 'requests' }) {
       if (empsRes.status === 'fulfilled' && empsRes.value?.data) {
         const empList = Array.isArray(empsRes.value.data) ? empsRes.value.data : [];
         setEmployees(empList);
+      }
+      if (settingsRes.status === 'fulfilled' && settingsRes.value?.data) {
+        setCompanySetting(settingsRes.value.data);
+      }
+      if (holidaysRes.status === 'fulfilled' && holidaysRes.value?.data) {
+        setHolidays(Array.isArray(holidaysRes.value.data) ? holidaysRes.value.data : []);
       }
     } catch (err) {
       console.error('Error fetching leave management records:', err);
@@ -204,15 +219,64 @@ export default function LeaveManagement({ initialTab = 'requests' }) {
     }
   }, [isInitBalanceModalOpen, employees]);
 
-  // Calculate requested duration in calendar days
-  const calculateDurationDays = (startDate, endDate) => {
-    if (!startDate || !endDate) return 0;
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    if (start > end) return 0;
-    const diffTime = Math.abs(end - start);
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-  };
+  // Calculate requested duration in calendar days, working days, and public holiday exclusions
+  const durationBreakdown = useMemo(() => {
+    if (!applyForm.startDate || !applyForm.endDate) {
+      return { totalDays: 0, workingDays: 0, holidays: [], weekendCount: 0 };
+    }
+    const start = new Date(applyForm.startDate);
+    const end = new Date(applyForm.endDate);
+    if (isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) {
+      return { totalDays: 0, workingDays: 0, holidays: [], weekendCount: 0 };
+    }
+
+    const workingDaysOfWeek = companySetting?.workSchedule?.workingDays || [1, 2, 3, 4, 5];
+    const exactHolidays = new Map();
+    const recurringHolidays = new Map();
+
+    holidays.forEach((h) => {
+      if (!h.isActive) return;
+      const d = new Date(h.date);
+      if (!isNaN(d.getTime())) {
+        const isoStr = d.toISOString().split('T')[0];
+        exactHolidays.set(isoStr, h.title);
+        if (h.isRecurringYearly) {
+          recurringHolidays.set(isoStr.slice(5), h.title);
+        }
+      }
+    });
+
+    let workingDays = 0;
+    let weekendCount = 0;
+    const holidaysFound = [];
+
+    const curr = new Date(start);
+    curr.setHours(0, 0, 0, 0);
+    const targetEnd = new Date(end);
+    targetEnd.setHours(0, 0, 0, 0);
+
+    const totalDays = Math.ceil((targetEnd - curr) / (1000 * 60 * 60 * 24)) + 1;
+
+    while (curr <= targetEnd) {
+      const day = curr.getDay();
+      const dateStr = curr.toISOString().split('T')[0];
+      const monthDay = dateStr.slice(5);
+
+      const holTitle = exactHolidays.get(dateStr) || recurringHolidays.get(monthDay);
+      const isWorkDay = workingDaysOfWeek.includes(day);
+
+      if (holTitle) {
+        holidaysFound.push({ date: dateStr, title: holTitle });
+      } else if (!isWorkDay) {
+        weekendCount++;
+      } else {
+        workingDays++;
+      }
+      curr.setDate(curr.getDate() + 1);
+    }
+
+    return { totalDays, workingDays: workingDays || totalDays, holidays: holidaysFound, weekendCount };
+  }, [applyForm.startDate, applyForm.endDate, companySetting, holidays]);
 
   // Find remaining balance for the currently selected employee & leave type in the apply modal
   const activeAvailableBalance = useMemo(() => {
@@ -228,17 +292,14 @@ export default function LeaveManagement({ initialTab = 'requests' }) {
     return bal || null;
   }, [applyForm.employee, applyForm.type, applyForm.startDate, balances, canManage, currentEmployee]);
 
-  // Duration in days for current apply form
-  const applyDurationDays = useMemo(() => {
-    return calculateDurationDays(applyForm.startDate, applyForm.endDate);
-  }, [applyForm.startDate, applyForm.endDate]);
-
-  // Check if requested duration exceeds balance (prevent negative balance)
+  // Check if requested duration exceeds balance (respecting company overdraft setting)
   const isBalanceExceeded = useMemo(() => {
     if (applyForm.type === 'unpaid') return false;
     if (!activeAvailableBalance) return false;
-    return applyDurationDays > activeAvailableBalance.remaining;
-  }, [applyForm.type, activeAvailableBalance, applyDurationDays]);
+    const allowNegative = Boolean(companySetting?.leaveSettings?.allowNegativeBalance);
+    if (allowNegative) return false;
+    return durationBreakdown.workingDays > activeAvailableBalance.remaining;
+  }, [applyForm.type, activeAvailableBalance, durationBreakdown.workingDays, companySetting]);
 
   // Handle Apply Leave Submit
   const handleApplyLeave = async (e) => {
@@ -262,15 +323,24 @@ export default function LeaveManagement({ initialTab = 'requests' }) {
       return;
     }
 
-    if (applyDurationDays <= 0) {
-      setApplyError('Invalid date range. Duration must be at least 1 day.');
+    const requestedDays = durationBreakdown.workingDays || 1;
+    if (requestedDays <= 0) {
+      setApplyError('Invalid date range. Duration must be at least 1 working day.');
       return;
     }
 
-    // Client-side negative balance prevention
-    if (applyForm.type !== 'unpaid' && activeAvailableBalance && applyDurationDays > activeAvailableBalance.remaining) {
+    // Enforce Company Policy: Medical certificate requirement for sick leave
+    const requireAttachment = companySetting?.leaveSettings?.requireAttachmentForSickLeave !== false;
+    if (applyForm.type === 'sick' && requireAttachment && !applyForm.attachment) {
+      setApplyError('Supporting medical certificate attachment is required for sick leave as per company policy.');
+      return;
+    }
+
+    // Enforce Company Policy: Negative balance restriction
+    const allowNegative = Boolean(companySetting?.leaveSettings?.allowNegativeBalance);
+    if (applyForm.type !== 'unpaid' && activeAvailableBalance && !allowNegative && requestedDays > activeAvailableBalance.remaining) {
       setApplyError(
-        `Insufficient leave balance! You have ${activeAvailableBalance.remaining} day(s) remaining for ${applyForm.type} leave, but requested ${applyDurationDays} day(s). Negative balances are not permitted.`
+        `Insufficient leave balance! You have ${activeAvailableBalance.remaining} day(s) remaining for ${applyForm.type} leave, but requested ${requestedDays} working day(s). Negative balance is not allowed by policy.`
       );
       return;
     }
@@ -350,6 +420,31 @@ export default function LeaveManagement({ initialTab = 'requests' }) {
       alert(err.message || 'Failed to cancel leave request');
     } finally {
       setCancellingLeaveId(null);
+    }
+  };
+
+  // HR Sync Company Leave Policy Quotas to Employee Balances
+  const handleSyncPolicy = async () => {
+    const confirmSync = window.confirm(
+      `Synchronize company standard leave entitlement quotas to all eligible employees for fiscal year ${balanceFilterYear}? This ensures everyone has standard quotas allocated.`
+    );
+    if (!confirmSync) return;
+
+    setSyncingPolicy(true);
+    setSyncSuccessMsg('');
+    try {
+      const res = await api.post('/leave-balances/sync-policy', { year: balanceFilterYear });
+      if (res.success) {
+        setSyncSuccessMsg(res.message);
+        await fetchData();
+        setTimeout(() => setSyncSuccessMsg(''), 6000);
+      } else {
+        alert(res.message || 'Failed to sync policy quotas');
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to sync policy quotas');
+    } finally {
+      setSyncingPolicy(false);
     }
   };
 
@@ -1132,6 +1227,77 @@ export default function LeaveManagement({ initialTab = 'requests' }) {
         /* TAB 2: LEAVE BALANCES & QUOTAS                                            */
         /* ========================================================================= */
         <div className="space-y-4">
+          {/* Standard Leave Entitlement Policy Summary & Sync Action */}
+          <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800 space-y-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <span className="font-bold text-xs text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                  <Scale className="w-4 h-4 text-primary-500" />
+                  <span>Standard Company Leave Entitlement Policy (Days/Year)</span>
+                </span>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                  Official corporate allocation quotas for annual onboarding and yearly quota renewals.
+                </p>
+              </div>
+              {isHrAdmin && (
+                <button
+                  onClick={handleSyncPolicy}
+                  disabled={syncingPolicy}
+                  className="px-3 py-1.5 bg-primary-500 hover:bg-primary-600 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center gap-1.5 self-start sm:self-auto disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${syncingPolicy ? 'animate-spin' : ''}`} />
+                  <span>{syncingPolicy ? 'Syncing...' : 'Sync Policy to Balances'}</span>
+                </button>
+              )}
+            </div>
+
+            {syncSuccessMsg && (
+              <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-800 dark:text-emerald-200 flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                <span>{syncSuccessMsg}</span>
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 text-xs pt-1 border-t border-slate-200/60 dark:border-slate-800">
+              <div className="p-2 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-100 dark:border-slate-800">
+                <span className="text-[10px] text-slate-400 font-bold block">Annual</span>
+                <strong className="text-slate-900 dark:text-slate-100 text-sm">
+                  {companySetting?.leaveSettings?.annualDaysPerYear ?? 16}d
+                </strong>
+              </div>
+              <div className="p-2 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-100 dark:border-slate-800">
+                <span className="text-[10px] text-slate-400 font-bold block">Sick</span>
+                <strong className="text-slate-900 dark:text-slate-100 text-sm">
+                  {companySetting?.leaveSettings?.sickDaysPerYear ?? 15}d
+                </strong>
+              </div>
+              <div className="p-2 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-100 dark:border-slate-800">
+                <span className="text-[10px] text-slate-400 font-bold block">Emergency</span>
+                <strong className="text-slate-900 dark:text-slate-100 text-sm">
+                  {companySetting?.leaveSettings?.emergencyDaysPerYear ?? 5}d
+                </strong>
+              </div>
+              <div className="p-2 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-100 dark:border-slate-800">
+                <span className="text-[10px] text-slate-400 font-bold block">Casual</span>
+                <strong className="text-slate-900 dark:text-slate-100 text-sm">
+                  {companySetting?.leaveSettings?.casualDaysPerYear ?? 3}d
+                </strong>
+              </div>
+              <div className="p-2 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-100 dark:border-slate-800">
+                <span className="text-[10px] text-slate-400 font-bold block">Maternity (F)</span>
+                <strong className="text-slate-900 dark:text-slate-100 text-sm">
+                  {companySetting?.leaveSettings?.maternityDays ?? 90}d
+                </strong>
+              </div>
+              <div className="p-2 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-100 dark:border-slate-800">
+                <span className="text-[10px] text-slate-400 font-bold block">Paternity (M)</span>
+                <strong className="text-slate-900 dark:text-slate-100 text-sm">
+                  {companySetting?.leaveSettings?.paternityDays ?? 5}d
+                </strong>
+              </div>
+            </div>
+          </div>
+
           {/* Balances Filters */}
           <div className="flex flex-wrap items-center gap-3 p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800 text-xs">
             <div className="flex items-center gap-1.5 text-slate-500 font-semibold">
@@ -1502,23 +1668,45 @@ export default function LeaveManagement({ initialTab = 'requests' }) {
             </div>
           </div>
 
-          {/* Calculated Duration & Negative Balance Warning */}
-          {applyDurationDays > 0 && (
+          {/* Calculated Working Days & Exclusions */}
+          {durationBreakdown.totalDays > 0 && (
             <div
-              className={`p-3 rounded-xl border text-xs flex items-center justify-between ${
+              className={`p-3 rounded-xl border text-xs space-y-1.5 ${
                 isBalanceExceeded
                   ? 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-300'
                   : 'bg-primary-50 dark:bg-primary-950/30 border-primary-200 dark:border-primary-900 text-primary-800 dark:text-primary-300'
               }`}
             >
-              <div>
-                <span className="font-bold">Calculated Duration:</span> {applyDurationDays} calendar day(s)
-                {isBalanceExceeded && (
-                  <div className="text-[11px] font-semibold mt-0.5 text-rose-600 dark:text-rose-400">
-                    ⚠️ Exceeds available quota ({activeAvailableBalance?.remaining} days). Submission is prevented to avoid negative balance.
-                  </div>
-                )}
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <span className="font-bold">
+                  Deductible Duration: {durationBreakdown.workingDays} working day(s)
+                </span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Total Range: {durationBreakdown.totalDays} calendar days
+                </span>
               </div>
+
+              {(durationBreakdown.holidays.length > 0 || durationBreakdown.weekendCount > 0) && (
+                <div className="text-[11px] text-slate-600 dark:text-slate-300 flex flex-wrap gap-2 pt-1 border-t border-slate-200/60 dark:border-slate-800">
+                  {durationBreakdown.holidays.length > 0 && (
+                    <span className="text-emerald-700 dark:text-emerald-300 font-semibold flex items-center gap-1">
+                      <Sparkles className="w-3.5 h-3.5 text-emerald-500" />
+                      {durationBreakdown.holidays.length} Public Holiday(s) Excluded ({durationBreakdown.holidays.map(h => h.title).join(', ')})
+                    </span>
+                  )}
+                  {durationBreakdown.weekendCount > 0 && (
+                    <span className="text-slate-500 dark:text-slate-400">
+                      • {durationBreakdown.weekendCount} Rest Day(s) Excluded
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {isBalanceExceeded && (
+                <div className="text-[11px] font-semibold text-rose-600 dark:text-rose-400 pt-1 border-t border-rose-200 dark:border-rose-900">
+                  ⚠️ Exceeds remaining balance ({activeAvailableBalance?.remaining} days). Negative balance is not permitted by company policy.
+                </div>
+              )}
             </div>
           )}
 

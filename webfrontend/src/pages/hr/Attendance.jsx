@@ -23,6 +23,7 @@ import {
   ExternalLink,
   Compass,
   ShieldCheck,
+  Sparkles,
   User
 } from 'lucide-react';
 
@@ -34,6 +35,10 @@ export default function Attendance() {
   const [attendances, setAttendances] = useState([]);
   const [loading, setLoading] = useState(true);
   const [employees, setEmployees] = useState([]);
+
+  // Company HR settings & Holiday Calendar integration
+  const [companySetting, setCompanySetting] = useState(null);
+  const [holidays, setHolidays] = useState([]);
 
   // Filtering states
   const [search, setSearch] = useState('');
@@ -136,9 +141,45 @@ export default function Attendance() {
     }
   };
 
+  const fetchSettingsAndHolidays = async () => {
+    try {
+      const [settingsRes, holidaysRes] = await Promise.allSettled([
+        api.get('/company-settings'),
+        api.get('/company-settings/holidays')
+      ]);
+      if (settingsRes.status === 'fulfilled' && settingsRes.value?.data) {
+        setCompanySetting(settingsRes.value.data);
+      }
+      if (holidaysRes.status === 'fulfilled' && holidaysRes.value?.data) {
+        setHolidays(Array.isArray(holidaysRes.value.data) ? holidaysRes.value.data : []);
+      }
+    } catch (err) {
+      console.warn('Could not load company settings or holidays:', err);
+    }
+  };
+
   useEffect(() => {
     fetchEmployeesList();
+    fetchSettingsAndHolidays();
   }, []);
+
+  // Check today's holiday and rest day status
+  const todayDateObj = new Date();
+  const todayDateStr = todayDateObj.toISOString().split('T')[0];
+  const todayMonthDayStr = todayDateStr.slice(5);
+
+  const activeHolidayToday = useMemo(() => {
+    return holidays.find((h) => {
+      if (!h.isActive) return false;
+      const hDate = new Date(h.date).toISOString().split('T')[0];
+      return hDate === todayDateStr || (h.isRecurringYearly && hDate.slice(5) === todayMonthDayStr);
+    });
+  }, [holidays, todayDateStr, todayMonthDayStr]);
+
+  const isRestDayToday = useMemo(() => {
+    const workingDays = companySetting?.workSchedule?.workingDays || [1, 2, 3, 4, 5];
+    return !workingDays.includes(todayDateObj.getDay());
+  }, [companySetting]);
 
   useEffect(() => {
     fetchAttendanceRecords();
@@ -437,6 +478,49 @@ export default function Attendance() {
             <span>{t('actions.clockOut')}</span>
           </button>
         </div>
+      </div>
+
+      {/* Dynamic Shift Schedule & Public Holiday Status Banner */}
+      {activeHolidayToday && (
+        <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 flex items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
+            <div>
+              <span className="font-bold">Official Public Holiday: {activeHolidayToday.title}</span>
+              <span className="block sm:inline sm:ml-2 text-[11px] text-amber-700 dark:text-amber-300">
+                Punches logged today automatically qualify for Holiday Overtime ({companySetting?.payrollSettings?.overtimeRateHoliday || 2.0}x multiplier).
+              </span>
+            </div>
+          </div>
+          <span className="hidden sm:inline-block px-2.5 py-1 rounded-lg bg-amber-200/60 dark:bg-amber-900/60 font-bold text-[10px]">
+            Public Holiday
+          </span>
+        </div>
+      )}
+
+      {/* Shift Schedule Policy Info Bar */}
+      <div className="flex items-center justify-between flex-wrap gap-2 px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 text-xs text-slate-600 dark:text-slate-300">
+        <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
+          <span className="flex items-center gap-1.5 font-semibold">
+            <Clock className="w-3.5 h-3.5 text-primary-500" />
+            <span>Shift: <strong className="text-slate-800 dark:text-slate-100">{companySetting?.workSchedule?.standardStartTime || '09:00'} – {companySetting?.workSchedule?.standardEndTime || '17:00'}</strong></span>
+          </span>
+          <span className="text-slate-300 dark:text-slate-700 hidden sm:inline">•</span>
+          <span>Grace Period: <strong className="text-slate-800 dark:text-slate-100">{companySetting?.workSchedule?.gracePeriodMinutes || 15}m</strong></span>
+          <span className="text-slate-300 dark:text-slate-700 hidden sm:inline">•</span>
+          <span>Daily Shift: <strong className="text-slate-800 dark:text-slate-100">{companySetting?.workSchedule?.standardDailyHours || 8}h</strong></span>
+          {isRestDayToday && !activeHolidayToday && (
+            <span className="px-2 py-0.5 rounded bg-slate-200/70 dark:bg-slate-700 font-bold text-[10px] text-slate-700 dark:text-slate-300">
+              Weekend / Rest Day
+            </span>
+          )}
+        </div>
+        {companySetting?.officeLocations?.length > 0 && (
+          <span className="flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
+            <MapPin className="w-3 h-3" />
+            <span>{companySetting.officeLocations.find(o => o.isDefault)?.name || companySetting.officeLocations[0]?.name} (Radius: {companySetting.officeLocations.find(o => o.isDefault)?.radiusMeters || companySetting.officeLocations[0]?.radiusMeters || 200}m)</span>
+          </span>
+        )}
       </div>
 
       {/* Filter and Search Bar */}
@@ -796,6 +880,38 @@ export default function Attendance() {
                       : user?.email}
                   </div>
                 </div>
+              </div>
+            )}
+          </div>
+
+          {/* Shift Schedule & Lateness Advisory */}
+          <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 text-primary-500" />
+                <span>Shift: {companySetting?.workSchedule?.standardStartTime || '09:00'} – {companySetting?.workSchedule?.standardEndTime || '17:00'}</span>
+              </span>
+              <span className="text-[11px] font-semibold text-slate-500">
+                Grace: {companySetting?.workSchedule?.gracePeriodMinutes || 15}m
+              </span>
+            </div>
+            {clockAction === 'clockIn' ? (
+              <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                {activeHolidayToday ? (
+                  <span className="text-amber-600 dark:text-amber-400 font-semibold flex items-center gap-1">
+                    <Sparkles className="w-3 h-3" /> Holiday Shift: {activeHolidayToday.title} ({companySetting?.payrollSettings?.overtimeRateHoliday || 2.0}x multiplier)
+                  </span>
+                ) : isRestDayToday ? (
+                  <span className="text-indigo-600 dark:text-indigo-400 font-semibold">
+                    Rest Day punch recorded.
+                  </span>
+                ) : (
+                  <span>Punches after {companySetting?.workSchedule?.standardStartTime || '09:00'} + {companySetting?.workSchedule?.gracePeriodMinutes || 15}m grace are classified as 'Late'.</span>
+                )}
+              </div>
+            ) : (
+              <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                Daily standard shift is {companySetting?.workSchedule?.standardDailyHours || 8} hours. Excess hours will be automatically synced with Overtime.
               </div>
             )}
           </div>

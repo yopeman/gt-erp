@@ -2,6 +2,7 @@ import Attendance from '../models/Attendance.js';
 import Employee from '../models/Employee.js';
 import Overtime from '../models/Overtime.js';
 import CompanySetting from '../models/CompanySetting.js';
+import Holiday from '../models/Holiday.js';
 import { uploadToCloudinary } from '../utils/cloudinary.js';
 import { classifyAttendance, calculateWorkedHours } from '../utils/dateUtils.js';
 import { checkGeofence } from '../utils/geoUtils.js';
@@ -168,14 +169,33 @@ export const clockIn = async (req, res) => {
       selfieUrl = uploadResult.secureUrl || uploadResult.url;
     }
 
-    // Get company schedule settings
+    // Get company schedule settings and public holidays
     const setting = await CompanySetting.findOne().sort({ createdAt: -1 });
     const standardStartTime = setting?.workSchedule?.standardStartTime || '09:00';
     const graceMinutes = setting?.workSchedule?.gracePeriodMinutes || 15;
-    const [startHour, startMin] = standardStartTime.split(':').map(Number);
+    const workingDays = setting?.workSchedule?.workingDays || [1, 2, 3, 4, 5];
 
+    const holidays = await Holiday.find({ isActive: true });
     const clockInTime = new Date();
-    const attendanceType = type || classifyAttendance(clockInTime, startHour || 9, graceMinutes || 15);
+    const clockInDateStr = clockInTime.toISOString().split('T')[0];
+    const clockInMonthDay = clockInDateStr.slice(5);
+
+    const holidayToday = holidays.find((h) => {
+      const hDate = new Date(h.date).toISOString().split('T')[0];
+      return hDate === clockInDateStr || (h.isRecurringYearly && hDate.slice(5) === clockInMonthDay);
+    });
+
+    const dayOfWeek = clockInTime.getDay();
+    const isRestDay = !workingDays.includes(dayOfWeek);
+
+    const attendanceType = type || classifyAttendance(clockInTime, standardStartTime, graceMinutes);
+
+    let scheduleNote = '';
+    if (holidayToday) {
+      scheduleNote = `Public Holiday: ${holidayToday.title}`;
+    } else if (isRestDay) {
+      scheduleNote = 'Weekend / Rest Day Shift';
+    }
 
     // Normalize location with diameter and geofence results
     const finalLocation = {
@@ -188,6 +208,15 @@ export const clockIn = async (req, res) => {
       withinGeofence: geofenceResult.withinGeofence
     };
 
+    let initialNotes = notes || '';
+    if (scheduleNote) {
+      initialNotes = initialNotes ? `${initialNotes} | ${scheduleNote}` : scheduleNote;
+    }
+    if (!geofenceResult.withinGeofence) {
+      const geoMsg = `Geofence warning: ${geofenceResult.message}`;
+      initialNotes = initialNotes ? `${initialNotes} | ${geoMsg}` : geoMsg;
+    }
+
     const attendance = await Attendance.create({
       employee: employeeId,
       date: startOfDay,
@@ -195,7 +224,7 @@ export const clockIn = async (req, res) => {
       type: attendanceType,
       status: attendanceType === 'late' ? 'late' : 'present',
       selfRecorded: true,
-      notes: notes || (geofenceResult.withinGeofence ? '' : `Geofence warning: ${geofenceResult.message}`),
+      notes: initialNotes,
       clockInSelfie: {
         image: selfieUrl,
         capturedAt: clockInTime,
@@ -282,23 +311,58 @@ export const clockOut = async (req, res) => {
     const clockOutTime = new Date();
     attendance.endTime = clockOutTime;
 
-    // Calculate worked hours and link overtime if shift exceeds standard 8 hours
+    // Fetch company settings & holidays to calculate shift thresholds & overtime rates
+    const setting = await CompanySetting.findOne().sort({ createdAt: -1 });
+    const standardDailyHours = setting?.workSchedule?.standardDailyHours || 8;
+    const workingDays = setting?.workSchedule?.workingDays || [1, 2, 3, 4, 5];
+    const otRateRegular = setting?.payrollSettings?.overtimeRateRegular || 1.5;
+    const otRateWeekend = setting?.payrollSettings?.overtimeRateWeekend || 1.5;
+    const otRateHoliday = setting?.payrollSettings?.overtimeRateHoliday || 2.0;
+
+    const holidays = await Holiday.find({ isActive: true });
+    const shiftDate = attendance.startTime || attendance.date || new Date();
+    const shiftDateStr = new Date(shiftDate).toISOString().split('T')[0];
+    const shiftMonthDay = shiftDateStr.slice(5);
+
+    const holidayShift = holidays.find((h) => {
+      const hDate = new Date(h.date).toISOString().split('T')[0];
+      return hDate === shiftDateStr || (h.isRecurringYearly && hDate.slice(5) === shiftMonthDay);
+    });
+
+    const dayOfWeek = new Date(shiftDate).getDay();
+    const isNonWorkingDay = !workingDays.includes(dayOfWeek);
+
+    // Calculate worked hours
     let workedHours = 0;
     if (attendance.startTime) {
       workedHours = calculateWorkedHours(attendance.startTime, clockOutTime);
       attendance.workedHours = workedHours;
     }
 
-    // Auto-link with Overtime if work hours > 8 hours
-    if (workedHours > 8) {
-      attendance.type = 'overtime';
-      const extraHours = Number((workedHours - 8).toFixed(2));
-      if (extraHours >= 0.5 && !attendance.linkedOvertime) {
-        const shiftDate = attendance.startTime || attendance.date || new Date();
-        const isWeekend = [0, 6].includes(new Date(shiftDate).getDay());
-        const otType = isWeekend ? 'weekend' : 'calendar';
-        const otRate = isWeekend ? 2.0 : 1.5;
+    // Determine overtime eligibility: regular day extra hours OR rest day / holiday shift
+    const isOvertimeShift = workedHours > standardDailyHours || (holidayShift && workedHours >= 0.5) || (isNonWorkingDay && workedHours >= 0.5);
 
+    if (isOvertimeShift) {
+      attendance.type = 'overtime';
+
+      let otType = 'calendar';
+      let otRate = otRateRegular;
+      let extraHours = 0;
+
+      if (holidayShift) {
+        otType = 'holiday';
+        otRate = otRateHoliday;
+        // On public holidays, either entire worked time or hours beyond threshold are overtime
+        extraHours = workedHours > standardDailyHours ? workedHours : Number(workedHours.toFixed(2));
+      } else if (isNonWorkingDay) {
+        otType = 'weekend';
+        otRate = otRateWeekend;
+        extraHours = workedHours > standardDailyHours ? workedHours : Number(workedHours.toFixed(2));
+      } else {
+        extraHours = Number((workedHours - standardDailyHours).toFixed(2));
+      }
+
+      if (extraHours >= 0.5 && !attendance.linkedOvertime) {
         const existingOt = await Overtime.findOne({
           employee: employeeId,
           $or: [
@@ -308,6 +372,7 @@ export const clockOut = async (req, res) => {
         });
 
         if (!existingOt) {
+          const holidayTitle = holidayShift ? ` [Holiday: ${holidayShift.title}]` : '';
           const autoOt = await Overtime.create({
             employee: employeeId,
             attendance: attendance._id,
@@ -316,7 +381,7 @@ export const clockOut = async (req, res) => {
             approvedHours: 0,
             type: otType,
             calculationRate: otRate,
-            reason: `Auto-recorded from attendance shift (${workedHours}h shift, ${extraHours}h overtime)`,
+            reason: `Auto-recorded from shift (${workedHours}h worked vs ${standardDailyHours}h standard shift${holidayTitle})`,
             status: 'pending',
             paymentStatus: 'unpaid'
           });

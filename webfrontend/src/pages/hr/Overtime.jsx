@@ -17,7 +17,9 @@ import {
   AlertCircle,
   Calendar,
   Check,
-  History
+  History,
+  Sparkles,
+  Clock
 } from 'lucide-react';
 
 const OVERTIME_TYPES = [
@@ -36,6 +38,10 @@ export default function Overtime() {
   const [overtimes, setOvertimes] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Company HR settings & Holiday Calendar integration
+  const [companySetting, setCompanySetting] = useState(null);
+  const [holidays, setHolidays] = useState([]);
 
   // Filters
   const [filterStatus, setFilterStatus] = useState('all');
@@ -109,21 +115,52 @@ export default function Overtime() {
     }
   };
 
+  const fetchSettingsAndHolidays = async () => {
+    try {
+      const [settingsRes, holidaysRes] = await Promise.allSettled([
+        api.get('/company-settings'),
+        api.get('/company-settings/holidays')
+      ]);
+      if (settingsRes.status === 'fulfilled' && settingsRes.value?.data) {
+        setCompanySetting(settingsRes.value.data);
+      }
+      if (holidaysRes.status === 'fulfilled' && holidaysRes.value?.data) {
+        setHolidays(Array.isArray(holidaysRes.value.data) ? holidaysRes.value.data : []);
+      }
+    } catch (err) {
+      console.warn('Could not load company settings or holidays:', err);
+    }
+  };
+
   useEffect(() => {
     fetchOvertimes();
     fetchEmployeesList();
+    fetchSettingsAndHolidays();
   }, []);
+
+  // Dynamic Overtime Types from company settings multipliers
+  const overtimeTypes = useMemo(() => {
+    const reg = companySetting?.payrollSettings?.overtimeRateRegular ?? 1.5;
+    const wkd = companySetting?.payrollSettings?.overtimeRateWeekend ?? 1.5;
+    const hol = companySetting?.payrollSettings?.overtimeRateHoliday ?? 2.0;
+    return [
+      { value: 'calendar', label: `Standard Working Day (${reg}x)`, rate: reg },
+      { value: 'weekend', label: `Weekend / Rest Day (${wkd}x)`, rate: wkd },
+      { value: 'holiday', label: `Public Holiday (${hol}x)`, rate: hol }
+    ];
+  }, [companySetting]);
 
   // When opening modal, initialize employee and rate
   useEffect(() => {
     if (isModalOpen) {
       setFormError('');
+      const defaultRate = companySetting?.payrollSettings?.overtimeRateRegular ?? 1.5;
       if (!canManage) {
         setFormData((prev) => ({
           ...prev,
           employee: currentEmployee?._id || '',
           type: 'calendar',
-          calculationRate: 1.5
+          calculationRate: defaultRate
         }));
       } else {
         if (!formData.employee && employees.length > 0) {
@@ -131,17 +168,17 @@ export default function Overtime() {
             ...prev,
             employee: currentEmployee?._id || employees[0]._id,
             type: 'calendar',
-            calculationRate: 1.5
+            calculationRate: defaultRate
           }));
         }
       }
     }
-  }, [isModalOpen, currentEmployee, canManage, employees]);
+  }, [isModalOpen, currentEmployee, canManage, employees, companySetting]);
 
-  // Handle type change and auto-select calculation rate
+  // Handle type change and auto-select calculation rate from policy
   const handleTypeChange = (newType) => {
-    const selected = OVERTIME_TYPES.find((t) => t.value === newType);
-    const rate = selected ? selected.rate : 1.5;
+    const selected = overtimeTypes.find((t) => t.value === newType);
+    const rate = selected ? selected.rate : (companySetting?.payrollSettings?.overtimeRateRegular ?? 1.5);
     setFormData((prev) => ({
       ...prev,
       type: newType,
@@ -159,12 +196,19 @@ export default function Overtime() {
       const res = await api.get(`/overtimes/attendance-lookup?employee=${emp}&date=${d}`);
       if (res.success && res.data) {
         setAttendanceLookup(res.data);
-        if (res.data.suggestedOvertime > 0) {
+        if (res.data.attendance) {
+          const extra = res.data.attendance.suggestedExtraHours;
           setFormData((prev) => ({
             ...prev,
-            workedHours: res.data.suggestedOvertime,
-            type: res.data.suggestedType || prev.type,
-            calculationRate: res.data.suggestedRate || prev.calculationRate
+            workedHours: extra > 0 ? extra : prev.workedHours,
+            type: res.data.attendance.suggestedType || prev.type,
+            calculationRate: res.data.attendance.suggestedRate || prev.calculationRate
+          }));
+        } else if (res.data.suggestedType) {
+          setFormData((prev) => ({
+            ...prev,
+            type: res.data.suggestedType,
+            calculationRate: res.data.suggestedRate
           }));
         }
       } else {
@@ -178,7 +222,48 @@ export default function Overtime() {
   };
 
   const handleDateChange = (val) => {
-    setFormData((prev) => ({ ...prev, startAt: val }));
+    setFormData((prev) => {
+      let nextType = prev.type;
+      let nextRate = prev.calculationRate;
+
+      if (val) {
+        const targetDate = new Date(val);
+        const dateStr = targetDate.toISOString().split('T')[0];
+        const monthDayStr = dateStr.slice(5);
+
+        const holidayMatch = holidays.find((h) => {
+          if (!h.isActive) return false;
+          const hDate = new Date(h.date).toISOString().split('T')[0];
+          return hDate === dateStr || (h.isRecurringYearly && hDate.slice(5) === monthDayStr);
+        });
+
+        const workingDays = companySetting?.workSchedule?.workingDays || [1, 2, 3, 4, 5];
+        const isRestDay = !workingDays.includes(targetDate.getDay());
+
+        const reg = companySetting?.payrollSettings?.overtimeRateRegular ?? 1.5;
+        const wkd = companySetting?.payrollSettings?.overtimeRateWeekend ?? 1.5;
+        const hol = companySetting?.payrollSettings?.overtimeRateHoliday ?? 2.0;
+
+        if (holidayMatch) {
+          nextType = 'holiday';
+          nextRate = hol;
+        } else if (isRestDay) {
+          nextType = 'weekend';
+          nextRate = wkd;
+        } else {
+          nextType = 'calendar';
+          nextRate = reg;
+        }
+      }
+
+      return {
+        ...prev,
+        startAt: val,
+        type: nextType,
+        calculationRate: nextRate
+      };
+    });
+
     handleCheckAttendance(val);
   };
 
@@ -341,6 +426,26 @@ export default function Overtime() {
         </div>
       </div>
 
+      {/* Overtime Policy Multipliers Status Bar */}
+      <div className="flex items-center justify-between flex-wrap gap-2 px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 text-xs text-slate-600 dark:text-slate-300">
+        <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
+          <span className="flex items-center gap-1.5 font-semibold">
+            <Clock className="w-3.5 h-3.5 text-primary-500" />
+            <span>Standard Day: <strong className="text-slate-800 dark:text-slate-100">{companySetting?.payrollSettings?.overtimeRateRegular ?? 1.5}x</strong></span>
+          </span>
+          <span className="text-slate-300 dark:text-slate-700 hidden sm:inline">•</span>
+          <span>Weekend / Rest Day: <strong className="text-slate-800 dark:text-slate-100">{companySetting?.payrollSettings?.overtimeRateWeekend ?? 1.5}x</strong></span>
+          <span className="text-slate-300 dark:text-slate-700 hidden sm:inline">•</span>
+          <span className="flex items-center gap-1">
+            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+            <span>Public Holiday: <strong className="text-amber-700 dark:text-amber-300">{companySetting?.payrollSettings?.overtimeRateHoliday ?? 2.0}x</strong></span>
+          </span>
+        </div>
+        <span className="text-[11px] text-slate-400">
+          Standard Shift Threshold: {companySetting?.workSchedule?.standardDailyHours || 8} hrs/day
+        </span>
+      </div>
+
       {/* Filter Bar */}
       <div className="flex flex-wrap items-center gap-3 p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800 text-xs">
         <div className="flex items-center gap-1.5 text-slate-500 font-semibold">
@@ -367,7 +472,7 @@ export default function Overtime() {
           className="px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-medium capitalize"
         >
           <option value="all">All Overtime Types</option>
-          {OVERTIME_TYPES.map((ot) => (
+          {overtimeTypes.map((ot) => (
             <option key={ot.value} value={ot.value}>
               {ot.label}
             </option>
@@ -791,6 +896,20 @@ export default function Overtime() {
             </div>
           ) : null}
 
+          {/* Public Holiday Banner if detected */}
+          {(attendanceLookup?.holiday || holidays.find(h => {
+            if (!h.isActive || !formData.startAt) return false;
+            const hDate = new Date(h.date).toISOString().split('T')[0];
+            return hDate === formData.startAt || (h.isRecurringYearly && hDate.slice(5) === formData.startAt.slice(5));
+          })) && (
+            <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-xs text-amber-800 dark:text-amber-200 flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
+              <span>
+                <strong>Public Holiday:</strong> {attendanceLookup?.holiday?.title || holidays.find(h => new Date(h.date).toISOString().split('T')[0] === formData.startAt)?.title || 'Holiday'}. Holiday multiplier ({companySetting?.payrollSettings?.overtimeRateHoliday ?? 2.0}x) automatically applied.
+              </span>
+            </div>
+          )}
+
           {/* Overtime Type and Calculation Rate (Auto-Selected & Disabled) */}
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -802,7 +921,7 @@ export default function Overtime() {
                 onChange={(e) => handleTypeChange(e.target.value)}
                 className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs sm:text-sm focus:ring-2 focus:ring-primary-500"
               >
-                {OVERTIME_TYPES.map((ot) => (
+                {overtimeTypes.map((ot) => (
                   <option key={ot.value} value={ot.value}>
                     {ot.label}
                   </option>

@@ -1,6 +1,8 @@
 import Overtime from '../models/Overtime.js';
 import Employee from '../models/Employee.js';
 import Attendance from '../models/Attendance.js';
+import CompanySetting from '../models/CompanySetting.js';
+import Holiday from '../models/Holiday.js';
 import { recordApprovalEvent } from '../utils/approvalHelper.js';
 
 /**
@@ -109,11 +111,44 @@ export const createOvertime = async (req, res) => {
       });
     }
 
-    // Auto-select calculation rate from type
-    const finalRate = Number(calculationRate) || OVERTIME_TYPE_RATES[type] || 1.5;
+    // Fetch company settings & holidays to link rates and holiday detection
+    const setting = await CompanySetting.findOne().sort({ createdAt: -1 });
+    const workingDays = setting?.workSchedule?.workingDays || [1, 2, 3, 4, 5];
+    const otRateRegular = setting?.payrollSettings?.overtimeRateRegular || 1.5;
+    const otRateWeekend = setting?.payrollSettings?.overtimeRateWeekend || 1.5;
+    const otRateHoliday = setting?.payrollSettings?.overtimeRateHoliday || 2.0;
+
+    const holidays = await Holiday.find({ isActive: true });
+    const shiftDate = new Date(startAt);
+    const dateStr = shiftDate.toISOString().split('T')[0];
+    const monthDayStr = dateStr.slice(5);
+
+    const holidayMatch = holidays.find((h) => {
+      const hDate = new Date(h.date).toISOString().split('T')[0];
+      return hDate === dateStr || (h.isRecurringYearly && hDate.slice(5) === monthDayStr);
+    });
+
+    const dayOfWeek = shiftDate.getDay();
+    const isNonWorkingDay = !workingDays.includes(dayOfWeek);
+
+    // Auto-detect type if not provided
+    let finalType = type;
+    if (!finalType) {
+      if (holidayMatch) finalType = 'holiday';
+      else if (isNonWorkingDay) finalType = 'weekend';
+      else finalType = 'calendar';
+    }
+
+    // Auto-select calculation rate from company setting multipliers
+    let defaultRateForType = otRateRegular;
+    if (finalType === 'holiday') defaultRateForType = otRateHoliday;
+    else if (finalType === 'weekend') defaultRateForType = otRateWeekend;
+
+    const finalRate = calculationRate !== undefined && !isNaN(Number(calculationRate))
+      ? Number(calculationRate)
+      : defaultRateForType;
 
     // Check if matching attendance exists for this employee on that date
-    const shiftDate = new Date(startAt);
     const startOfDay = new Date(shiftDate);
     startOfDay.setHours(0, 0, 0, 0);
     const endOfDay = new Date(shiftDate);
@@ -131,7 +166,7 @@ export const createOvertime = async (req, res) => {
       workedHours: hours,
       approvedHours: isPreApproved ? hours : 0,
       reason,
-      type: type || 'calendar',
+      type: finalType,
       calculationRate: finalRate,
       isPreApproved: Boolean(isPreApproved),
       status: 'pending',
@@ -210,21 +245,58 @@ export const lookupAttendanceForOvertime = async (req, res) => {
       isDeleted: false
     });
 
+    // Load company settings and public holidays to suggest accurate type & multiplier
+    const setting = await CompanySetting.findOne().sort({ createdAt: -1 });
+    const standardDailyHours = setting?.workSchedule?.standardDailyHours || 8;
+    const workingDays = setting?.workSchedule?.workingDays || [1, 2, 3, 4, 5];
+    const otRateRegular = setting?.payrollSettings?.overtimeRateRegular || 1.5;
+    const otRateWeekend = setting?.payrollSettings?.overtimeRateWeekend || 1.5;
+    const otRateHoliday = setting?.payrollSettings?.overtimeRateHoliday || 2.0;
+
+    const holidays = await Holiday.find({ isActive: true });
+    const dateStr = queryDate.toISOString().split('T')[0];
+    const monthDayStr = dateStr.slice(5);
+
+    const holidayMatch = holidays.find((h) => {
+      const hDate = new Date(h.date).toISOString().split('T')[0];
+      return hDate === dateStr || (h.isRecurringYearly && hDate.slice(5) === monthDayStr);
+    });
+
+    const dayOfWeek = queryDate.getDay();
+    const isNonWorkingDay = !workingDays.includes(dayOfWeek);
+
+    let suggestedType = 'calendar';
+    let suggestedRate = otRateRegular;
+
+    if (holidayMatch) {
+      suggestedType = 'holiday';
+      suggestedRate = otRateHoliday;
+    } else if (isNonWorkingDay) {
+      suggestedType = 'weekend';
+      suggestedRate = otRateWeekend;
+    }
+
     if (!attendance) {
       return res.status(200).json({
         success: true,
         found: false,
-        attendance: null
+        attendance: null,
+        holiday: holidayMatch ? { title: holidayMatch.title, isHoliday: true } : null,
+        isNonWorkingDay,
+        suggestedType,
+        suggestedRate,
+        standardDailyHours
       });
     }
 
     const workedHours = attendance.workedHours || 0;
-    const suggestedExtraHours = workedHours > 8 ? Number((workedHours - 8).toFixed(2)) : 0;
+    let suggestedExtraHours = 0;
 
-    const dayOfWeek = queryDate.getDay();
-    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-    const suggestedType = isWeekend ? 'weekend' : 'calendar';
-    const suggestedRate = isWeekend ? 2.0 : 1.5;
+    if (holidayMatch || isNonWorkingDay) {
+      suggestedExtraHours = workedHours > standardDailyHours ? workedHours : Number(workedHours.toFixed(2));
+    } else {
+      suggestedExtraHours = workedHours > standardDailyHours ? Number((workedHours - standardDailyHours).toFixed(2)) : 0;
+    }
 
     res.status(200).json({
       success: true,
@@ -236,7 +308,10 @@ export const lookupAttendanceForOvertime = async (req, res) => {
         workedHours,
         suggestedExtraHours,
         suggestedType,
-        suggestedRate
+        suggestedRate,
+        standardDailyHours,
+        isNonWorkingDay,
+        holiday: holidayMatch ? { title: holidayMatch.title, isHoliday: true } : null
       }
     });
   } catch (error) {

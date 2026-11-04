@@ -2,6 +2,7 @@ import express from 'express';
 import {
   createLeaveBalance,
   initializeEmployeeYearlyBalances,
+  syncPolicyToBalances,
   getMyLeaveBalances,
   getLeaveBalances,
   getLeaveBalanceById,
@@ -20,6 +21,7 @@ router.get('/my-balances', getMyLeaveBalances);
 
 // Admin / HR Management Routes
 router.post('/initialize', authorizeRoles('admin', 'hr'), initializeEmployeeYearlyBalances);
+router.post('/sync-policy', authorizeRoles('admin', 'hr'), syncPolicyToBalances);
 
 router
   .route('/')

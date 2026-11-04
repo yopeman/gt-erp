@@ -32,7 +32,7 @@ const overtimeSchema = new mongoose.Schema(
     },
     calculationRate: {
       type: Number,
-      enum: [1, 1.5, 2],
+      min: [0, 'Calculation rate cannot be negative'],
       default: 1.5
     },
     status: {

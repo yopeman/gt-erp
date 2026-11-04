@@ -419,6 +419,31 @@ export default function CompanySettings() {
     }
   };
 
+  // State for syncing policy quotas
+  const [syncingPolicy, setSyncingPolicy] = useState(false);
+
+  const handleSyncPolicyQuotas = async () => {
+    const yr = new Date().getFullYear();
+    const confirmSync = window.confirm(
+      `Synchronize these Standard Leave Entitlement Policy quotas across employee balances for fiscal year ${yr}?`
+    );
+    if (!confirmSync) return;
+
+    setSyncingPolicy(true);
+    try {
+      await api.put('/company-settings', settings);
+      const res = await api.post('/leave-balances/sync-policy', { year: yr });
+      if (res.success) {
+        setSuccessMsg(res.message);
+        setTimeout(() => setSuccessMsg(''), 5000);
+      }
+    } catch (err) {
+      setErrorMsg(err.message || 'Failed to sync policy quotas to employee balances');
+    } finally {
+      setSyncingPolicy(false);
+    }
+  };
+
   if (!isHrAdmin) {
     return (
       <div className="p-8 text-center bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700">
@@ -738,14 +763,25 @@ export default function CompanySettings() {
 
           {/* Section 3: Standard Leave Entitlement Quotas */}
           <div className="p-5 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xs space-y-4">
-            <div className="border-b border-slate-100 dark:border-slate-700/60 pb-3">
-              <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                <Scale className="w-4 h-4 text-primary-500" />
-                <span>Standard Leave Entitlement Policy (Days/Year)</span>
-              </h2>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Baseline yearly quota balances allocated when staff are initialized or onboarding.
-              </p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-700/60 pb-3">
+              <div>
+                <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                  <Scale className="w-4 h-4 text-primary-500" />
+                  <span>Standard Leave Entitlement Policy (Days/Year)</span>
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Baseline yearly quota balances allocated when staff are initialized or onboarding.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleSyncPolicyQuotas}
+                disabled={syncingPolicy}
+                className="px-3 py-1.5 bg-primary-50 hover:bg-primary-100 dark:bg-primary-950/60 text-primary-700 dark:text-primary-300 font-bold text-xs rounded-xl transition flex items-center gap-1.5 self-start sm:self-auto border border-primary-200 dark:border-primary-800 disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${syncingPolicy ? 'animate-spin' : ''}`} />
+                <span>{syncingPolicy ? 'Syncing...' : 'Sync to Staff Balances'}</span>
+              </button>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 text-xs">
@@ -858,25 +894,48 @@ export default function CompanySettings() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2 pt-1">
-              <input
-                type="checkbox"
-                id="requireAttachmentCheck"
-                checked={settings.leaveSettings?.requireAttachmentForSickLeave !== false}
-                onChange={(e) =>
-                  setSettings({
-                    ...settings,
-                    leaveSettings: {
-                      ...settings.leaveSettings,
-                      requireAttachmentForSickLeave: e.target.checked
-                    }
-                  })
-                }
-                className="rounded text-primary-600 focus:ring-primary-500"
-              />
-              <label htmlFor="requireAttachmentCheck" className="text-xs text-slate-700 dark:text-slate-300">
-                Prompt/Recommend supporting medical certificate attachment for sick and emergency leave requests
-              </label>
+            <div className="space-y-2 pt-1">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="requireAttachmentCheck"
+                  checked={settings.leaveSettings?.requireAttachmentForSickLeave !== false}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      leaveSettings: {
+                        ...settings.leaveSettings,
+                        requireAttachmentForSickLeave: e.target.checked
+                      }
+                    })
+                  }
+                  className="rounded text-primary-600 focus:ring-primary-500"
+                />
+                <label htmlFor="requireAttachmentCheck" className="text-xs text-slate-700 dark:text-slate-300">
+                  Prompt & enforce supporting medical certificate attachment for sick leave requests
+                </label>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="allowNegativeBalanceCheck"
+                  checked={Boolean(settings.leaveSettings?.allowNegativeBalance)}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      leaveSettings: {
+                        ...settings.leaveSettings,
+                        allowNegativeBalance: e.target.checked
+                      }
+                    })
+                  }
+                  className="rounded text-primary-600 focus:ring-primary-500"
+                />
+                <label htmlFor="allowNegativeBalanceCheck" className="text-xs text-slate-700 dark:text-slate-300">
+                  Allow leave quota overdraft / borrowing against future entitlement (permits negative balance)
+                </label>
+              </div>
             </div>
           </div>
 

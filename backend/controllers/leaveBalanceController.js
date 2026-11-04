@@ -174,7 +174,7 @@ export const initializeEmployeeYearlyBalances = async (req, res) => {
   }
 };
 
-// Get current user's leave balances
+// Get current user's leave balances with auto-initialization from policy
 export const getMyLeaveBalances = async (req, res) => {
   try {
     const employeeId = await resolveEmployeeId(req);
@@ -186,11 +186,49 @@ export const getMyLeaveBalances = async (req, res) => {
     }
 
     const currentYear = req.query.year ? parseInt(req.query.year, 10) : new Date().getFullYear();
-    const balances = await LeaveBalance.find({
+    let balances = await LeaveBalance.find({
       employee: employeeId,
       year: currentYear,
       isDeleted: false
     }).sort({ type: 1 });
+
+    // Auto-initialize standard balances if none exist for current year
+    if (balances.length === 0) {
+      const setting = await CompanySetting.findOne().sort({ createdAt: -1 });
+      const emp = await Employee.findById(employeeId);
+      if (emp) {
+        const standardBalances = [
+          { type: 'annual', total: setting?.leaveSettings?.annualDaysPerYear || 16, isPayable: true },
+          { type: 'sick', total: setting?.leaveSettings?.sickDaysPerYear || 15, isPayable: false },
+          { type: 'emergency', total: setting?.leaveSettings?.emergencyDaysPerYear || 5, isPayable: false },
+          { type: 'casual', total: setting?.leaveSettings?.casualDaysPerYear || 3, isPayable: false }
+        ];
+
+        if (emp.gender === 'female') {
+          standardBalances.push({ type: 'maternity', total: setting?.leaveSettings?.maternityDays || 90, isPayable: true });
+        } else if (emp.gender === 'male') {
+          standardBalances.push({ type: 'paternity', total: setting?.leaveSettings?.paternityDays || 5, isPayable: false });
+        }
+
+        for (const item of standardBalances) {
+          await LeaveBalance.create({
+            employee: emp._id,
+            year: currentYear,
+            type: item.type,
+            isPayable: item.isPayable,
+            total: item.total,
+            remaining: item.total,
+            totalUsed: 0
+          });
+        }
+
+        balances = await LeaveBalance.find({
+          employee: employeeId,
+          year: currentYear,
+          isDeleted: false
+        }).sort({ type: 1 });
+      }
+    }
 
     res.status(200).json({
       success: true,
@@ -201,6 +239,76 @@ export const getMyLeaveBalances = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch your leave balances',
+      error: error.message
+    });
+  }
+};
+
+// Sync Standard Leave Entitlement Policy quotas across employee balances
+export const syncPolicyToBalances = async (req, res) => {
+  try {
+    const { year, overwriteCustom } = req.body;
+    const targetYear = Number(year) || new Date().getFullYear();
+    const setting = await CompanySetting.findOne().sort({ createdAt: -1 });
+
+    const quotaMap = {
+      annual: setting?.leaveSettings?.annualDaysPerYear || 16,
+      sick: setting?.leaveSettings?.sickDaysPerYear || 15,
+      emergency: setting?.leaveSettings?.emergencyDaysPerYear || 5,
+      casual: setting?.leaveSettings?.casualDaysPerYear || 3,
+      maternity: setting?.leaveSettings?.maternityDays || 90,
+      paternity: setting?.leaveSettings?.paternityDays || 5
+    };
+
+    const employees = await Employee.find({ status: { $ne: 'terminated' } });
+    let updatedCount = 0;
+    let createdCount = 0;
+
+    for (const emp of employees) {
+      const types = ['annual', 'sick', 'emergency', 'casual'];
+      if (emp.gender === 'female') types.push('maternity');
+      else if (emp.gender === 'male') types.push('paternity');
+
+      for (const t of types) {
+        const policyTotal = quotaMap[t] || 0;
+        const existing = await LeaveBalance.findOne({
+          employee: emp._id,
+          year: targetYear,
+          type: t,
+          isDeleted: false
+        });
+
+        if (existing) {
+          if (overwriteCustom || existing.totalUsed === 0) {
+            existing.total = policyTotal;
+            existing.remaining = Math.max(0, policyTotal - (existing.totalUsed || 0));
+            await existing.save();
+            updatedCount++;
+          }
+        } else {
+          await LeaveBalance.create({
+            employee: emp._id,
+            year: targetYear,
+            type: t,
+            isPayable: ['annual', 'maternity'].includes(t),
+            total: policyTotal,
+            remaining: policyTotal,
+            totalUsed: 0
+          });
+          createdCount++;
+        }
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Synchronized policy quotas for year ${targetYear} (${createdCount} created, ${updatedCount} updated across ${employees.length} employees)`,
+      data: { createdCount, updatedCount, employeeCount: employees.length, targetYear }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to sync leave policy quotas',
       error: error.message
     });
   }

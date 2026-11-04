@@ -35,8 +35,8 @@ const calculateStatutoryTax = (taxableIncome) => {
   return Math.round(income * 0.35 - 1500);
 };
 
-const calculateStatutoryPension = (baseSalary) => {
-  return Math.round((Number(baseSalary) || 0) * 0.07);
+const calculateStatutoryPension = (baseSalary, empRate = 7) => {
+  return Math.round((Number(baseSalary) || 0) * (empRate / 100));
 };
 
 export default function Payroll() {
@@ -47,6 +47,7 @@ export default function Payroll() {
 
   const [payrolls, setPayrolls] = useState([]);
   const [employees, setEmployees] = useState([]);
+  const [companySetting, setCompanySetting] = useState(null);
   const [loading, setLoading] = useState(true);
 
   // Single Process Modal & Editing State
@@ -128,8 +129,20 @@ export default function Payroll() {
     }
   };
 
+  const fetchCompanySettings = async () => {
+    try {
+      const res = await api.get('/company-settings');
+      if (res.success && res.data) {
+        setCompanySetting(res.data);
+      }
+    } catch (err) {
+      console.warn('Could not load company settings for payroll:', err);
+    }
+  };
+
   useEffect(() => {
     fetchPayrolls();
+    fetchCompanySettings();
     if (canApprove) {
       fetchEmployeesList();
     }
@@ -465,6 +478,22 @@ export default function Payroll() {
             </>
           )}
         </div>
+      </div>
+
+      {/* Statutory Rates & Corporate Multipliers Policy Info Bar */}
+      <div className="flex items-center justify-between flex-wrap gap-2 px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 text-xs text-slate-600 dark:text-slate-300">
+        <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
+          <span>Employee Pension: <strong className="text-slate-800 dark:text-slate-100">{companySetting?.payrollSettings?.employeePensionPercent ?? 7}%</strong></span>
+          <span className="text-slate-300 dark:text-slate-700 hidden sm:inline">•</span>
+          <span>Employer Pension: <strong className="text-slate-800 dark:text-slate-100">{companySetting?.payrollSettings?.employerPensionPercent ?? 11}%</strong></span>
+          <span className="text-slate-300 dark:text-slate-700 hidden sm:inline">•</span>
+          <span>OT Regular: <strong className="text-slate-800 dark:text-slate-100">{companySetting?.payrollSettings?.overtimeRateRegular ?? 1.5}x</strong></span>
+          <span className="text-slate-300 dark:text-slate-700 hidden sm:inline">•</span>
+          <span>OT Holiday: <strong className="text-amber-700 dark:text-amber-300">{companySetting?.payrollSettings?.overtimeRateHoliday ?? 2.0}x</strong></span>
+        </div>
+        <span className="text-[11px] font-bold text-primary-600 dark:text-primary-400">
+          Base Currency: {companySetting?.currency || 'ETB'}
+        </span>
       </div>
 
       {loading ? (
@@ -1118,7 +1147,7 @@ export default function Payroll() {
               <div className="border-b border-slate-200 dark:border-slate-700 pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
                   <h2 className="text-xl font-black tracking-tight text-slate-900 dark:text-slate-100">
-                    GT-ERP SYSTEMS
+                    {companySetting?.companyName || 'GT-ERP SYSTEMS'}
                   </h2>
                   <p className="text-xs uppercase font-bold tracking-widest text-primary-600 dark:text-primary-400">
                     Confidential Employee Payslip
@@ -1264,6 +1293,24 @@ export default function Payroll() {
                     </div>
                   </div>
                 </div>
+              </div>
+
+              {/* Employer Statutory Contributions */}
+              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-800 text-xs flex justify-between items-center">
+                <div>
+                  <span className="font-bold text-slate-700 dark:text-slate-300">
+                    Employer Statutory Pension Contribution ({companySetting?.payrollSettings?.employerPensionPercent ?? 11}%)
+                  </span>
+                  <p className="text-[10px] text-slate-400 mt-0.5">
+                    Legally mandated employer contribution paid directly to the pension agency (not deducted from employee salary).
+                  </p>
+                </div>
+                <span className="font-bold text-emerald-600 dark:text-emerald-400 text-sm whitespace-nowrap ml-4">
+                  {Number(
+                    selectedSlip.employerContributions?.pensionEmployer ||
+                    Math.round((Number(selectedSlip.baseSalary || selectedSlip.totalGross) * (companySetting?.payrollSettings?.employerPensionPercent ?? 11)) / 100)
+                  ).toLocaleString()} {selectedSlip.currency || 'ETB'}
+                </span>
               </div>
 
               {/* Net Pay Banner */}
