@@ -48,6 +48,29 @@ export const getCompanySetting = async (req, res) => {
       });
     }
 
+    // Enforce exactly one Default HQ location
+    if (setting && setting.officeLocations && setting.officeLocations.length > 0) {
+      let defaultFound = false;
+      let modified = false;
+      for (const loc of setting.officeLocations) {
+        if (loc.isDefault) {
+          if (!defaultFound) {
+            defaultFound = true;
+          } else {
+            loc.isDefault = false;
+            modified = true;
+          }
+        }
+      }
+      if (!defaultFound && setting.officeLocations.length > 0) {
+        setting.officeLocations[0].isDefault = true;
+        modified = true;
+      }
+      if (modified) {
+        await setting.save();
+      }
+    }
+
     res.status(200).json({
       success: true,
       data: setting
@@ -66,12 +89,32 @@ export const updateCompanySetting = async (req, res) => {
   try {
     let setting = await CompanySetting.findOne().sort({ createdAt: -1 });
 
+    const updateData = { ...req.body };
+
+    // Enforce single default if officeLocations provided in bulk update
+    if (Array.isArray(updateData.officeLocations) && updateData.officeLocations.length > 0) {
+      let defaultSeen = false;
+      updateData.officeLocations = updateData.officeLocations.map((loc) => {
+        if (loc.isDefault) {
+          if (!defaultSeen) {
+            defaultSeen = true;
+            return { ...loc, isDefault: true };
+          }
+          return { ...loc, isDefault: false };
+        }
+        return loc;
+      });
+      if (!defaultSeen && updateData.officeLocations.length > 0) {
+        updateData.officeLocations[0].isDefault = true;
+      }
+    }
+
     if (!setting) {
-      setting = await CompanySetting.create(req.body);
+      setting = await CompanySetting.create(updateData);
     } else {
       setting = await CompanySetting.findByIdAndUpdate(
         setting._id,
-        { $set: req.body },
+        { $set: updateData },
         { new: true, runValidators: true }
       );
     }
@@ -107,6 +150,14 @@ export const addOfficeLocation = async (req, res) => {
       setting = await CompanySetting.create({});
     }
 
+    const makeDefault = Boolean(isDefault) || setting.officeLocations.length === 0;
+
+    if (makeDefault) {
+      setting.officeLocations.forEach((loc) => {
+        loc.isDefault = false;
+      });
+    }
+
     setting.officeLocations.push({
       name,
       address,
@@ -114,7 +165,7 @@ export const addOfficeLocation = async (req, res) => {
       longitude: Number(longitude),
       radiusMeters: Number(radiusMeters) || 200,
       isActive: true,
-      isDefault: Boolean(isDefault)
+      isDefault: makeDefault
     });
 
     await setting.save();
@@ -128,6 +179,112 @@ export const addOfficeLocation = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to add office location',
+      error: error.message
+    });
+  }
+};
+
+// Update office branch location
+export const updateOfficeLocation = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, address, latitude, longitude, radiusMeters, isActive, isDefault } = req.body;
+
+    let setting = await CompanySetting.findOne().sort({ createdAt: -1 });
+    if (!setting) {
+      return res.status(404).json({
+        success: false,
+        message: 'Company settings not found'
+      });
+    }
+
+    const loc = setting.officeLocations.id(id) || setting.officeLocations.find((l) => String(l._id) === String(id));
+    if (!loc) {
+      return res.status(404).json({
+        success: false,
+        message: 'Office location not found'
+      });
+    }
+
+    if (name !== undefined) loc.name = name;
+    if (address !== undefined) loc.address = address;
+    if (latitude !== undefined) loc.latitude = Number(latitude);
+    if (longitude !== undefined) loc.longitude = Number(longitude);
+    if (radiusMeters !== undefined) loc.radiusMeters = Number(radiusMeters);
+    if (isActive !== undefined) loc.isActive = Boolean(isActive);
+
+    if (isDefault) {
+      setting.officeLocations.forEach((l) => {
+        if (String(l._id) !== String(id)) {
+          l.isDefault = false;
+        }
+      });
+      loc.isDefault = true;
+    } else if (isDefault === false && loc.isDefault) {
+      loc.isDefault = false;
+      const other = setting.officeLocations.find((l) => String(l._id) !== String(id) && l.isActive);
+      if (other) {
+        other.isDefault = true;
+      } else {
+        loc.isDefault = true; // Always retain at least one default
+      }
+    }
+
+    await setting.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Office location updated successfully',
+      data: setting.officeLocations
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update office location',
+      error: error.message
+    });
+  }
+};
+
+// Delete office branch location
+export const deleteOfficeLocation = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    let setting = await CompanySetting.findOne().sort({ createdAt: -1 });
+    if (!setting) {
+      return res.status(404).json({
+        success: false,
+        message: 'Company settings not found'
+      });
+    }
+
+    const loc = setting.officeLocations.id(id) || setting.officeLocations.find((l) => String(l._id) === String(id));
+    if (!loc) {
+      return res.status(404).json({
+        success: false,
+        message: 'Office location not found'
+      });
+    }
+
+    const wasDefault = loc.isDefault;
+    setting.officeLocations = setting.officeLocations.filter((l) => String(l._id) !== String(id));
+
+    if (wasDefault && setting.officeLocations.length > 0) {
+      setting.officeLocations[0].isDefault = true;
+    }
+
+    await setting.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Office location deleted successfully',
+      data: setting.officeLocations
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete office location',
       error: error.message
     });
   }

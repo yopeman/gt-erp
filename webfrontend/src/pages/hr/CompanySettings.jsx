@@ -22,7 +22,9 @@ import {
   Compass,
   ExternalLink,
   ShieldCheck,
-  CalendarDays
+  CalendarDays,
+  Eye,
+  Pencil
 } from 'lucide-react';
 
 export default function CompanySettings() {
@@ -86,6 +88,23 @@ export default function CompanySettings() {
     isDefault: false
   });
 
+  // Modal 1B: View Location Detail Modal
+  const [selectedLocationDetail, setSelectedLocationDetail] = useState(null);
+
+  // Modal 1C: Edit Office Location Modal
+  const [editingLocation, setEditingLocation] = useState(null);
+  const [submittingEditLocation, setSubmittingEditLocation] = useState(false);
+  const [gettingEditLocationGps, setGettingEditLocationGps] = useState(false);
+  const [editLocationForm, setEditLocationForm] = useState({
+    name: '',
+    address: '',
+    latitude: '',
+    longitude: '',
+    radiusMeters: 250,
+    isActive: true,
+    isDefault: false
+  });
+
   // Modal 2: Add Public Holiday Modal
   const [isHolidayModalOpen, setIsHolidayModalOpen] = useState(false);
   const [submittingHoliday, setSubmittingHoliday] = useState(false);
@@ -102,8 +121,26 @@ export default function CompanySettings() {
       setLoading(true);
       const res = await api.get('/company-settings');
       if (res.success && res.data) {
+        // Enforce exactly one default HQ on client side
+        let defaultSeen = false;
+        const normalizedOfficeLocations = (res.data.officeLocations || []).map((loc) => {
+          if (loc.isDefault) {
+            if (!defaultSeen) {
+              defaultSeen = true;
+              return { ...loc, isDefault: true };
+            }
+            return { ...loc, isDefault: false };
+          }
+          return loc;
+        });
+
+        if (!defaultSeen && normalizedOfficeLocations.length > 0) {
+          normalizedOfficeLocations[0].isDefault = true;
+        }
+
         setSettings({
           ...res.data,
+          officeLocations: normalizedOfficeLocations,
           workSchedule: {
             standardStartTime: '09:00',
             standardEndTime: '17:00',
@@ -243,6 +280,102 @@ export default function CompanySettings() {
       alert(err.message || 'Failed to add office location');
     } finally {
       setSubmittingLocation(false);
+    }
+  };
+
+  // Open Edit Location Modal
+  const handleOpenEditLocation = (loc) => {
+    setEditingLocation(loc);
+    setEditLocationForm({
+      name: loc.name || '',
+      address: loc.address || '',
+      latitude: loc.latitude !== undefined ? String(loc.latitude) : '',
+      longitude: loc.longitude !== undefined ? String(loc.longitude) : '',
+      radiusMeters: loc.radiusMeters || 200,
+      isActive: loc.isActive !== false,
+      isDefault: Boolean(loc.isDefault)
+    });
+  };
+
+  // Auto-fill GPS from browser for editing office location
+  const handleUseEditCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      alert('Geolocation is not supported by your browser.');
+      return;
+    }
+    setGettingEditLocationGps(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setEditLocationForm((prev) => ({
+          ...prev,
+          latitude: position.coords.latitude.toFixed(6),
+          longitude: position.coords.longitude.toFixed(6),
+          radiusMeters: Math.max(100, Math.round(position.coords.accuracy * 2))
+        }));
+        setGettingEditLocationGps(false);
+      },
+      (error) => {
+        alert('Could not acquire GPS coordinates: ' + error.message);
+        setGettingEditLocationGps(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
+  // Handle Update Office Location
+  const handleUpdateLocation = async (e) => {
+    e.preventDefault();
+    if (!editingLocation) return;
+    setSubmittingEditLocation(true);
+    try {
+      const payload = {
+        ...editLocationForm,
+        latitude: Number(editLocationForm.latitude),
+        longitude: Number(editLocationForm.longitude),
+        radiusMeters: Number(editLocationForm.radiusMeters) || 200
+      };
+
+      const res = await api.put(`/company-settings/office-locations/${editingLocation._id}`, payload);
+      if (res.success) {
+        setEditingLocation(null);
+        if (selectedLocationDetail && selectedLocationDetail._id === editingLocation._id) {
+          const updated = Array.isArray(res.data)
+            ? res.data.find((l) => String(l._id) === String(editingLocation._id))
+            : null;
+          if (updated) setSelectedLocationDetail(updated);
+          else setSelectedLocationDetail(null);
+        }
+        await fetchSettings();
+      } else {
+        alert(res.message || 'Failed to update office location');
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to update office location');
+    } finally {
+      setSubmittingEditLocation(false);
+    }
+  };
+
+  // Handle Delete Office Location
+  const handleDeleteLocation = async (loc) => {
+    if (!loc) return;
+    const confirmDelete = window.confirm(
+      `Are you sure you want to delete the office location "${loc.name}"? If this is currently the default HQ, another branch will automatically become default.`
+    );
+    if (!confirmDelete) return;
+
+    try {
+      const res = await api.delete(`/company-settings/office-locations/${loc._id}`);
+      if (res.success) {
+        if (selectedLocationDetail && selectedLocationDetail._id === loc._id) {
+          setSelectedLocationDetail(null);
+        }
+        await fetchSettings();
+      } else {
+        alert(res.message || 'Failed to delete office location');
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to delete office location');
     }
   };
 
@@ -466,7 +599,7 @@ export default function CompanySettings() {
                       </div>
                     </div>
 
-                    <div className="pt-1">
+                    <div className="pt-2 border-t border-slate-200/60 dark:border-slate-800 flex items-center justify-between">
                       <a
                         href={`https://www.google.com/maps?q=${loc.latitude},${loc.longitude}`}
                         target="_blank"
@@ -474,8 +607,35 @@ export default function CompanySettings() {
                         className="inline-flex items-center gap-1 text-[11px] text-primary-600 dark:text-primary-400 font-semibold hover:underline"
                       >
                         <ExternalLink className="w-3 h-3" />
-                        <span>View Perimeter on Map</span>
+                        <span>Map</span>
                       </a>
+
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedLocationDetail(loc)}
+                          title="View Details"
+                          className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-800 transition"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEditLocation(loc)}
+                          title="Edit Location"
+                          className="p-1.5 rounded-lg text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-950/60 transition"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteLocation(loc)}
+                          title="Delete Location"
+                          className="p-1.5 rounded-lg text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/60 transition"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -1045,17 +1205,24 @@ export default function CompanySettings() {
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="isDefaultLocationCheck"
-              checked={locationForm.isDefault}
-              onChange={(e) => setLocationForm({ ...locationForm, isDefault: e.target.checked })}
-              className="rounded text-primary-600 focus:ring-primary-500"
-            />
-            <label htmlFor="isDefaultLocationCheck" className="text-xs text-slate-700 dark:text-slate-300">
-              Set as primary headquarters (default office)
-            </label>
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="isDefaultLocationCheck"
+                checked={locationForm.isDefault}
+                onChange={(e) => setLocationForm({ ...locationForm, isDefault: e.target.checked })}
+                className="rounded text-primary-600 focus:ring-primary-500"
+              />
+              <label htmlFor="isDefaultLocationCheck" className="text-xs text-slate-700 dark:text-slate-300 font-semibold">
+                Set as primary headquarters (default office)
+              </label>
+            </div>
+            {locationForm.isDefault && (
+              <p className="text-[11px] text-amber-600 dark:text-amber-400 pl-6">
+                Setting this will establish it as the only Default HQ and remove default status from all other locations.
+              </p>
+            )}
           </div>
 
           <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
@@ -1076,6 +1243,262 @@ export default function CompanySettings() {
           </div>
         </form>
       </Modal>
+
+      {/* ========================================================================= */}
+      {/* MODAL 1B: VIEW OFFICE LOCATION DETAILS                                    */}
+      {/* ========================================================================= */}
+      {selectedLocationDetail && (
+        <Modal
+          isOpen={Boolean(selectedLocationDetail)}
+          onClose={() => setSelectedLocationDetail(null)}
+          title="Office Location & Geofence Details"
+          maxWidth="max-w-md"
+        >
+          <div className="space-y-4 text-xs">
+            {/* Header Card */}
+            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-2">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="font-bold text-base text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                    <Building2 className="w-4 h-4 text-primary-500" />
+                    <span>{selectedLocationDetail.name}</span>
+                  </h3>
+                  <p className="text-slate-500 text-xs mt-0.5">{selectedLocationDetail.address || 'No physical street address recorded'}</p>
+                </div>
+                <Badge
+                  status={selectedLocationDetail.isActive ? 'active' : 'inactive'}
+                  text={selectedLocationDetail.isActive ? 'Active' : 'Disabled'}
+                />
+              </div>
+
+              <div className="pt-2 border-t border-slate-200/60 dark:border-slate-800 flex items-center gap-2">
+                {selectedLocationDetail.isDefault ? (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-primary-100 text-primary-700 dark:bg-primary-950 dark:text-primary-300">
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    <span>Primary Company Headquarters (Default HQ)</span>
+                  </span>
+                ) : (
+                  <span className="text-slate-500 text-xs italic">Branch Office</span>
+                )}
+              </div>
+            </div>
+
+            {/* Coordinates & Perimeter Grid */}
+            <div className="grid grid-cols-2 gap-2 text-center">
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800">
+                <span className="text-[10px] text-slate-400 uppercase font-bold block mb-1">Geofence Radius</span>
+                <span className="text-emerald-600 dark:text-emerald-400 font-bold text-sm">
+                  {selectedLocationDetail.radiusMeters || 200} meters
+                </span>
+                <span className="text-[10px] text-slate-400 block mt-0.5">
+                  Diameter: {(selectedLocationDetail.radiusMeters || 200) * 2}m
+                </span>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800">
+                <span className="text-[10px] text-slate-400 uppercase font-bold block mb-1">GPS Lock</span>
+                <span className="font-mono text-slate-700 dark:text-slate-300 font-semibold block text-[11px]">
+                  {Number(selectedLocationDetail.latitude).toFixed(5)}, {Number(selectedLocationDetail.longitude).toFixed(5)}
+                </span>
+                <a
+                  href={`https://www.google.com/maps?q=${selectedLocationDetail.latitude},${selectedLocationDetail.longitude}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-[10px] text-primary-600 dark:text-primary-400 font-bold hover:underline mt-0.5"
+                >
+                  <ExternalLink className="w-2.5 h-2.5" />
+                  <span>Google Maps</span>
+                </a>
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => handleDeleteLocation(selectedLocationDetail)}
+                className="px-3 py-1.5 rounded-xl text-xs font-bold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition flex items-center gap-1 border border-rose-200 dark:border-rose-900"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Delete</span>
+              </button>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedLocationDetail(null)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleOpenEditLocation(selectedLocationDetail);
+                    setSelectedLocationDetail(null);
+                  }}
+                  className="px-4 py-2 rounded-xl bg-primary-500 hover:bg-primary-600 text-white font-bold text-xs shadow-md transition flex items-center gap-1.5"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                  <span>Edit Location</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL 1C: EDIT OFFICE LOCATION & GEOFENCE PERIMETER                       */}
+      {/* ========================================================================= */}
+      {editingLocation && (
+        <Modal
+          isOpen={Boolean(editingLocation)}
+          onClose={() => setEditingLocation(null)}
+          title="Edit Office Location & Geofence"
+          maxWidth="max-w-md"
+        >
+          <form onSubmit={handleUpdateLocation} className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Location / Branch Name *
+              </label>
+              <input
+                type="text"
+                required
+                value={editLocationForm.name}
+                onChange={(e) => setEditLocationForm({ ...editLocationForm, name: e.target.value })}
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs focus:ring-2 focus:ring-primary-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Physical Street Address
+              </label>
+              <input
+                type="text"
+                value={editLocationForm.address}
+                onChange={(e) => setEditLocationForm({ ...editLocationForm, address: e.target.value })}
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs focus:ring-2 focus:ring-primary-500"
+              />
+            </div>
+
+            {/* Quick GPS Locator Button */}
+            <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-xs">
+              <span className="text-slate-500">Auto-fill coordinates:</span>
+              <button
+                type="button"
+                onClick={handleUseEditCurrentLocation}
+                disabled={gettingEditLocationGps}
+                className="px-2.5 py-1 text-xs font-bold text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-950/60 hover:bg-primary-100 rounded-lg flex items-center gap-1"
+              >
+                <Compass className={`w-3.5 h-3.5 ${gettingEditLocationGps ? 'animate-spin' : ''}`} />
+                <span>Use Current Device GPS</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Latitude *
+                </label>
+                <input
+                  type="number"
+                  step="any"
+                  required
+                  value={editLocationForm.latitude}
+                  onChange={(e) => setEditLocationForm({ ...editLocationForm, latitude: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-mono focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Longitude *
+                </label>
+                <input
+                  type="number"
+                  step="any"
+                  required
+                  value={editLocationForm.longitude}
+                  onChange={(e) => setEditLocationForm({ ...editLocationForm, longitude: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-mono focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Geofence Radius (Meters) *
+              </label>
+              <input
+                type="number"
+                min="50"
+                max="2000"
+                required
+                value={editLocationForm.radiusMeters}
+                onChange={(e) => setEditLocationForm({ ...editLocationForm, radiusMeters: Number(e.target.value) })}
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs focus:ring-2 focus:ring-primary-500"
+              />
+              <span className="text-[10px] text-slate-400 mt-0.5 block">
+                Punches within this radius will be recognized as 'In Perimeter'
+              </span>
+            </div>
+
+            <div className="space-y-2 pt-1 border-t border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="editIsActiveCheck"
+                  checked={editLocationForm.isActive}
+                  onChange={(e) => setEditLocationForm({ ...editLocationForm, isActive: e.target.checked })}
+                  className="rounded text-primary-600 focus:ring-primary-500"
+                />
+                <label htmlFor="editIsActiveCheck" className="text-xs text-slate-700 dark:text-slate-300 font-semibold">
+                  Active (allows staff to clock in from this location)
+                </label>
+              </div>
+
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="editIsDefaultCheck"
+                    checked={editLocationForm.isDefault}
+                    onChange={(e) => setEditLocationForm({ ...editLocationForm, isDefault: e.target.checked })}
+                    className="rounded text-primary-600 focus:ring-primary-500"
+                  />
+                  <label htmlFor="editIsDefaultCheck" className="text-xs text-slate-700 dark:text-slate-300 font-bold">
+                    Set as primary headquarters (Default HQ)
+                  </label>
+                </div>
+                {editLocationForm.isDefault && (
+                  <p className="text-[11px] text-amber-600 dark:text-amber-400 pl-6">
+                    Setting this will establish it as the only Default HQ and remove default status from all other locations.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setEditingLocation(null)}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                {t('actions.cancel')}
+              </button>
+              <button
+                type="submit"
+                disabled={submittingEditLocation}
+                className="px-5 py-2 rounded-xl bg-primary-500 hover:bg-primary-600 text-white font-bold text-xs shadow-md transition disabled:opacity-50"
+              >
+                {submittingEditLocation ? 'Saving Changes...' : 'Save Location'}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
 
       {/* ========================================================================= */}
       {/* MODAL 2: ADD PUBLIC HOLIDAY                                               */}

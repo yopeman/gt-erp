@@ -3,6 +3,8 @@ import {
   getCompanySetting,
   updateCompanySetting,
   addOfficeLocation,
+  updateOfficeLocation,
+  deleteOfficeLocation,
   getHolidays,
   createHoliday,
   deleteHoliday
@@ -18,6 +20,8 @@ router.use(protect);
 router.get('/', getCompanySetting);
 router.put('/', authorizeRoles('admin', 'hr'), updateCompanySetting);
 router.post('/office-locations', authorizeRoles('admin', 'hr'), addOfficeLocation);
+router.put('/office-locations/:id', authorizeRoles('admin', 'hr'), updateOfficeLocation);
+router.delete('/office-locations/:id', authorizeRoles('admin', 'hr'), deleteOfficeLocation);
 
 // Public Holidays
 router.get('/holidays', getHolidays);
