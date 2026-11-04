@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from '../../i18n';
+import { useAuth } from '../../context/AuthContext';
 import StatCard from '../../components/common/StatCard';
 import Badge from '../../components/common/Badge';
 import api from '../../services/api';
@@ -19,7 +20,9 @@ import {
 
 export default function HrDashboard() {
   const { t } = useTranslation();
+  const { hasRole } = useAuth();
   const navigate = useNavigate();
+  const canManageEmployees = hasRole(['admin', 'hr']);
 
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
@@ -99,13 +102,15 @@ export default function HrDashboard() {
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
               <span>{t('actions.refresh')}</span>
             </button>
-            <Link
-              to="/hr/employees"
-              className="px-4 py-2 rounded-xl bg-white text-primary-600 hover:bg-slate-100 font-bold text-xs shadow-md transition active:scale-95 flex items-center gap-1.5"
-            >
-              <UserPlus className="w-4 h-4" />
-              <span>{t('actions.createEmployee')}</span>
-            </Link>
+            {canManageEmployees && (
+              <Link
+                to="/hr/employees"
+                className="px-4 py-2 rounded-xl bg-white text-primary-600 hover:bg-slate-100 font-bold text-xs shadow-md transition active:scale-95 flex items-center gap-1.5"
+              >
+                <UserPlus className="w-4 h-4" />
+                <span>{t('actions.createEmployee')}</span>
+              </Link>
+            )}
           </div>
         </div>
       </div>
