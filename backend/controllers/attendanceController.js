@@ -1,17 +1,26 @@
 import Attendance from '../models/Attendance.js';
 import Employee from '../models/Employee.js';
+import Overtime from '../models/Overtime.js';
 import CompanySetting from '../models/CompanySetting.js';
+import Holiday from '../models/Holiday.js';
 import { uploadToCloudinary } from '../utils/cloudinary.js';
 import { classifyAttendance, calculateWorkedHours } from '../utils/dateUtils.js';
 import { checkGeofence } from '../utils/geoUtils.js';
 
 /**
- * Resolve employee ID from request body or authenticated user
+ * Resolve employee ID from request body or authenticated user.
+ * Employees can only ever record for themselves; HR/Admin/Manager can select another employee.
  */
 const resolveEmployeeId = async (req) => {
-  if (req.body.employee && req.user && (req.user.roles?.includes('admin') || req.user.roles?.includes('hr') || req.user.roles?.includes('manager'))) {
+  const userRoles = req.user?.roles || [];
+  const canManageOthers = userRoles.some((r) => ['admin', 'hr', 'manager'].includes(r));
+
+  // If HR/Admin/Manager explicitly selected another employee in request body, allow it
+  if (canManageOthers && req.body.employee) {
     return req.body.employee;
   }
+
+  // Regular employee MUST resolve strictly to their own linked employee profile
   if (req.user?.employee?._id) {
     return req.user.employee._id;
   }
@@ -19,14 +28,21 @@ const resolveEmployeeId = async (req) => {
     return req.user.employee;
   }
   if (req.user) {
-    const employee = await Employee.findOne({ email: req.user.email.toLowerCase() });
+    const employee = await Employee.findOne({
+      $or: [
+        { user: req.user._id },
+        { email: req.user.email.toLowerCase() }
+      ]
+    });
     if (employee) {
       return employee._id;
     }
   }
-  if (req.body.employee) {
+
+  if (canManageOthers && req.body.employee) {
     return req.body.employee;
   }
+
   return null;
 };
 
@@ -99,12 +115,23 @@ const verifyLocationGeofence = async (location) => {
 export const clockIn = async (req, res) => {
   try {
     const { selfie, location, type, notes } = req.body;
+    const userRoles = req.user?.roles || [];
+    const canManageOthers = userRoles.some((r) => ['admin', 'hr', 'manager'].includes(r));
+
     const employeeId = await resolveEmployeeId(req);
 
     if (!employeeId) {
       return res.status(400).json({
         success: false,
         message: 'Employee ID is required (or logged in user must have matching employee profile)'
+      });
+    }
+
+    // Security check: Regular employees cannot clock in on behalf of someone else
+    if (!canManageOthers && req.body.employee && String(req.body.employee) !== String(employeeId)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Employees cannot clock in for other staff members.'
       });
     }
 
@@ -142,14 +169,53 @@ export const clockIn = async (req, res) => {
       selfieUrl = uploadResult.secureUrl || uploadResult.url;
     }
 
-    // Get company schedule settings
+    // Get company schedule settings and public holidays
     const setting = await CompanySetting.findOne().sort({ createdAt: -1 });
     const standardStartTime = setting?.workSchedule?.standardStartTime || '09:00';
     const graceMinutes = setting?.workSchedule?.gracePeriodMinutes || 15;
-    const [startHour, startMin] = standardStartTime.split(':').map(Number);
+    const workingDays = setting?.workSchedule?.workingDays || [1, 2, 3, 4, 5];
 
+    const holidays = await Holiday.find({ isActive: true });
     const clockInTime = new Date();
-    const attendanceType = type || classifyAttendance(clockInTime, startHour || 9, graceMinutes || 15);
+    const clockInDateStr = clockInTime.toISOString().split('T')[0];
+    const clockInMonthDay = clockInDateStr.slice(5);
+
+    const holidayToday = holidays.find((h) => {
+      const hDate = new Date(h.date).toISOString().split('T')[0];
+      return hDate === clockInDateStr || (h.isRecurringYearly && hDate.slice(5) === clockInMonthDay);
+    });
+
+    const dayOfWeek = clockInTime.getDay();
+    const isRestDay = !workingDays.includes(dayOfWeek);
+
+    const attendanceType = type || classifyAttendance(clockInTime, standardStartTime, graceMinutes);
+
+    let scheduleNote = '';
+    if (holidayToday) {
+      scheduleNote = `Public Holiday: ${holidayToday.title}`;
+    } else if (isRestDay) {
+      scheduleNote = 'Weekend / Rest Day Shift';
+    }
+
+    // Normalize location with diameter and geofence results
+    const finalLocation = {
+      latitude: location?.latitude,
+      longitude: location?.longitude,
+      address: location?.address,
+      accuracy: location?.accuracy,
+      diameter: location?.diameter || (location?.accuracy ? Math.round(location.accuracy * 2) : undefined),
+      distanceFromOfficeMeters: geofenceResult.distanceFromOfficeMeters,
+      withinGeofence: geofenceResult.withinGeofence
+    };
+
+    let initialNotes = notes || '';
+    if (scheduleNote) {
+      initialNotes = initialNotes ? `${initialNotes} | ${scheduleNote}` : scheduleNote;
+    }
+    if (!geofenceResult.withinGeofence) {
+      const geoMsg = `Geofence warning: ${geofenceResult.message}`;
+      initialNotes = initialNotes ? `${initialNotes} | ${geoMsg}` : geoMsg;
+    }
 
     const attendance = await Attendance.create({
       employee: employeeId,
@@ -158,24 +224,20 @@ export const clockIn = async (req, res) => {
       type: attendanceType,
       status: attendanceType === 'late' ? 'late' : 'present',
       selfRecorded: true,
-      notes: notes || (geofenceResult.withinGeofence ? '' : `Geofence warning: ${geofenceResult.message}`),
+      notes: initialNotes,
       clockInSelfie: {
         image: selfieUrl,
         capturedAt: clockInTime,
-        location: {
-          latitude: location?.latitude,
-          longitude: location?.longitude,
-          address: location?.address,
-          accuracy: location?.accuracy,
-          distanceFromOfficeMeters: geofenceResult.distanceFromOfficeMeters,
-          withinGeofence: geofenceResult.withinGeofence
-        },
+        location: finalLocation,
         deviceInfo: req.headers['user-agent'] || '',
         ipAddress: req.ip || req.connection?.remoteAddress || ''
       }
     });
 
-    const populated = await attendance.populate('employee', 'fullName email department position profileImage');
+    const populated = await attendance.populate(
+      'employee',
+      'fullName email department position profileImage nationalId branch phoneNumber'
+    );
 
     res.status(201).json({
       success: true,
@@ -196,7 +258,18 @@ export const clockIn = async (req, res) => {
 export const clockOut = async (req, res) => {
   try {
     const { selfie, location, attendanceId, notes } = req.body;
+    const userRoles = req.user?.roles || [];
+    const canManageOthers = userRoles.some((r) => ['admin', 'hr', 'manager'].includes(r));
+
     const employeeId = await resolveEmployeeId(req);
+
+    // Security check: Regular employees cannot clock out on behalf of someone else
+    if (!canManageOthers && req.body.employee && String(req.body.employee) !== String(employeeId)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Employees cannot clock out for other staff members.'
+      });
+    }
 
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
@@ -236,30 +309,119 @@ export const clockOut = async (req, res) => {
     }
 
     const clockOutTime = new Date();
-    const workedHours = calculateWorkedHours(attendance.startTime, clockOutTime);
-
     attendance.endTime = clockOutTime;
-    attendance.workedHours = workedHours;
+
+    // Fetch company settings & holidays to calculate shift thresholds & overtime rates
+    const setting = await CompanySetting.findOne().sort({ createdAt: -1 });
+    const standardDailyHours = setting?.workSchedule?.standardDailyHours || 8;
+    const workingDays = setting?.workSchedule?.workingDays || [1, 2, 3, 4, 5];
+    const otRateRegular = setting?.payrollSettings?.overtimeRateRegular || 1.5;
+    const otRateWeekend = setting?.payrollSettings?.overtimeRateWeekend || 1.5;
+    const otRateHoliday = setting?.payrollSettings?.overtimeRateHoliday || 2.0;
+
+    const holidays = await Holiday.find({ isActive: true });
+    const shiftDate = attendance.startTime || attendance.date || new Date();
+    const shiftDateStr = new Date(shiftDate).toISOString().split('T')[0];
+    const shiftMonthDay = shiftDateStr.slice(5);
+
+    const holidayShift = holidays.find((h) => {
+      const hDate = new Date(h.date).toISOString().split('T')[0];
+      return hDate === shiftDateStr || (h.isRecurringYearly && hDate.slice(5) === shiftMonthDay);
+    });
+
+    const dayOfWeek = new Date(shiftDate).getDay();
+    const isNonWorkingDay = !workingDays.includes(dayOfWeek);
+
+    // Calculate worked hours
+    let workedHours = 0;
+    if (attendance.startTime) {
+      workedHours = calculateWorkedHours(attendance.startTime, clockOutTime);
+      attendance.workedHours = workedHours;
+    }
+
+    // Determine overtime eligibility: regular day extra hours OR rest day / holiday shift
+    const isOvertimeShift = workedHours > standardDailyHours || (holidayShift && workedHours >= 0.5) || (isNonWorkingDay && workedHours >= 0.5);
+
+    if (isOvertimeShift) {
+      attendance.type = 'overtime';
+
+      let otType = 'calendar';
+      let otRate = otRateRegular;
+      let extraHours = 0;
+
+      if (holidayShift) {
+        otType = 'holiday';
+        otRate = otRateHoliday;
+        // On public holidays, either entire worked time or hours beyond threshold are overtime
+        extraHours = workedHours > standardDailyHours ? workedHours : Number(workedHours.toFixed(2));
+      } else if (isNonWorkingDay) {
+        otType = 'weekend';
+        otRate = otRateWeekend;
+        extraHours = workedHours > standardDailyHours ? workedHours : Number(workedHours.toFixed(2));
+      } else {
+        extraHours = Number((workedHours - standardDailyHours).toFixed(2));
+      }
+
+      if (extraHours >= 0.5 && !attendance.linkedOvertime) {
+        const existingOt = await Overtime.findOne({
+          employee: employeeId,
+          $or: [
+            { attendance: attendance._id },
+            { startAt: { $gte: startOfDay, $lte: endOfDay } }
+          ]
+        });
+
+        if (!existingOt) {
+          const holidayTitle = holidayShift ? ` [Holiday: ${holidayShift.title}]` : '';
+          const autoOt = await Overtime.create({
+            employee: employeeId,
+            attendance: attendance._id,
+            startAt: attendance.startTime || attendance.date,
+            workedHours: extraHours,
+            approvedHours: 0,
+            type: otType,
+            calculationRate: otRate,
+            reason: `Auto-recorded from shift (${workedHours}h worked vs ${standardDailyHours}h standard shift${holidayTitle})`,
+            status: 'pending',
+            paymentStatus: 'unpaid'
+          });
+          attendance.linkedOvertime = autoOt._id;
+        } else {
+          attendance.linkedOvertime = existingOt._id;
+          if (!existingOt.attendance) {
+            existingOt.attendance = attendance._id;
+            await existingOt.save();
+          }
+        }
+      }
+    }
+
     if (notes) attendance.notes = attendance.notes ? `${attendance.notes} | ${notes}` : notes;
+
+    const finalLocation = {
+      latitude: location?.latitude,
+      longitude: location?.longitude,
+      address: location?.address,
+      accuracy: location?.accuracy,
+      diameter: location?.diameter || (location?.accuracy ? Math.round(location.accuracy * 2) : undefined),
+      distanceFromOfficeMeters: geofenceResult.distanceFromOfficeMeters,
+      withinGeofence: geofenceResult.withinGeofence
+    };
 
     attendance.clockOutSelfie = {
       image: selfieUrl,
       capturedAt: clockOutTime,
-      location: {
-        latitude: location?.latitude,
-        longitude: location?.longitude,
-        address: location?.address,
-        accuracy: location?.accuracy,
-        distanceFromOfficeMeters: geofenceResult.distanceFromOfficeMeters,
-        withinGeofence: geofenceResult.withinGeofence
-      },
+      location: finalLocation,
       deviceInfo: req.headers['user-agent'] || '',
       ipAddress: req.ip || req.connection?.remoteAddress || ''
     };
 
     await attendance.save();
 
-    const populated = await attendance.populate('employee', 'fullName email department position profileImage');
+    const populated = await attendance.populate([
+      { path: 'employee', select: 'fullName email department position profileImage nationalId branch phoneNumber' },
+      { path: 'linkedOvertime', select: 'workedHours approvedHours status calculationRate' }
+    ]);
 
     res.status(200).json({
       success: true,
@@ -406,7 +568,8 @@ export const getMyAttendanceHistory = async (req, res) => {
   }
 };
 
-// Get all attendances with filters and pagination (Admin/HR/Manager)
+// Get all attendances with filters and pagination
+// Regular employees see only their own attendance history logs; HR/Admin/Manager can see all
 export const getAttendances = async (req, res) => {
   try {
     const {
@@ -420,13 +583,46 @@ export const getAttendances = async (req, res) => {
       includeDeleted = 'false'
     } = req.query;
 
+    const userRoles = req.user?.roles || [];
+    const canManageOthers = userRoles.some((r) => ['admin', 'hr', 'manager'].includes(r));
+
     const query = {};
 
     if (includeDeleted !== 'true') {
       query.isDeleted = false;
     }
 
-    if (employee) query.employee = employee;
+    if (!canManageOthers) {
+      // Restrict regular employee to strictly their own attendance records
+      let userEmpId = req.user?.employee?._id || req.user?.employee;
+      if (!userEmpId && req.user) {
+        const emp = await Employee.findOne({
+          $or: [
+            { user: req.user._id },
+            { email: req.user.email.toLowerCase() }
+          ]
+        });
+        if (emp) userEmpId = emp._id;
+      }
+
+      if (!userEmpId) {
+        return res.status(200).json({
+          success: true,
+          data: [],
+          pagination: {
+            total: 0,
+            page: 1,
+            pages: 0
+          }
+        });
+      }
+
+      query.employee = userEmpId;
+    } else {
+      // HR/Admin/Manager can filter by any specific employee or view all
+      if (employee) query.employee = employee;
+    }
+
     if (type) query.type = type;
     if (status) query.status = status;
 
@@ -439,7 +635,8 @@ export const getAttendances = async (req, res) => {
     const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
     const total = await Attendance.countDocuments(query);
     const attendances = await Attendance.find(query)
-      .populate('employee', 'fullName email department position profileImage')
+      .populate('employee', 'fullName email department position profileImage nationalId branch phoneNumber')
+      .populate('linkedOvertime', 'workedHours approvedHours status calculationRate')
       .sort({ date: -1, createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit, 10));
@@ -510,14 +707,40 @@ export const getAttendanceStats = async (req, res) => {
 // Get attendance by ID
 export const getAttendanceById = async (req, res) => {
   try {
+    const userRoles = req.user?.roles || [];
+    const canManageOthers = userRoles.some((r) => ['admin', 'hr', 'manager'].includes(r));
+
     const attendance = await Attendance.findById(req.params.id)
-      .populate('employee', 'fullName email department position profileImage');
+      .populate('employee', 'fullName email department position profileImage nationalId branch phoneNumber')
+      .populate('linkedOvertime', 'workedHours approvedHours status calculationRate');
 
     if (!attendance) {
       return res.status(404).json({
         success: false,
         message: 'Attendance record not found'
       });
+    }
+
+    // Permission check for regular employee
+    if (!canManageOthers && req.user) {
+      let userEmpId = req.user?.employee?._id || req.user?.employee;
+      if (!userEmpId) {
+        const emp = await Employee.findOne({
+          $or: [
+            { user: req.user._id },
+            { email: req.user.email.toLowerCase() }
+          ]
+        });
+        if (emp) userEmpId = emp._id;
+      }
+
+      const recordEmpId = attendance.employee?._id || attendance.employee;
+      if (String(recordEmpId) !== String(userEmpId)) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied: You can only view your own attendance records'
+        });
+      }
     }
 
     res.status(200).json({

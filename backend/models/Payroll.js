@@ -1,5 +1,21 @@
 import mongoose from 'mongoose';
 
+const payrollItemSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    amount: {
+      type: Number,
+      required: true,
+      min: [0, 'Amount cannot be negative']
+    }
+  },
+  { _id: true }
+);
+
 const payrollSchema = new mongoose.Schema(
   {
     employeeId: {
@@ -71,6 +87,20 @@ const payrollSchema = new mongoose.Schema(
     employerContributions: {
       pensionEmployer: { type: Number, default: 0 }
     },
+    overtimeRecords: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Overtime'
+      }
+    ],
+    leaveRecords: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'LeaveRequest'
+      }
+    ],
+    earnings: [payrollItemSchema],
+    deductions: [payrollItemSchema],
     totalGross: {
       type: Number,
       default: 0,

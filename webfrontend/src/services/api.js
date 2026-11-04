@@ -3,18 +3,32 @@
  * Connects directly to Express.js API on http://localhost:5000/api (or VITE_API_BASE_URL)
  */
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+const rawBaseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api').trim();
+
+// Normalize API_BASE_URL: ensure no trailing slash, ensure /api suffix if not already present
+export const API_BASE_URL = (() => {
+  if (rawBaseUrl === '/api' || rawBaseUrl.endsWith('/api')) {
+    return rawBaseUrl.replace(/\/+$/, '');
+  }
+  return `${rawBaseUrl.replace(/\/+$/, '')}/api`;
+})();
+
+// Base server URL (without /api) for root health checks, uploads, or static paths
+export const SERVER_BASE_URL = API_BASE_URL === '/api' ? '' : API_BASE_URL.replace(/\/api\/?$/, '');
 
 export async function apiRequest(endpoint, options = {}) {
   const token = localStorage.getItem('gt_erp_token');
+  const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
 
   const headers = {
-    'Content-Type': 'application/json',
+    ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    // Bypass ngrok free-tier browser interstitial warning page which lacks CORS headers
+    'ngrok-skip-browser-warning': 'true',
     ...options.headers,
   };
 
-  const url = `${BASE_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+  const url = `${API_BASE_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
 
   try {
     const response = await fetch(url, {
@@ -46,10 +60,18 @@ export async function apiRequest(endpoint, options = {}) {
   }
 }
 
+const serializeBody = (body) => {
+  if (body === undefined) return undefined;
+  if (typeof FormData !== 'undefined' && body instanceof FormData) return body;
+  if (typeof body === 'string') return body;
+  return JSON.stringify(body);
+};
+
 export const api = {
   get: (endpoint, options) => apiRequest(endpoint, { ...options, method: 'GET' }),
-  post: (endpoint, body, options) => apiRequest(endpoint, { ...options, method: 'POST', body: JSON.stringify(body) }),
-  put: (endpoint, body, options) => apiRequest(endpoint, { ...options, method: 'PUT', body: JSON.stringify(body) }),
+  post: (endpoint, body, options) => apiRequest(endpoint, { ...options, method: 'POST', body: serializeBody(body) }),
+  put: (endpoint, body, options) => apiRequest(endpoint, { ...options, method: 'PUT', body: serializeBody(body) }),
+  patch: (endpoint, body, options) => apiRequest(endpoint, { ...options, method: 'PATCH', body: serializeBody(body) }),
   delete: (endpoint, options) => apiRequest(endpoint, { ...options, method: 'DELETE' }),
 };
 

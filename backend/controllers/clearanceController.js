@@ -2,27 +2,24 @@ import Clearance from '../models/Clearance.js';
 import Employee from '../models/Employee.js';
 import { recordApprovalEvent } from '../utils/approvalHelper.js';
 
-// Helper to resolve employee ID
-const resolveEmployeeId = async (req) => {
-  if (req.body.employee && req.user && (req.user.roles?.includes('admin') || req.user.roles?.includes('hr') || req.user.roles?.includes('manager'))) {
-    return req.body.employee;
+/**
+ * Helper to resolve logged in employee ID safely
+ */
+const resolveUserEmployeeId = async (user) => {
+  if (!user) return null;
+  if (user.employee?._id) {
+    return user.employee._id;
   }
-  if (req.user?.employee?._id) {
-    return req.user.employee._id;
+  if (user.employee) {
+    return user.employee;
   }
-  if (req.user?.employee) {
-    return req.user.employee;
-  }
-  if (req.user) {
-    const employee = await Employee.findOne({ email: req.user.email.toLowerCase() });
-    if (employee) {
-      return employee._id;
-    }
-  }
-  if (req.body.employee) {
-    return req.body.employee;
-  }
-  return null;
+  const emp = await Employee.findOne({
+    $or: [
+      { user: user._id },
+      { email: user.email?.toLowerCase().trim() }
+    ]
+  });
+  return emp ? emp._id : null;
 };
 
 // Create a new clearance request
@@ -30,7 +27,24 @@ export const createClearance = async (req, res) => {
   try {
     const { employee, reason, checklist } = req.body;
 
-    const targetEmployeeId = employee || (await resolveEmployeeId(req));
+    const userRoles = req.user?.roles || [];
+    const canManage = userRoles.some((r) => ['admin', 'hr'].includes(r));
+
+    let targetEmployeeId = employee;
+
+    // Scoped restriction: Regular employees can only initiate clearance for themselves
+    if (!canManage) {
+      const myEmpId = await resolveUserEmployeeId(req.user);
+      if (!myEmpId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Could not resolve your linked employee profile to start clearance'
+        });
+      }
+      targetEmployeeId = myEmpId;
+    } else if (!targetEmployeeId) {
+      targetEmployeeId = await resolveUserEmployeeId(req.user);
+    }
 
     if (!targetEmployeeId) {
       return res.status(400).json({
@@ -56,13 +70,17 @@ export const createClearance = async (req, res) => {
     });
 
     // Record submission in ApprovalHistory
-    await recordApprovalEvent({
-      referenceType: 'clearance',
-      referenceId: clearance._id,
-      action: 'submitted',
-      user: req.user,
-      comment: reason || 'Exit clearance initialized'
-    });
+    try {
+      await recordApprovalEvent({
+        referenceType: 'clearance',
+        referenceId: clearance._id,
+        action: 'submitted',
+        user: req.user,
+        comment: reason || 'Exit clearance initialized'
+      });
+    } catch (histErr) {
+      console.warn('Approval history logging warning:', histErr.message);
+    }
 
     const populated = await clearance.populate('employee', 'fullName email department position');
 
@@ -83,7 +101,7 @@ export const createClearance = async (req, res) => {
 // Get current user's clearance status
 export const getMyClearance = async (req, res) => {
   try {
-    const employeeId = await resolveEmployeeId(req);
+    const employeeId = await resolveUserEmployeeId(req.user);
     if (!employeeId) {
       return res.status(404).json({
         success: false,
@@ -119,9 +137,26 @@ export const getClearances = async (req, res) => {
       status
     } = req.query;
 
+    const userRoles = req.user?.roles || [];
+    const canManage = userRoles.some((r) => ['admin', 'hr'].includes(r));
+
     const query = {};
 
-    if (employee) query.employee = employee;
+    // Scoped visibility: Regular employees can only see their own exit clearance records
+    if (!canManage) {
+      const myEmpId = await resolveUserEmployeeId(req.user);
+      if (!myEmpId) {
+        return res.status(200).json({
+          success: true,
+          data: [],
+          pagination: { total: 0, page: 1, pages: 0 }
+        });
+      }
+      query.employee = myEmpId;
+    } else if (employee) {
+      query.employee = employee;
+    }
+
     if (status) query.status = status;
 
     const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
@@ -165,6 +200,18 @@ export const getClearanceById = async (req, res) => {
         success: false,
         message: 'Clearance not found'
       });
+    }
+
+    const userRoles = req.user?.roles || [];
+    const canManage = userRoles.some((r) => ['admin', 'hr'].includes(r));
+    if (!canManage) {
+      const myEmpId = await resolveUserEmployeeId(req.user);
+      if (!myEmpId || clearance.employee?._id?.toString() !== myEmpId.toString()) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied: You can only view your own exit clearance record'
+        });
+      }
     }
 
     res.status(200).json({
@@ -216,7 +263,7 @@ export const updateClearance = async (req, res) => {
 export const updateChecklistItem = async (req, res) => {
   try {
     const { itemId } = req.params;
-    const { status, remarks } = req.body;
+    const { status, confirmedBy, remarks, isConfirmed } = req.body;
 
     const clearance = await Clearance.findById(req.params.id);
     if (!clearance) {
@@ -234,13 +281,25 @@ export const updateChecklistItem = async (req, res) => {
       });
     }
 
-    if (status) item.status = status;
-    item.confirmedBy = req.user?._id || req.body.confirmedBy;
-    if (remarks !== undefined) item.remarks = remarks;
-    if (status === 'cleared') {
-      item.confirmedAt = new Date();
+    let newStatus = status;
+    if (!newStatus) {
+      if (isConfirmed === true) newStatus = 'cleared';
+      else if (isConfirmed === false) newStatus = 'pending';
+      else newStatus = item.status === 'cleared' ? 'pending' : 'cleared';
     }
 
+    item.status = newStatus;
+    if (newStatus === 'cleared') {
+      item.confirmedBy = confirmedBy || req.user?._id;
+      item.confirmedAt = new Date();
+    } else {
+      item.confirmedBy = null;
+      item.confirmedAt = null;
+    }
+
+    if (remarks !== undefined) item.remarks = remarks;
+
+    // If any item is in progress or cleared, transition root clearance status to 'in_progress'
     if (clearance.status === 'pending') {
       clearance.status = 'in_progress';
     }
@@ -248,13 +307,17 @@ export const updateChecklistItem = async (req, res) => {
     await clearance.save();
 
     // Log action in ApprovalHistory
-    await recordApprovalEvent({
-      referenceType: 'clearance',
-      referenceId: clearance._id,
-      action: status === 'cleared' ? 'cleared' : status === 'rejected' ? 'rejected' : 'returned for correction',
-      user: req.user,
-      comment: `Checklist item '${item.title}' marked as ${status}. ${remarks || ''}`
-    });
+    try {
+      await recordApprovalEvent({
+        referenceType: 'clearance',
+        referenceId: clearance._id,
+        action: newStatus === 'cleared' ? 'cleared' : newStatus === 'rejected' ? 'rejected' : 'returned for correction',
+        user: req.user,
+        comment: `Checklist item '${item.title}' marked as ${newStatus}. ${remarks || ''}`
+      });
+    } catch (histErr) {
+      console.warn('Approval history logging warning:', histErr.message);
+    }
 
     const populated = await clearance.populate([
       { path: 'employee', select: 'fullName email department position' },
@@ -278,7 +341,9 @@ export const updateChecklistItem = async (req, res) => {
 // Final approval for clearance and auto-offboarding
 export const finalApproveClearance = async (req, res) => {
   try {
-    const { status = 'completed', remarks } = req.body;
+    const finalApprovedBy = req.body?.finalApprovedBy || req.user?._id;
+    const status = req.body?.status || 'approved';
+    const remarks = req.body?.remarks || '';
 
     const clearance = await Clearance.findById(req.params.id);
     if (!clearance) {
@@ -288,27 +353,44 @@ export const finalApproveClearance = async (req, res) => {
       });
     }
 
-    clearance.finalApprovedBy = req.user?._id || req.body.finalApprovedBy;
+    // Verify all checklist items are cleared
+    const hasUnclearedItems = clearance.checklist && clearance.checklist.some((c) => c.status !== 'cleared');
+    if (hasUnclearedItems) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot grant final approval until all department checklist items are signed off'
+      });
+    }
+
+    clearance.finalApprovedBy = finalApprovedBy;
     clearance.status = status;
     clearance.completedAt = new Date();
 
     await clearance.save();
 
-    // When clearance is officially completed, automatically mark employee status as 'terminated'
-    if (status === 'completed' && clearance.employee) {
-      await Employee.findByIdAndUpdate(clearance.employee, {
-        status: 'terminated'
-      });
+    // When clearance is officially completed/approved, automatically mark employee status as 'terminated'
+    if (['approved', 'completed'].includes(status) && clearance.employee) {
+      try {
+        await Employee.findByIdAndUpdate(clearance.employee, {
+          status: 'terminated'
+        });
+      } catch (empErr) {
+        console.warn('Could not update employee status upon final clearance:', empErr.message);
+      }
     }
 
     // Log in ApprovalHistory
-    await recordApprovalEvent({
-      referenceType: 'clearance',
-      referenceId: clearance._id,
-      action: status === 'completed' ? 'approved' : 'rejected',
-      user: req.user,
-      comment: remarks || `Final exit clearance marked as ${status}. Employee status updated to terminated.`
-    });
+    try {
+      await recordApprovalEvent({
+        referenceType: 'clearance',
+        referenceId: clearance._id,
+        action: ['approved', 'completed'].includes(status) ? 'approved' : 'rejected',
+        user: req.user,
+        comment: remarks || `Final exit clearance marked as ${status}. Employee status updated to terminated.`
+      });
+    } catch (histErr) {
+      console.warn('Approval history logging warning:', histErr.message);
+    }
 
     const populated = await clearance.populate([
       { path: 'employee', select: 'fullName email department position status' },

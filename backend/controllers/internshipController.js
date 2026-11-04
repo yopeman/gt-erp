@@ -4,12 +4,22 @@ import Employee from '../models/Employee.js';
 // Create internship
 export const createInternship = async (req, res) => {
   try {
-    const { supervisor, employee, type, department, startDate, endDate, status } = req.body;
+    const {
+      supervisor,
+      employee,
+      userId,
+      newEmployee,
+      type,
+      department,
+      startDate,
+      endDate,
+      status
+    } = req.body;
 
-    if (!supervisor || !employee || !startDate || !endDate) {
+    if (!supervisor || !startDate || !endDate) {
       return res.status(400).json({
         success: false,
-        message: 'supervisor, employee, startDate, and endDate are required'
+        message: 'supervisor, startDate, and endDate are required'
       });
     }
 
@@ -20,8 +30,94 @@ export const createInternship = async (req, res) => {
       });
     }
 
+    let targetEmployeeId = employee;
+
+    // Option 1: Register a new employee on the fly
+    if (newEmployee && (newEmployee.fullName || newEmployee.email)) {
+      const { fullName, email, phoneNumber, department: empDept, position: empPos, gender } = newEmployee;
+      if (!fullName || !email || !phoneNumber) {
+        return res.status(400).json({
+          success: false,
+          message: 'fullName, email, and phoneNumber are required to register a new intern employee'
+        });
+      }
+
+      let existingEmp = await Employee.findOne({ email: email.toLowerCase().trim() });
+      if (existingEmp) {
+        targetEmployeeId = existingEmp._id;
+        if (existingEmp.type !== 'intern') {
+          existingEmp.type = 'intern';
+          await existingEmp.save();
+        }
+      } else {
+        const createdEmp = await Employee.create({
+          fullName: fullName.trim(),
+          email: email.toLowerCase().trim(),
+          phoneNumber: phoneNumber.trim(),
+          department: empDept || department || 'Digital Print',
+          position: empPos || 'Intern / Trainee',
+          gender: gender || 'other',
+          type: 'intern',
+          hiredAt: startDate || new Date()
+        });
+        targetEmployeeId = createdEmp._id;
+      }
+    } else if (userId) {
+      // Option 2: Link with existing user
+      const User = (await import('../models/User.js')).default;
+      const targetUser = await User.findById(userId).populate('employee');
+      if (!targetUser) {
+        return res.status(404).json({
+          success: false,
+          message: 'User account not found'
+        });
+      }
+
+      if (targetUser.employee) {
+        targetEmployeeId = targetUser.employee._id || targetUser.employee;
+        const linkedEmp = await Employee.findById(targetEmployeeId);
+        if (linkedEmp && linkedEmp.type !== 'intern') {
+          linkedEmp.type = 'intern';
+          await linkedEmp.save();
+        }
+      } else {
+        let existingEmp = await Employee.findOne({ email: targetUser.email.toLowerCase().trim() });
+        if (!existingEmp) {
+          existingEmp = await Employee.create({
+            fullName: targetUser.fullName || targetUser.name || targetUser.email.split('@')[0],
+            email: targetUser.email.toLowerCase().trim(),
+            phoneNumber: targetUser.phoneNumber || '0900000000',
+            department: department || 'Digital Print',
+            position: 'Intern / Trainee',
+            gender: 'other',
+            type: 'intern',
+            user: targetUser._id,
+            hiredAt: startDate || new Date()
+          });
+          targetUser.employee = existingEmp._id;
+          await targetUser.save();
+        } else {
+          if (!existingEmp.user) {
+            existingEmp.user = targetUser._id;
+          }
+          if (existingEmp.type !== 'intern') {
+            existingEmp.type = 'intern';
+          }
+          await existingEmp.save();
+        }
+        targetEmployeeId = existingEmp._id;
+      }
+    }
+
+    if (!targetEmployeeId) {
+      return res.status(400).json({
+        success: false,
+        message: 'An intern employee or user must be selected or registered'
+      });
+    }
+
     // Verify employee exists and is of type intern
-    const internEmployee = await Employee.findById(employee);
+    const internEmployee = await Employee.findById(targetEmployeeId);
     if (!internEmployee) {
       return res.status(404).json({
         success: false,
@@ -29,11 +125,16 @@ export const createInternship = async (req, res) => {
       });
     }
 
+    if (internEmployee.type !== 'intern') {
+      internEmployee.type = 'intern';
+      await internEmployee.save();
+    }
+
     const internship = await Internship.create({
       supervisor,
-      employee,
+      employee: targetEmployeeId,
       type: type || 'unpaid',
-      department: department || internEmployee.department,
+      department: department || internEmployee.department || 'Digital Print',
       startDate,
       endDate,
       status: status || 'ongoing'
@@ -41,7 +142,7 @@ export const createInternship = async (req, res) => {
 
     const populated = await internship.populate([
       { path: 'supervisor', select: 'fullName email department position' },
-      { path: 'employee', select: 'fullName email department position type' }
+      { path: 'employee', select: 'fullName email department position type phoneNumber' }
     ]);
 
     res.status(201).json({
@@ -83,7 +184,7 @@ export const getInternships = async (req, res) => {
     const total = await Internship.countDocuments(query);
     const internships = await Internship.find(query)
       .populate('supervisor', 'fullName email department position')
-      .populate('employee', 'fullName email department position type')
+      .populate('employee', 'fullName email department position type phoneNumber')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit, 10));
@@ -150,7 +251,7 @@ export const updateInternship = async (req, res) => {
       { new: true, runValidators: true }
     )
       .populate('supervisor', 'fullName email department position')
-      .populate('employee', 'fullName email department position type');
+      .populate('employee', 'fullName email department position type phoneNumber');
 
     if (!internship) {
       return res.status(404).json({

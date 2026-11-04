@@ -67,6 +67,11 @@ const leaveRequestSchema = new mongoose.Schema(
       type: Date,
       default: null
     },
+    decisionReason: {
+      type: String,
+      trim: true,
+      default: ''
+    },
     managerReview: {
       decidedBy: {
         type: mongoose.Schema.Types.ObjectId,

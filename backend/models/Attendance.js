@@ -15,6 +15,7 @@ const selfieCaptureSchema = new mongoose.Schema(
       longitude: { type: Number },
       address: { type: String, trim: true },
       accuracy: { type: Number },
+      diameter: { type: Number },
       distanceFromOfficeMeters: { type: Number },
       withinGeofence: { type: Boolean, default: true }
     },
@@ -72,6 +73,15 @@ const attendanceSchema = new mongoose.Schema(
     },
     clockInSelfie: selfieCaptureSchema,
     clockOutSelfie: selfieCaptureSchema,
+    workedHours: {
+      type: Number,
+      default: 0
+    },
+    linkedOvertime: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Overtime',
+      default: null
+    },
     selfRecorded: {
       type: Boolean,
       default: true

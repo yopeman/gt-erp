@@ -10,6 +10,7 @@ import Login from './pages/auth/Login';
 import HrDashboard from './pages/hr/HrDashboard';
 import Employees from './pages/hr/Employees';
 import Attendance from './pages/hr/Attendance';
+import LeaveManagement from './pages/hr/LeaveManagement';
 import LeaveRequests from './pages/hr/LeaveRequests';
 import LeaveBalances from './pages/hr/LeaveBalances';
 import Overtime from './pages/hr/Overtime';
@@ -17,9 +18,14 @@ import Payroll from './pages/hr/Payroll';
 import Recruitment from './pages/hr/Recruitment';
 import Internships from './pages/hr/Internships';
 import Clearances from './pages/hr/Clearances';
+import CompanySettings from './pages/hr/CompanySettings';
 
 // Admin Pages (Section 7.1)
 import UsersPage from './pages/admin/Users';
+
+// Public Careers & Job Application Pages
+import PublicJobs from './pages/careers/PublicJobs';
+import PublicJobDetail from './pages/careers/PublicJobDetail';
 
 // Future Modules (Sections 1, 3, 4, 5, 6 - non-blocking modular placeholders)
 import UpcomingModule from './pages/modules/UpcomingModule';
@@ -28,8 +34,12 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Public Login */}
+        {/* Public Login & Public Careers Board */}
         <Route path="/login" element={<Login />} />
+        <Route path="/careers" element={<PublicJobs />} />
+        <Route path="/careers/:id" element={<PublicJobDetail />} />
+        <Route path="/jobs" element={<Navigate to="/careers" replace />} />
+        <Route path="/jobs/:id" element={<PublicJobDetail />} />
 
         {/* Protected ERP Shell */}
         <Route
@@ -47,13 +57,22 @@ export default function App() {
           <Route path="hr/dashboard" element={<HrDashboard />} />
           <Route path="hr/employees" element={<Employees />} />
           <Route path="hr/attendance" element={<Attendance />} />
-          <Route path="hr/leave-requests" element={<LeaveRequests />} />
-          <Route path="hr/leave-balances" element={<LeaveBalances />} />
+          <Route path="hr/leave" element={<LeaveManagement />} />
+          <Route path="hr/leave-requests" element={<LeaveManagement initialTab="requests" />} />
+          <Route path="hr/leave-balances" element={<LeaveManagement initialTab="balances" />} />
           <Route path="hr/overtimes" element={<Overtime />} />
           <Route path="hr/payrolls" element={<Payroll />} />
           <Route path="hr/recruitment" element={<Recruitment />} />
           <Route path="hr/internships" element={<Internships />} />
           <Route path="hr/clearances" element={<Clearances />} />
+          <Route
+            path="hr/settings"
+            element={
+              <ProtectedRoute roles={['admin', 'hr']}>
+                <CompanySettings />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Central Admin Subroutes */}
           <Route

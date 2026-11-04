@@ -32,7 +32,7 @@ const overtimeSchema = new mongoose.Schema(
     },
     calculationRate: {
       type: Number,
-      enum: [1, 1.5, 2],
+      min: [0, 'Calculation rate cannot be negative'],
       default: 1.5
     },
     status: {
@@ -49,9 +49,28 @@ const overtimeSchema = new mongoose.Schema(
       type: Boolean,
       default: false
     },
+    decisionReason: {
+      type: String,
+      trim: true,
+      default: ''
+    },
+    reviewedAt: {
+      type: Date,
+      default: null
+    },
     approvedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
+      default: null
+    },
+    attendance: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Attendance',
+      default: null
+    },
+    payroll: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Payroll',
       default: null
     }
   },

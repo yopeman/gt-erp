@@ -53,11 +53,16 @@ export function AuthProvider({ children }) {
   const login = async (email, password) => {
     const response = await api.post('/users/login', { email, password });
     if (response.success && response.token) {
+      const userData = {
+        ...response.data,
+        mustChangePassword: response.mustChangePassword ?? response.data?.mustChangePassword,
+        isTemporaryPassword: response.isTemporaryPassword ?? response.data?.isTemporaryPassword
+      };
       setToken(response.token);
-      setUser(response.data);
+      setUser(userData);
       localStorage.setItem('gt_erp_token', response.token);
-      localStorage.setItem('gt_erp_user', JSON.stringify(response.data));
-      return response.data;
+      localStorage.setItem('gt_erp_user', JSON.stringify(userData));
+      return userData;
     }
     throw new Error(response.message || 'Login failed');
   };
@@ -78,7 +83,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, logout, hasRole }}>
+    <AuthContext.Provider value={{ user, setUser, token, loading, login, logout, hasRole }}>
       {children}
     </AuthContext.Provider>
   );

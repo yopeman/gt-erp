@@ -11,8 +11,8 @@ export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const [email, setEmail] = useState('admin@gtprinting.com');
-  const [password, setPassword] = useState('AdminPassword123!');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -29,12 +29,6 @@ export default function Login() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleQuickFill = (presetEmail, presetPassword) => {
-    setEmail(presetEmail);
-    setPassword(presetPassword);
-    setError('');
   };
 
   return (
@@ -135,33 +129,6 @@ export default function Login() {
               )}
             </button>
           </form>
-
-          {/* Quick preset credentials for testing */}
-          <div className="mt-6 pt-5 border-t border-slate-100 dark:border-slate-800">
-            <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 text-center mb-2.5">
-              Quick Test Accounts
-            </div>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <button
-                type="button"
-                onClick={() => handleQuickFill('admin@gtprinting.com', 'AdminPassword123!')}
-                className="p-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-left transition"
-              >
-                <div className="font-bold text-primary-500">Admin User</div>
-                <div className="text-[10px] text-slate-400">admin@gtprinting.com</div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleQuickFill('ccc@ccc.ccc', 'AdminPassword123!')}
-                className="p-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-left transition"
-              >
-                <div className="font-bold text-slate-700 dark:text-slate-200">HR Manager</div>
-                <div className="text-[10px] text-slate-400">ccc@ccc.ccc</div>
-              </button>
-            </div>
-          </div>
-
         </div>
       </div>
     </div>

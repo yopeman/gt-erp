@@ -22,6 +22,9 @@ import {
   Factory,
   TrendingUp,
   Landmark,
+  Globe,
+  Settings,
+  Building2,
   ChevronDown,
   ChevronRight,
   X
@@ -37,6 +40,7 @@ const iconMap = {
   Timer,
   CreditCard,
   Briefcase,
+  Globe,
   GraduationCap,
   FileCheck2,
   Shield,
@@ -45,7 +49,9 @@ const iconMap = {
   ShoppingCart,
   Factory,
   TrendingUp,
-  Landmark
+  Landmark,
+  Settings,
+  Building2
 };
 
 export default function Sidebar({ isOpen, onClose }) {

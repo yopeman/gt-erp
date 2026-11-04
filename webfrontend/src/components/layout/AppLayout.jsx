@@ -2,15 +2,23 @@ import React, { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import Header from './Header';
 import Sidebar from './Sidebar';
+import { SERVER_BASE_URL } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
+import ChangePasswordModal from '../auth/ChangePasswordModal';
 
 export default function AppLayout() {
+  const { user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [backendConnected, setBackendConnected] = useState(true);
 
   // Check backend server liveness
   useEffect(() => {
     const checkBackend = () => {
-      fetch('http://localhost:5000/')
+      fetch(`${SERVER_BASE_URL || ''}/`, {
+        headers: {
+          'ngrok-skip-browser-warning': 'true',
+        },
+      })
         .then((res) => res.text())
         .then(() => setBackendConnected(true))
         .catch(() => setBackendConnected(false));
@@ -40,6 +48,11 @@ export default function AppLayout() {
           <Outlet />
         </main>
       </div>
+
+      {/* Mandatory Password Change Modal for temporary passwords */}
+      {user?.mustChangePassword && (
+        <ChangePasswordModal isOpen={true} isMandatory={true} />
+      )}
     </div>
   );
 }

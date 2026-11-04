@@ -2,7 +2,53 @@ import Employee from '../models/Employee.js';
 import User from '../models/User.js';
 import LeaveBalance from '../models/LeaveBalance.js';
 import CompanySetting from '../models/CompanySetting.js';
+import { uploadToCloudinary } from '../utils/cloudinary.js';
 import { hashPassword, generateTemporaryPassword } from '../utils/password.js';
+
+/**
+ * Normalizes account details array ensuring strictly ONE primary account
+ */
+export const normalizeAccountDetails = (accounts) => {
+  if (!accounts) return [];
+  const list = Array.isArray(accounts) ? accounts : [accounts];
+  const validList = list.filter((acc) => acc && (acc.holderName || acc.number || acc.bankName));
+  if (validList.length === 0) return [];
+
+  let primaryIndex = validList.findIndex((acc) => acc.isPrimary === true || acc.isPrimary === 'true');
+  if (primaryIndex === -1 && validList.length > 0) {
+    primaryIndex = 0; // Default first account as primary
+  }
+
+  return validList.map((acc, idx) => ({
+    bankName: acc.bankName || 'Commercial Bank of Ethiopia (CBE)',
+    holderName: acc.holderName || '',
+    number: acc.number || '',
+    branch: acc.branch || '',
+    status: acc.status || 'active',
+    isPrimary: idx === primaryIndex
+  }));
+};
+
+/**
+ * Uploads base64 data to Cloudinary (or fallback local file system)
+ * Returns the permanent hosted/local URL instead of raw base64
+ */
+const processMediaUrl = async (urlOrBase64, folder, resourceType = 'auto') => {
+  if (!urlOrBase64 || typeof urlOrBase64 !== 'string') return urlOrBase64;
+  if (urlOrBase64.startsWith('data:') || urlOrBase64.length > 500) {
+    try {
+      const uploadResult = await uploadToCloudinary(urlOrBase64, {
+        folder,
+        resourceType
+      });
+      return uploadResult.secureUrl || uploadResult.url;
+    } catch (err) {
+      console.error('Error processing media URL, falling back:', err.message);
+      return urlOrBase64;
+    }
+  }
+  return urlOrBase64;
+};
 
 // Get profile of current logged-in user
 export const getMyProfile = async (req, res) => {
@@ -64,6 +110,7 @@ export const createEmployee = async (req, res) => {
       detailAddress,
       hiredAt,
       manager,
+      user,
       type,
       profileImage,
       dateOfBirth,
@@ -75,37 +122,53 @@ export const createEmployee = async (req, res) => {
       educations,
       accountDetails,
       baseSalary,
-      roles,
       password,
+      roles,
       autoCreateUser = true
     } = req.body;
 
     if (!fullName || !email) {
       return res.status(400).json({
         success: false,
-        message: 'fullName and email are required'
+        message: 'fullName and email are required fields'
       });
     }
 
     const normalizedEmail = email.toLowerCase().trim();
 
-    // Check if employee already exists
+    // Check if an active employee with this email already exists
     let employee = await Employee.findOne({ email: normalizedEmail });
-
-    // If an existing employee has status 'pending_profile', we fill in their details
-    if (employee && employee.status !== 'pending_profile') {
+    if (employee && employee.status !== 'terminated') {
       return res.status(409).json({
         success: false,
         message: 'An active employee with this email already exists'
       });
     }
 
-    let userAccount = await User.findOne({ email: normalizedEmail });
+    // Determine linked user if specified or auto-create system user account
+    let userAccount = null;
     let temporaryPassword = null;
     let isNewUserCreated = false;
 
-    // Check or provision User login account
-    if (!userAccount && autoCreateUser) {
+    if (user) {
+      userAccount = await User.findById(user);
+    } else {
+      userAccount = await User.findOne({ email: normalizedEmail });
+    }
+
+    // Enforce 1-to-1 unique relationship: ensure user is not already linked to another employee
+    if (userAccount) {
+      const existingLink = await Employee.findOne({
+        user: userAccount._id,
+        ...(employee ? { _id: { $ne: employee._id } } : {})
+      });
+      if (existingLink) {
+        return res.status(409).json({
+          success: false,
+          message: `User account is already linked to employee '${existingLink.fullName}'. A one-to-one relationship is required.`
+        });
+      }
+    } else if (autoCreateUser) {
       temporaryPassword = password || generateTemporaryPassword();
       userAccount = await User.create({
         fullName: fullName.trim(),
@@ -117,6 +180,23 @@ export const createEmployee = async (req, res) => {
       });
       isNewUserCreated = true;
     }
+
+    // Process profile image (Cloudinary with local fallback)
+    const finalProfileImage = await processMediaUrl(profileImage, 'gt_erp/employees/profiles', 'image');
+
+    // Process documents if any are base64
+    let processedDocuments = [];
+    if (Array.isArray(documents) && documents.length > 0) {
+      processedDocuments = await Promise.all(
+        documents.map(async (doc) => ({
+          ...doc,
+          url: await processMediaUrl(doc.url, 'gt_erp/documents', 'auto')
+        }))
+      );
+    }
+
+    // Normalize bank accounts ensuring exactly one primary
+    const processedAccounts = normalizeAccountDetails(accountDetails);
 
     const employeeData = {
       user: userAccount ? userAccount._id : null,
@@ -131,15 +211,15 @@ export const createEmployee = async (req, res) => {
       hiredAt: hiredAt || new Date(),
       manager: manager || null,
       type: type || 'full time',
-      profileImage: profileImage || null,
+      profileImage: finalProfileImage || null,
       dateOfBirth,
       status: status || 'active',
-      documents: documents || [],
+      documents: processedDocuments,
       nationalId,
       emergency: emergency || {},
       warranty: warranty || {},
       educations: educations || [],
-      accountDetails: accountDetails || {},
+      accountDetails: processedAccounts,
       baseSalary: baseSalary || 0
     };
 
@@ -198,14 +278,14 @@ export const createEmployee = async (req, res) => {
     }
 
     const populated = await Employee.findById(employee._id)
-      .populate('user', 'fullName email roles mustChangePassword')
+      .populate('user', 'fullName email roles mustChangePassword isDeleted')
       .populate('manager', 'fullName email department position');
 
     res.status(201).json({
       success: true,
       message: isNewUserCreated
         ? 'Employee details filled and linked with new User account (temporary password generated).'
-        : 'Employee details filled and successfully linked with existing User account.',
+        : 'Employee created and successfully linked with User account.',
       credentials: isNewUserCreated
         ? {
             email: normalizedEmail,
@@ -336,8 +416,8 @@ export const getEmployees = async (req, res) => {
     const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
     const total = await Employee.countDocuments(query);
     const employees = await Employee.find(query)
-      .populate('user', 'fullName email roles mustChangePassword isDeleted')
       .populate('manager', 'fullName email position department')
+      .populate('user', 'fullName email roles mustChangePassword isDeleted')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit, 10));
@@ -364,8 +444,8 @@ export const getEmployees = async (req, res) => {
 export const getEmployeeById = async (req, res) => {
   try {
     const employee = await Employee.findById(req.params.id)
-      .populate('user', 'fullName email roles mustChangePassword isDeleted')
       .populate('manager', 'fullName email position department phoneNumber')
+      .populate('user', 'fullName email roles mustChangePassword isDeleted')
       .populate('documents.uploadedBy', 'fullName email');
 
     if (!employee) {
@@ -401,17 +481,60 @@ export const updateEmployee = async (req, res) => {
       });
     }
 
-    // Prevent direct modification of email to an existing one
-    if (updateData.email && updateData.email.toLowerCase() !== employee.email.toLowerCase()) {
-      const existing = await Employee.findOne({
-        email: updateData.email.toLowerCase(),
-        _id: { $ne: req.params.id }
-      });
-      if (existing) {
-        return res.status(409).json({
-          success: false,
-          message: 'Another employee with this email already exists'
+    if (updateData.email) {
+      updateData.email = updateData.email.toLowerCase().trim();
+      // Prevent direct modification of email to an existing one
+      if (updateData.email !== employee.email.toLowerCase()) {
+        const existing = await Employee.findOne({
+          email: updateData.email,
+          _id: { $ne: req.params.id }
         });
+        if (existing) {
+          return res.status(409).json({
+            success: false,
+            message: 'Another employee with this email already exists'
+          });
+        }
+      }
+    }
+
+    // Process profile image if base64
+    if (updateData.profileImage) {
+      updateData.profileImage = await processMediaUrl(updateData.profileImage, 'gt_erp/employees/profiles', 'image');
+    }
+
+    // Normalize bank accounts ensuring strictly one primary
+    if (updateData.accountDetails) {
+      updateData.accountDetails = normalizeAccountDetails(updateData.accountDetails);
+    }
+
+    // Process any base64 document URLs
+    if (Array.isArray(updateData.documents)) {
+      updateData.documents = await Promise.all(
+        updateData.documents.map(async (doc) => ({
+          ...doc,
+          url: await processMediaUrl(doc.url, 'gt_erp/documents', 'auto')
+        }))
+      );
+    }
+
+    // Handle user link consistency if user field is explicitly updated
+    if (updateData.user !== undefined) {
+      const newUserId = updateData.user || null;
+      updateData.user = newUserId;
+
+      if (employee.user && String(employee.user) !== String(newUserId)) {
+        // Unlink previous user
+        await User.updateOne({ _id: employee.user }, { $set: { employee: null } });
+      }
+
+      if (newUserId) {
+        // Link new user and clear any other employee attached to this user
+        await Employee.updateMany(
+          { user: newUserId, _id: { $ne: req.params.id } },
+          { $set: { user: null } }
+        );
+        await User.updateOne({ _id: newUserId }, { $set: { employee: req.params.id } });
       }
     }
 
@@ -420,15 +543,15 @@ export const updateEmployee = async (req, res) => {
       { $set: updateData },
       { new: true, runValidators: true }
     )
-      .populate('user', 'fullName email roles mustChangePassword')
+      .populate('user', 'fullName email roles mustChangePassword isDeleted')
       .populate('manager', 'fullName email position department');
 
-    // Synchronize linked User account
+    // Synchronize linked User account details
     const linkedUserId = updatedEmployee.user?._id || employee.user;
     if (linkedUserId) {
       const userUpdate = {};
       if (updateData.fullName) userUpdate.fullName = updateData.fullName.trim();
-      if (updateData.email) userUpdate.email = updateData.email.toLowerCase().trim();
+      if (updateData.email) userUpdate.email = updateData.email;
 
       // If employee is terminated or inactive, deactivate their login account
       if (updateData.status === 'terminated' || updateData.status === 'inactive') {
@@ -456,10 +579,34 @@ export const updateEmployee = async (req, res) => {
   }
 };
 
-// Delete employee
+// Delete employee (supports soft delete and permanent delete)
 export const deleteEmployee = async (req, res) => {
   try {
-    const employee = await Employee.findByIdAndDelete(req.params.id);
+    const { permanent } = req.query;
+
+    if (permanent === 'true') {
+      const employee = await Employee.findByIdAndDelete(req.params.id);
+      if (!employee) {
+        return res.status(404).json({
+          success: false,
+          message: 'Employee not found'
+        });
+      }
+      // Unlink any User pointing to this deleted Employee
+      await User.updateMany({ employee: req.params.id }, { $set: { employee: null } });
+
+      return res.status(200).json({
+        success: true,
+        message: 'Employee permanently deleted'
+      });
+    }
+
+    const employee = await Employee.findByIdAndUpdate(
+      req.params.id,
+      { status: 'terminated' },
+      { new: true }
+    );
+
     if (!employee) {
       return res.status(404).json({
         success: false,
@@ -467,14 +614,15 @@ export const deleteEmployee = async (req, res) => {
       });
     }
 
-    // Soft-delete linked User account
+    // Soft-delete / deactivate linked User account on termination
     if (employee.user) {
-      await User.findByIdAndUpdate(employee.user, { isDeleted: true });
+      await User.findByIdAndUpdate(employee.user, { $set: { isDeleted: true } });
     }
 
     res.status(200).json({
       success: true,
-      message: 'Employee deleted and user account deactivated successfully'
+      message: 'Employee terminated and user account deactivated successfully',
+      data: employee
     });
   } catch (error) {
     res.status(500).json({
@@ -488,7 +636,9 @@ export const deleteEmployee = async (req, res) => {
 // Add document to employee
 export const addDocument = async (req, res) => {
   try {
-    const { type, name, url, issuedAt, expiresAt } = req.body;
+    const { type, name, url, file, issuedAt, uploadedBy, expiresAt } = req.body;
+    const rawDocumentData = file || url;
+    const finalUrl = await processMediaUrl(rawDocumentData, 'gt_erp/documents', 'auto');
 
     const employee = await Employee.findByIdAndUpdate(
       req.params.id,
@@ -497,9 +647,9 @@ export const addDocument = async (req, res) => {
           documents: {
             type,
             name,
-            url,
+            url: finalUrl,
             issuedAt,
-            uploadedBy: req.user?._id || null,
+            uploadedBy: req.user?._id || uploadedBy || null,
             expiresAt
           }
         }

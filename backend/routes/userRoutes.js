@@ -25,6 +25,7 @@ router.get('/me', protect, getMe);
 
 // Admin / HR User Management
 router.post('/:id/reset-password', protect, authorizeRoles('admin', 'hr'), resetTemporaryPassword);
+router.post('/:id/reset-temporary-password', protect, authorizeRoles('admin', 'hr'), resetTemporaryPassword);
 router.get('/', protect, authorizeRoles('admin', 'hr'), getUsers);
 router.post('/', protect, authorizeRoles('admin', 'hr'), createUser);
 router.get('/:id', protect, authorizeRoles('admin', 'hr'), getUserById);

@@ -51,6 +51,38 @@ const educationSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const bankAccountSchema = new mongoose.Schema(
+  {
+    bankName: {
+      type: String,
+      trim: true,
+      default: 'Commercial Bank of Ethiopia (CBE)'
+    },
+    holderName: {
+      type: String,
+      trim: true
+    },
+    number: {
+      type: String,
+      trim: true
+    },
+    branch: {
+      type: String,
+      trim: true
+    },
+    status: {
+      type: String,
+      enum: ['active', 'inactive'],
+      default: 'active'
+    },
+    isPrimary: {
+      type: Boolean,
+      default: false
+    }
+  },
+  { _id: false }
+);
+
 const employeeSchema = new mongoose.Schema(
   {
     user: {
@@ -119,6 +151,15 @@ const employeeSchema = new mongoose.Schema(
       ref: 'Employee',
       default: null
     },
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+      index: {
+        unique: true,
+        partialFilterExpression: { user: { $type: 'objectId' } }
+      }
+    },
     type: {
       type: String,
       enum: ['remote', 'part time', 'full time', 'contract', 'intern'],
@@ -179,25 +220,7 @@ const employeeSchema = new mongoose.Schema(
       }
     },
     educations: [educationSchema],
-    accountDetails: {
-      holderName: {
-        type: String,
-        trim: true
-      },
-      number: {
-        type: String,
-        trim: true
-      },
-      status: {
-        type: String,
-        enum: ['active', 'inactive'],
-        default: 'active'
-      },
-      isPrimary: {
-        type: Boolean,
-        default: true
-      }
-    },
+    accountDetails: [bankAccountSchema],
     baseSalary: {
       type: Number,
       default: 0,
@@ -208,6 +231,90 @@ const employeeSchema = new mongoose.Schema(
     timestamps: true
   }
 );
+
+// Helper to lazily load User model safely across all import contexts
+const getUserModel = async () => mongoose.models.User || (await import('./User.js')).default;
+
+// Pre-save hook: auto-link with User or create default User account if none exists
+employeeSchema.pre('save', async function () {
+  try {
+    if (!this.user && this.email) {
+      const User = await getUserModel();
+      let matchedUser = await User.findOne({ email: this.email.toLowerCase() });
+      if (!matchedUser) {
+        const { hashPassword } = await import('../utils/password.js');
+        const defaultPassword = 'password123';
+        matchedUser = await User.create({
+          fullName: this.fullName,
+          email: this.email.toLowerCase(),
+          password: hashPassword(defaultPassword),
+          roles: ['employee']
+        });
+      }
+      if (matchedUser) {
+        this.user = matchedUser._id;
+      }
+    }
+  } catch (err) {
+    console.warn('Employee pre-save user link error:', err.message);
+  }
+});
+
+// Post-save hook: ensure linked User points back to this Employee and keeps profile synchronized
+employeeSchema.post('save', async function (doc) {
+  try {
+    if (doc && doc.user) {
+      const User = await getUserModel();
+      await User.updateOne(
+        { _id: doc.user },
+        {
+          $set: {
+            employee: doc._id,
+            fullName: doc.fullName,
+            email: doc.email.toLowerCase()
+          }
+        }
+      );
+    }
+  } catch (err) {
+    console.warn('Employee post-save user sync error:', err.message);
+  }
+});
+
+// Post-findOneAndUpdate hook: keep bidirectional link and user fields synchronized
+employeeSchema.post('findOneAndUpdate', async function (doc) {
+  try {
+    if (doc && doc.user) {
+      const User = await getUserModel();
+      const updateData = {
+        employee: doc._id,
+        fullName: doc.fullName,
+        email: doc.email.toLowerCase()
+      };
+      if (doc.status === 'terminated') {
+        updateData.isDeleted = true;
+      }
+      await User.updateOne({ _id: doc.user }, { $set: updateData });
+    }
+  } catch (err) {
+    console.warn('Employee post-findOneAndUpdate user sync error:', err.message);
+  }
+});
+
+// Post-findOneAndDelete hook: unlink User when Employee is deleted
+employeeSchema.post('findOneAndDelete', async function (doc) {
+  try {
+    if (doc) {
+      const User = await getUserModel();
+      await User.updateMany(
+        { employee: doc._id },
+        { $set: { employee: null } }
+      );
+    }
+  } catch (err) {
+    console.warn('Employee post-findOneAndDelete user sync error:', err.message);
+  }
+});
 
 employeeSchema.index({ email: 1 });
 employeeSchema.index({ user: 1 });

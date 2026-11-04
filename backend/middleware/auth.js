@@ -26,7 +26,6 @@ export const protect = async (req, res, next) => {
     const user = await User.findById(decoded.id || decoded._id)
       .select('-password')
       .populate('employee');
-
     if (!user) {
       return res.status(401).json({
         success: false,

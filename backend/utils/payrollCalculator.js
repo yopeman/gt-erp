@@ -63,12 +63,14 @@ export const computePayslip = ({
   allowances = {},
   deductions = {},
   unpaidLeaveDays = 0,
-  dailyHours = 8
+  dailyHours = 8,
+  employeePensionPercent = 7,
+  employerPensionPercent = 11
 }) => {
   const base = Math.max(0, Number(baseSalary) || 0);
 
   // 1. Calculate Overtime earnings
-  const hourlyRate = calculateHourlyRate(base, 30 * dailyHours);
+  const hourlyRate = calculateHourlyRate(base, 30 * (dailyHours || 8));
   const overtimeAmount = Number((overtimeHours * hourlyRate * (overtimeRate || 1.5)).toFixed(2));
 
   // 2. Aggregate Allowances
@@ -91,8 +93,14 @@ export const computePayslip = ({
   const taxableIncome = Math.max(0, totalGross - unpaidLeaveDeduction);
   const incomeTax = calculateEthiopianIncomeTax(taxableIncome);
 
-  // 6. Pension
-  const { employeePension, employerPension } = calculatePension(base);
+  // 6. Statutory Pension (Configured % from company settings)
+  const empRate = Number(employeePensionPercent) !== undefined && !isNaN(Number(employeePensionPercent))
+    ? Number(employeePensionPercent)
+    : 7;
+  const orgRate = Number(employerPensionPercent) !== undefined && !isNaN(Number(employerPensionPercent))
+    ? Number(employerPensionPercent)
+    : 11;
+  const { employeePension, employerPension } = calculatePension(base, empRate, orgRate);
 
   // 7. Other deductions
   const loanOrAdvance = Number(deductions.loanOrAdvance) || 0;
