@@ -153,7 +153,7 @@ export default function IdCardModal({ isOpen, onClose, employee }) {
   const currentTheme = THEMES[themeKey] || THEMES.navy;
   const employeeBadgeCode = employee.employeeCode || `GTE-${(employee._id || '').slice(-6).toUpperCase() || 'EMP901'}`;
   const verifyUrl = typeof window !== 'undefined'
-    ? `${window.location.origin}/verify-id/${employee._id || employeeBadgeCode}`
+    ? `${import.meta.env.VITE_FRONTEND_BASE_URL || window.location.origin}/verify-id/${employee._id || employeeBadgeCode}`
     : `/verify-id/${employee._id || employeeBadgeCode}`;
 
   const [copied, setCopied] = useState(false);
@@ -256,7 +256,7 @@ export default function IdCardModal({ isOpen, onClose, employee }) {
                 title="Open public verification page as scanned by QR code"
               >
                 <ExternalLink className="w-3.5 h-3.5 text-sky-500" />
-                <span>Test QR Link</span>
+                <span>Verify ID</span>
               </a>
               <button
                 onClick={handlePrint}

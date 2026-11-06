@@ -53,7 +53,8 @@ export default function PublicIdCardVerification() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [data, setData] = useState(null);
-  const [viewSide, setViewSide] = useState('front'); // 'front' | 'back'
+  const [viewSide, setViewSide] = useState('both'); // 'both' | 'front' | 'back'
+  const [printSide, setPrintSide] = useState('both'); // 'both' | 'front' | 'back'
 
   useEffect(() => {
     let isMounted = true;
@@ -151,18 +152,27 @@ export default function PublicIdCardVerification() {
   const issueDate = employee.hiredAt ? new Date(employee.hiredAt).toISOString().split('T')[0] : '2025-01-01';
   const expiryDate = employee.hiredAt
     ? new Date(new Date(employee.hiredAt).setFullYear(new Date(employee.hiredAt).getFullYear() + 3))
-        .toISOString()
-        .split('T')[0]
+      .toISOString()
+      .split('T')[0]
     : '2028-01-01';
   const emergencyPhone = employee.emergency?.contactPhone || '+251 911 234 567';
   const bloodGroup = employee.bloodGroup || 'O+';
   const qrVerificationUrl = window.location.href;
 
+  const showFront = viewSide === 'both' || viewSide === 'front';
+  const showBack = viewSide === 'both' || viewSide === 'back';
+  const printFront = printSide === 'both' || printSide === 'front';
+  const printBack = printSide === 'both' || printSide === 'back';
+
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col antialiased selection:bg-sky-500 selection:text-white pb-16">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col antialiased selection:bg-sky-500 selection:text-white">
       {/* Print Styles */}
       <style>{`
         @media print {
+          @page {
+            size: auto;
+            margin: 8mm;
+          }
           body * {
             visibility: hidden !important;
           }
@@ -175,15 +185,30 @@ export default function PublicIdCardVerification() {
             top: 0 !important;
             width: 100% !important;
             margin: 0 !important;
-            padding: 10mm !important;
+            padding: 0 !important;
             display: flex !important;
-            flex-direction: column !important;
-            align-items: center !important;
+            flex-direction: row !important;
+            flex-wrap: wrap !important;
+            justify-content: center !important;
+            align-items: flex-start !important;
+            gap: 10mm !important;
             background: white !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
+          .id-card-container {
+            box-shadow: none !important;
+            border: 1px solid #cbd5e1 !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
           .no-print {
+            display: none !important;
+          }
+          .print-show {
+            display: flex !important;
+          }
+          .print-hidden {
             display: none !important;
           }
         }
@@ -218,7 +243,7 @@ export default function PublicIdCardVerification() {
       </header>
 
       {/* Main Container */}
-      <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 pt-6 sm:pt-10 flex flex-col items-center">
+      <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 pt-6 sm:pt-10 mb-8 flex flex-col items-center">
         {/* Verification Status Pill */}
         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold tracking-wide mb-6 shadow-xs animate-fade-in no-print">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
@@ -228,35 +253,70 @@ export default function PublicIdCardVerification() {
           <span className="text-[11px] font-mono text-emerald-300">ACTIVE</span>
         </div>
 
-        {/* View Toggle Tabs */}
-        <div className="inline-flex p-1 rounded-xl bg-slate-900 border border-slate-800 mb-6 no-print">
-          <button
-            onClick={() => setViewSide('front')}
-            className={`px-5 py-2 rounded-lg text-xs font-bold transition-all ${
-              viewSide === 'front'
-                ? 'bg-sky-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            Front Side (Badge)
-          </button>
-          <button
-            onClick={() => setViewSide('back')}
-            className={`px-5 py-2 rounded-lg text-xs font-bold transition-all ${
-              viewSide === 'back'
-                ? 'bg-sky-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            Back Side (Credentials)
-          </button>
+        {/* View Toggle Tabs & Print Side Selector */}
+        <div className="flex flex-wrap items-center justify-between w-full max-w-lg mb-6 gap-3 no-print">
+          <div className="flex p-1 rounded-xl bg-slate-900 border border-slate-800 text-xs font-bold gap-1">
+            <button
+              type="button"
+              onClick={() => setViewSide('both')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                viewSide === 'both'
+                  ? 'bg-sky-600 text-white shadow-md'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              Both Sides
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewSide('front')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                viewSide === 'front'
+                  ? 'bg-sky-600 text-white shadow-md'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              Front Only
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewSide('back')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                viewSide === 'back'
+                  ? 'bg-sky-600 text-white shadow-md'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              Back Only
+            </button>
+          </div>
+
+          <div className="flex items-center gap-1.5 text-xs text-slate-400">
+            <span className="font-semibold text-slate-300">Print:</span>
+            <select
+              value={printSide}
+              onChange={(e) => setPrintSide(e.target.value)}
+              className="px-2.5 py-1.5 rounded-lg border border-slate-800 bg-slate-900 text-slate-200 text-xs font-semibold focus:outline-hidden focus:ring-1 focus:ring-sky-500"
+            >
+              <option value="both">Both Sides</option>
+              <option value="front">Front Only</option>
+              <option value="back">Back Only</option>
+            </select>
+          </div>
         </div>
 
         {/* THE ID CARD (Standard CR80 Portrait 300x460) */}
-        <div id="public-id-print-zone" className="flex flex-col items-center mb-8">
-          {viewSide === 'front' ? (
-            /* ==================== FRONT SIDE ==================== */
-            <div className="w-[300px] h-[460px] bg-white text-slate-900 rounded-2xl shadow-2xl overflow-hidden border border-slate-300 relative select-none flex flex-col justify-between">
+        <div
+          id="public-id-print-zone"
+          className="w-full flex flex-col sm:flex-row items-center justify-center gap-6 mb-8"
+        >
+          {/* ==================== FRONT SIDE ==================== */}
+          {(showFront || printFront) && (
+            <div
+              className={`id-card-container w-[300px] h-[460px] bg-white text-slate-900 rounded-2xl shadow-2xl overflow-hidden border border-slate-300 relative select-none flex flex-col justify-between shrink-0 ${
+                !showFront ? 'hidden' : ''
+              } ${printFront ? 'print-show' : 'print-hidden'}`}
+            >
               {/* Optional Lanyard Punch Hole */}
               <div className="absolute top-2 left-1/2 -translate-x-1/2 w-10 h-2 bg-slate-300/80 rounded-full border border-slate-400/50 z-20 shadow-inner" />
 
@@ -343,9 +403,15 @@ export default function PublicIdCardVerification() {
                 </span>
               </div>
             </div>
-          ) : (
-            /* ==================== BACK SIDE ==================== */
-            <div className="w-[300px] h-[460px] bg-white text-slate-900 rounded-2xl shadow-2xl overflow-hidden border border-slate-300 relative select-none flex flex-col justify-between">
+          )}
+
+          {/* ==================== BACK SIDE ==================== */}
+          {(showBack || printBack) && (
+            <div
+              className={`id-card-container w-[300px] h-[460px] bg-white text-slate-900 rounded-2xl shadow-2xl overflow-hidden border border-slate-300 relative select-none flex flex-col justify-between shrink-0 ${
+                !showBack ? 'hidden' : ''
+              } ${printBack ? 'print-show' : 'print-hidden'}`}
+            >
               {/* Lanyard Punch Hole */}
               <div className="absolute top-2 left-1/2 -translate-x-1/2 w-10 h-2 bg-slate-300/80 rounded-full border border-slate-400/50 z-20 shadow-inner" />
 
@@ -498,16 +564,16 @@ export default function PublicIdCardVerification() {
               className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs transition-colors flex items-center justify-center gap-2 border border-slate-700"
             >
               <Phone className="w-4 h-4" />
-              Call Security / HR
+              Call
             </a>
           </div>
         </div>
       </main>
 
       {/* Footer */}
-      <footer className="mt-auto text-center text-xs text-slate-500 py-6 border-t border-slate-900 no-print">
+      <footer className="text-center text-xs text-slate-500 py-6 border-t border-slate-900 no-print">
         <p>© {new Date().getFullYear()} {companyName}. All rights reserved.</p>
-        <p className="mt-0.5 text-[10px] text-slate-600">GT ERP Automated Credential Authentication Service</p>
+        <p className="text-[10px] text-slate-600">GT ERP Automated Credential Authentication Service</p>
       </footer>
     </div>
   );
