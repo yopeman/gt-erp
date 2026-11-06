@@ -1,6 +1,49 @@
 import PurchasePayment from '../models/PurchasePayment.js';
+import PurchaseOrder from '../models/PurchaseOrder.js';
+import Supplier from '../models/Supplier.js';
 import { sendSuccess, sendError } from '../utils/apiResponse.js';
 import { generateCode } from '../utils/inventoryHelper.js';
+
+// Helper to apply or reverse payment impact on Purchase Order and Supplier Credit Balance
+export const syncPaymentWithPOAndSupplier = async (payment, isReversal = false) => {
+  const po = await PurchaseOrder.findById(payment.purchaseOrder);
+  if (po) {
+    const paymentAmount = Number(payment.amount || 0);
+    if (!isReversal) {
+      po.paidAmount = (po.paidAmount || 0) + paymentAmount;
+    } else {
+      po.paidAmount = Math.max(0, (po.paidAmount || 0) - paymentAmount);
+    }
+
+    po.balanceDue = Math.max(0, (po.grandTotal || 0) - po.paidAmount);
+
+    if (po.balanceDue === 0 && po.grandTotal > 0) {
+      po.paymentStatus = 'paid';
+    } else if (po.paidAmount > 0) {
+      po.paymentStatus = 'partially paid';
+    } else if (po.paymentDueDate && new Date(po.paymentDueDate) < new Date()) {
+      po.paymentStatus = 'overdue';
+    } else {
+      po.paymentStatus = 'unpaid';
+    }
+
+    await po.save();
+  }
+
+  // Update supplier currentCreditBalance
+  if (payment.supplier) {
+    const delta = isReversal ? Number(payment.amount || 0) : -Number(payment.amount || 0);
+    const updatedSupplier = await Supplier.findByIdAndUpdate(
+      payment.supplier,
+      { $inc: { currentCreditBalance: delta } },
+      { new: true }
+    );
+    if (updatedSupplier && updatedSupplier.currentCreditBalance < 0) {
+      updatedSupplier.currentCreditBalance = 0;
+      await updatedSupplier.save();
+    }
+  }
+};
 
 // Create purchase payment
 export const createPurchasePayment = async (req, res) => {
@@ -17,11 +60,22 @@ export const createPurchasePayment = async (req, res) => {
       transactionReference,
       bankName,
       attachments,
-      notes
+      notes,
+      status = 'paid'
     } = req.body;
 
     if (!supplier || !purchaseOrder || amount === undefined || !paymentMethod) {
       return sendError(res, 'Supplier, purchase order, amount, and payment method are required', 400);
+    }
+
+    const po = await PurchaseOrder.findById(purchaseOrder);
+    if (!po) {
+      return sendError(res, 'Purchase order not found', 404);
+    }
+
+    const payAmount = Number(amount);
+    if (payAmount <= 0) {
+      return sendError(res, 'Payment amount must be greater than 0', 400);
     }
 
     const paymentNumber = generateCode('PAY');
@@ -33,20 +87,26 @@ export const createPurchasePayment = async (req, res) => {
       goodsReceipt: goodsReceipt || null,
       invoiceNumber,
       paymentDate: paymentDate ? new Date(paymentDate) : new Date(),
-      amount: Number(amount),
-      currency: currency || 'ETB',
+      amount: payAmount,
+      currency: currency || po.currency || 'ETB',
       paymentMethod,
       transactionReference,
       bankName,
       paidBy: req.user?._id,
+      approvedBy: status === 'paid' ? req.user?._id : null,
       attachments: attachments || [],
       notes,
-      status: 'pending'
+      status
     });
 
+    // If recorded directly as paid, immediately reflect on PO and supplier credit balance
+    if (status === 'paid') {
+      await syncPaymentWithPOAndSupplier(payment, false);
+    }
+
     const populated = await payment.populate([
-      { path: 'supplier', select: 'supplierName supplierCode' },
-      { path: 'purchaseOrder', select: 'purchaseOrderNumber grandTotal status' },
+      { path: 'supplier', select: 'supplierName supplierCode currentCreditBalance' },
+      { path: 'purchaseOrder', select: 'purchaseOrderNumber grandTotal paidAmount balanceDue paymentStatus status' },
       { path: 'paidBy', select: 'fullName email' }
     ]);
 
@@ -124,7 +184,7 @@ export const getPurchasePaymentById = async (req, res) => {
   }
 };
 
-// Approve payment
+// Approve or update payment status
 export const approvePurchasePayment = async (req, res) => {
   try {
     const { status = 'paid', notes } = req.body;
@@ -133,12 +193,28 @@ export const approvePurchasePayment = async (req, res) => {
       return sendError(res, 'Purchase payment not found', 404);
     }
 
+    const previousStatus = payment.status;
+
+    // Apply or reverse balance synchronization based on state transition
+    if (previousStatus !== 'paid' && status === 'paid') {
+      await syncPaymentWithPOAndSupplier(payment, false);
+    } else if (previousStatus === 'paid' && (status === 'cancelled' || status === 'rejected')) {
+      await syncPaymentWithPOAndSupplier(payment, true);
+    }
+
     payment.status = status;
     payment.approvedBy = req.user?._id;
     if (notes) payment.notes = `${payment.notes || ''} | ${notes}`;
     await payment.save();
 
-    return sendSuccess(res, `Purchase payment ${status} successfully`, payment);
+    const populated = await payment.populate([
+      { path: 'supplier', select: 'supplierName supplierCode currentCreditBalance' },
+      { path: 'purchaseOrder', select: 'purchaseOrderNumber grandTotal paidAmount balanceDue paymentStatus status' },
+      { path: 'paidBy', select: 'fullName email' },
+      { path: 'approvedBy', select: 'fullName email' }
+    ]);
+
+    return sendSuccess(res, `Purchase payment ${status} successfully`, populated);
   } catch (error) {
     return sendError(res, 'Failed to approve purchase payment', 500, error);
   }

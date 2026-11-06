@@ -1,5 +1,7 @@
 import SupplierReturn from '../models/SupplierReturn.js';
 import InventoryItem from '../models/InventoryItem.js';
+import PurchaseOrder from '../models/PurchaseOrder.js';
+import Supplier from '../models/Supplier.js';
 import { sendSuccess, sendError } from '../utils/apiResponse.js';
 import {
   generateCode,
@@ -167,6 +169,38 @@ export const approveSupplierReturn = async (req, res) => {
     if (refundAmount !== undefined) returnDoc.refundAmount = Number(refundAmount);
     if (notes) returnDoc.notes = `${returnDoc.notes || ''} | ${notes}`;
     await returnDoc.save();
+
+    // Adjust credit payable balance on PO and Supplier
+    const returnCreditValue =
+      Number(returnDoc.refundAmount || 0) > 0
+        ? Number(returnDoc.refundAmount)
+        : returnDoc.items.reduce((sum, item) => sum + (item.quantity * (item.unitCost || 0)), 0);
+
+    if (returnCreditValue > 0) {
+      if (returnDoc.purchaseOrder) {
+        const po = await PurchaseOrder.findById(returnDoc.purchaseOrder);
+        if (po) {
+          const deduction = Math.min(returnCreditValue, po.balanceDue);
+          po.balanceDue = Math.max(0, po.balanceDue - deduction);
+          if (po.balanceDue === 0 && po.grandTotal > 0) {
+            po.paymentStatus = 'paid';
+          }
+          await po.save();
+        }
+      }
+
+      if (returnDoc.supplier) {
+        const supplierDoc = await Supplier.findByIdAndUpdate(
+          returnDoc.supplier,
+          { $inc: { currentCreditBalance: -returnCreditValue } },
+          { new: true }
+        );
+        if (supplierDoc && supplierDoc.currentCreditBalance < 0) {
+          supplierDoc.currentCreditBalance = 0;
+          await supplierDoc.save();
+        }
+      }
+    }
 
     await recordAudit({
       warehouse: returnDoc.warehouse,

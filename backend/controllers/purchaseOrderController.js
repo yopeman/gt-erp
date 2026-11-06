@@ -1,4 +1,5 @@
 import PurchaseOrder from '../models/PurchaseOrder.js';
+import Supplier from '../models/Supplier.js';
 import { sendSuccess, sendError } from '../utils/apiResponse.js';
 import { generateCode, recordApproval } from '../utils/inventoryHelper.js';
 
@@ -16,6 +17,9 @@ export const createPurchaseOrder = async (req, res) => {
       otherExpenses = 0,
       currency,
       paymentTerms,
+      paymentType,
+      creditPeriodDays,
+      paymentDueDate,
       orderDate,
       expectedDeliveryDate,
       deliveryAddress,
@@ -25,6 +29,11 @@ export const createPurchaseOrder = async (req, res) => {
 
     if (!supplier || !warehouse || !items || items.length === 0) {
       return sendError(res, 'Supplier, warehouse, and at least one item are required', 400);
+    }
+
+    const supplierDoc = await Supplier.findById(supplier);
+    if (!supplierDoc) {
+      return sendError(res, 'Supplier not found', 404);
     }
 
     const purchaseOrderNumber = generateCode('PO');
@@ -56,6 +65,23 @@ export const createPurchaseOrder = async (req, res) => {
       subtotal - Number(discountAmount) + Number(taxAmount) + Number(shippingCost) + Number(otherExpenses)
     );
 
+    const resolvedPaymentType = paymentType || (supplierDoc.paymentTerms === 'credit' ? 'credit' : 'cash');
+    const resolvedCreditPeriod = Number(creditPeriodDays || supplierDoc.creditPeriodDays || 30);
+    const orderDateObj = orderDate ? new Date(orderDate) : new Date();
+
+    let resolvedDueDate = paymentDueDate ? new Date(paymentDueDate) : null;
+    if (resolvedPaymentType === 'credit' && !resolvedDueDate) {
+      resolvedDueDate = new Date(orderDateObj.getTime() + resolvedCreditPeriod * 24 * 60 * 60 * 1000);
+    }
+
+    let creditLimitExceeded = false;
+    if (resolvedPaymentType === 'credit' && supplierDoc.creditLimit > 0) {
+      const projectedBalance = (supplierDoc.currentCreditBalance || 0) + grandTotal;
+      if (projectedBalance > supplierDoc.creditLimit) {
+        creditLimitExceeded = true;
+      }
+    }
+
     const purchaseOrder = await PurchaseOrder.create({
       purchaseOrderNumber,
       purchaseRequest: purchaseRequest || null,
@@ -69,8 +95,15 @@ export const createPurchaseOrder = async (req, res) => {
       otherExpenses,
       grandTotal,
       currency: currency || 'ETB',
-      paymentTerms,
-      orderDate: orderDate ? new Date(orderDate) : new Date(),
+      paymentTerms: paymentTerms || (resolvedPaymentType === 'credit' ? `Net ${resolvedCreditPeriod} days` : 'Cash on delivery'),
+      paymentType: resolvedPaymentType,
+      creditPeriodDays: resolvedCreditPeriod,
+      paymentDueDate: resolvedDueDate,
+      creditLimitExceeded,
+      paidAmount: 0,
+      balanceDue: grandTotal,
+      paymentStatus: 'unpaid',
+      orderDate: orderDateObj,
       expectedDeliveryDate: expectedDeliveryDate ? new Date(expectedDeliveryDate) : null,
       deliveryAddress,
       notes,
@@ -109,6 +142,9 @@ export const getPurchaseOrders = async (req, res) => {
       supplier,
       warehouse,
       status,
+      paymentType,
+      paymentStatus,
+      overdueOnly,
       startDate,
       endDate
     } = req.query;
@@ -117,6 +153,13 @@ export const getPurchaseOrders = async (req, res) => {
     if (supplier) query.supplier = supplier;
     if (warehouse) query.warehouse = warehouse;
     if (status) query.status = status;
+    if (paymentType) query.paymentType = paymentType;
+    if (paymentStatus) query.paymentStatus = paymentStatus;
+
+    if (overdueOnly === 'true') {
+      query.paymentDueDate = { $lt: new Date() };
+      query.balanceDue = { $gt: 0 };
+    }
 
     if (startDate || endDate) {
       query.orderDate = {};
@@ -127,7 +170,7 @@ export const getPurchaseOrders = async (req, res) => {
     const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
     const total = await PurchaseOrder.countDocuments(query);
     const orders = await PurchaseOrder.find(query)
-      .populate('supplier', 'supplierName supplierCode contactPerson')
+      .populate('supplier', 'supplierName supplierCode contactPerson creditLimit currentCreditBalance')
       .populate('warehouse', 'warehouseName warehouseCode')
       .populate('items.item', 'itemName itemCode unitOfMeasurement')
       .populate('createdBy', 'fullName email')
@@ -198,10 +241,21 @@ export const approvePurchaseOrder = async (req, res) => {
       return sendError(res, 'Purchase order not found', 404);
     }
 
+    if (order.status === 'approved') {
+      return sendError(res, 'Purchase order is already approved', 400);
+    }
+
     order.status = 'approved';
     order.approvedBy = req.user?._id;
     order.approvedAt = new Date();
     await order.save();
+
+    // If order was placed on credit, synchronize supplier's credit balance
+    if (order.paymentType === 'credit') {
+      await Supplier.findByIdAndUpdate(order.supplier, {
+        $inc: { currentCreditBalance: order.grandTotal }
+      });
+    }
 
     await recordApproval({
       referenceType: 'purchase order',

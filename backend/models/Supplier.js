@@ -125,6 +125,21 @@ const supplierSchema = new mongoose.Schema(
       default: 'cash',
       trim: true
     },
+    creditLimit: {
+      type: Number,
+      default: 0,
+      min: [0, 'Credit limit cannot be negative']
+    },
+    creditPeriodDays: {
+      type: Number,
+      default: 30,
+      min: [0, 'Credit period cannot be negative']
+    },
+    currentCreditBalance: {
+      type: Number,
+      default: 0,
+      min: [0, 'Credit balance cannot be negative']
+    },
     bankDetails: [supplierBankDetailSchema],
     documents: [supplierDocumentSchema],
     rating: {
