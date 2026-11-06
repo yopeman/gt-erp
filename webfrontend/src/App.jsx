@@ -27,6 +27,9 @@ import UsersPage from './pages/admin/Users';
 import PublicJobs from './pages/careers/PublicJobs';
 import PublicJobDetail from './pages/careers/PublicJobDetail';
 
+// Public Employee ID Card Verification (accessible via QR code scan)
+import PublicIdCardVerification from './pages/public/PublicIdCardVerification';
+
 // Future Modules (Sections 1, 3, 4, 5, 6 - non-blocking modular placeholders)
 import UpcomingModule from './pages/modules/UpcomingModule';
 
@@ -40,6 +43,11 @@ export default function App() {
         <Route path="/careers/:id" element={<PublicJobDetail />} />
         <Route path="/jobs" element={<Navigate to="/careers" replace />} />
         <Route path="/jobs/:id" element={<PublicJobDetail />} />
+
+        {/* Public Employee ID Verification */}
+        <Route path="/verify-id/:id" element={<PublicIdCardVerification />} />
+        <Route path="/id-card/:id" element={<PublicIdCardVerification />} />
+        <Route path="/id/:id" element={<PublicIdCardVerification />} />
 
         {/* Protected ERP Shell */}
         <Route

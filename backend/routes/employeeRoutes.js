@@ -8,12 +8,16 @@ import {
   deleteEmployee,
   linkUserAccount,
   addDocument,
-  addEducation
+  addEducation,
+  getPublicEmployeeCard
 } from '../controllers/employeeController.js';
 import { protect } from '../middleware/auth.js';
 import { authorizeRoles } from '../middleware/rbac.js';
 
 const router = express.Router();
+
+// Public employee verification endpoint (accessible via QR code without authentication)
+router.get('/verify/:identifier', getPublicEmployeeCard);
 
 router.use(protect);
 

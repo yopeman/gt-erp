@@ -16,8 +16,11 @@ import {
   Phone,
   Building,
   Calendar,
-  AlertCircle
+  AlertCircle,
+  ExternalLink,
+  Copy
 } from 'lucide-react';
+import QrCodeSvg from '../common/QrCodeSvg';
 
 const THEMES = {
   navy: {
@@ -99,69 +102,6 @@ function BarcodeSvg({ value, height = 36 }) {
   );
 }
 
-/**
- * Deterministic Vector SVG QR Code generator
- */
-function QrCodeSvg({ text, size = 64 }) {
-  const matrixSize = 21;
-  const cellSize = size / matrixSize;
-
-  const isModule = (r, c) => {
-    // Top-left finder pattern
-    if (r < 7 && c < 7) {
-      if (r === 0 || r === 6 || c === 0 || c === 6) return true;
-      if (r >= 2 && r <= 4 && c >= 2 && c <= 4) return true;
-      return false;
-    }
-    // Top-right finder pattern
-    if (r < 7 && c >= matrixSize - 7) {
-      const oc = c - (matrixSize - 7);
-      if (r === 0 || r === 6 || oc === 0 || oc === 6) return true;
-      if (r >= 2 && r <= 4 && oc >= 2 && oc <= 4) return true;
-      return false;
-    }
-    // Bottom-left finder pattern
-    if (r >= matrixSize - 7 && c < 7) {
-      const or = r - (matrixSize - 7);
-      if (or === 0 || or === 6 || c === 0 || c === 6) return true;
-      if (or >= 2 && or <= 4 && c >= 2 && c <= 4) return true;
-      return false;
-    }
-    // Timing patterns
-    if (r === 6 || c === 6) return (r + c) % 2 === 0;
-
-    // Pseudo-random deterministic data modules
-    const charCode = text.charCodeAt((r * matrixSize + c) % text.length) || 42;
-    return (charCode * (r + 1) * (c + 1)) % 3 === 0;
-  };
-
-  const rects = [];
-  for (let r = 0; r < matrixSize; r++) {
-    for (let c = 0; c < matrixSize; c++) {
-      if (isModule(r, c)) {
-        rects.push(
-          <rect
-            key={`${r}-${c}`}
-            x={c * cellSize}
-            y={r * cellSize}
-            width={cellSize}
-            height={cellSize}
-            fill="#0f172a"
-          />
-        );
-      }
-    }
-  }
-
-  return (
-    <div className="bg-white p-1 rounded-md shadow-xs border border-slate-200 inline-block">
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-        {rects}
-      </svg>
-    </div>
-  );
-}
-
 export default function IdCardModal({ isOpen, onClose, employee }) {
   if (!isOpen || !employee) return null;
 
@@ -211,7 +151,19 @@ export default function IdCardModal({ isOpen, onClose, employee }) {
   const [printSide, setPrintSide] = useState('both'); // 'both' | 'front' | 'back'
 
   const currentTheme = THEMES[themeKey] || THEMES.navy;
-  const employeeBadgeCode = `GTE-${(employee._id || '').slice(-6).toUpperCase() || 'EMP901'}`;
+  const employeeBadgeCode = employee.employeeCode || `GTE-${(employee._id || '').slice(-6).toUpperCase() || 'EMP901'}`;
+  const verifyUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}/verify-id/${employee._id || employeeBadgeCode}`
+    : `/verify-id/${employee._id || employeeBadgeCode}`;
+
+  const [copied, setCopied] = useState(false);
+  const handleCopyLink = () => {
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(verifyUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
   // Handle Photo Upload on the fly
   const handlePhotoUpload = (e) => {
@@ -235,6 +187,10 @@ export default function IdCardModal({ isOpen, onClose, employee }) {
       {/* Print Stylesheet Injection */}
       <style>{`
         @media print {
+          @page {
+            size: auto;
+            margin: 8mm;
+          }
           body * {
             visibility: hidden !important;
           }
@@ -247,11 +203,13 @@ export default function IdCardModal({ isOpen, onClose, employee }) {
             top: 0 !important;
             width: 100% !important;
             margin: 0 !important;
-            padding: 20mm !important;
+            padding: 0 !important;
             display: flex !important;
             flex-direction: row !important;
             flex-wrap: wrap !important;
-            gap: 15mm !important;
+            justify-content: center !important;
+            align-items: flex-start !important;
+            gap: 10mm !important;
             background: white !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
@@ -260,6 +218,7 @@ export default function IdCardModal({ isOpen, onClose, employee }) {
             box-shadow: none !important;
             border: 1px solid #cbd5e1 !important;
             page-break-inside: avoid !important;
+            break-inside: avoid !important;
           }
           .no-print {
             display: none !important;
@@ -289,6 +248,16 @@ export default function IdCardModal({ isOpen, onClose, employee }) {
             </div>
 
             <div className="flex items-center gap-2">
+              <a
+                href={verifyUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs rounded-xl border border-slate-200 dark:border-slate-700 transition flex items-center gap-1.5"
+                title="Open public verification page as scanned by QR code"
+              >
+                <ExternalLink className="w-3.5 h-3.5 text-sky-500" />
+                <span>Test QR Link</span>
+              </a>
               <button
                 onClick={handlePrint}
                 className="px-4 py-2 bg-primary-500 hover:bg-primary-600 active:scale-95 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center gap-2"
@@ -545,6 +514,49 @@ export default function IdCardModal({ isOpen, onClose, employee }) {
                   </label>
                 </div>
               </div>
+
+              {/* Instant Scan with Phone Camera */}
+              <div className="p-4 rounded-2xl border border-sky-200 dark:border-sky-900/60 bg-sky-50/70 dark:bg-sky-950/30 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs font-bold text-sky-900 dark:text-sky-300 uppercase tracking-wider">
+                    <QrCode className="w-4 h-4 text-sky-600 dark:text-sky-400" />
+                    <span>Scan With Mobile Camera</span>
+                  </div>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-bold">
+                    Scannable
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-4">
+                  <div className="p-2 bg-white rounded-xl shadow-md border border-slate-200 shrink-0">
+                    <QrCodeSvg text={verifyUrl} size={110} />
+                  </div>
+                  <div className="flex-1 space-y-2 text-left">
+                    <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-snug">
+                      Point your smartphone camera at this QR code to immediately open the <strong>Digital ID Card</strong>.
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <a
+                        href={verifyUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="px-2.5 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-bold text-[11px] inline-flex items-center gap-1 transition-colors shadow-xs"
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        <span>Open Page</span>
+                      </a>
+                      <button
+                        type="button"
+                        onClick={handleCopyLink}
+                        className="px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-[11px] border border-slate-300 dark:border-slate-700 inline-flex items-center gap-1 transition-colors"
+                      >
+                        {copied ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3 text-slate-400" />}
+                        <span>{copied ? 'Copied!' : 'Copy Link'}</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* RIGHT COLUMN: Live Interactive Preview & Print Canvas (7 cols) */}
@@ -698,8 +710,9 @@ export default function IdCardModal({ isOpen, onClose, employee }) {
                           </div>
 
                           {/* Barcode / QR */}
-                          <div className="w-full flex items-center justify-center pt-1">
+                          <div className="w-full flex items-center justify-center gap-3 pt-1">
                             {showBarcode && <BarcodeSvg value={employeeBadgeCode} height={24} />}
+                            {showQrCode && <QrCodeSvg text={verifyUrl} size={46} />}
                           </div>
                         </div>
 
@@ -781,7 +794,7 @@ export default function IdCardModal({ isOpen, onClose, employee }) {
                             {/* Barcode or QR */}
                             <div className="pt-1 flex items-center justify-between">
                               {showBarcode && <BarcodeSvg value={employeeBadgeCode} height={20} />}
-                              {showQrCode && <QrCodeSvg text={`ID:${employeeBadgeCode}|NAME:${employee.fullName}`} size={42} />}
+                              {showQrCode && <QrCodeSvg text={verifyUrl} size={48} />}
                             </div>
                           </div>
                         </div>
@@ -800,79 +813,188 @@ export default function IdCardModal({ isOpen, onClose, employee }) {
                 {/* -------------------- BACK SIDE -------------------- */}
                 {(previewSide === 'both' || previewSide === 'back') && (printSide === 'both' || printSide === 'back') && (
                   <div
-                    className={`id-card-container relative bg-white text-slate-900 rounded-2xl shadow-xl overflow-hidden border border-slate-300 shrink-0 select-none ${
+                    className={`id-card-container relative bg-white text-slate-900 rounded-2xl shadow-xl overflow-hidden border border-slate-300 shrink-0 select-none flex flex-col ${
                       orientation === 'portrait' ? 'w-[300px] h-[460px]' : 'w-[440px] h-[276px]'
                     }`}
                   >
-                    {/* Magnetic Stripe representation */}
-                    <div className="w-full h-8 bg-slate-900 mt-3" />
+                    {/* Optional Lanyard Punch hole */}
+                    {showLanyardSlot && (
+                      <div
+                        className={`absolute left-1/2 -translate-x-1/2 bg-slate-300/80 rounded-full border border-slate-400/50 z-20 shadow-inner ${
+                          orientation === 'portrait' ? 'top-2 w-10 h-2' : 'top-1.5 w-8 h-1.5'
+                        }`}
+                      />
+                    )}
 
-                    <div className="p-4 flex flex-col justify-between h-[calc(100%-44px)] text-left text-xs">
-                      {/* Terms & Return Information */}
-                      <div className="space-y-2">
-                        <div className="text-[10px] text-slate-600 leading-snug">
-                          <strong>TERMS OF USE:</strong> This credential is the exclusive property of{' '}
-                          <span className="font-bold">{companyName}</span>. It must be displayed on premises at all times
-                          and surrendered upon end of employment.
-                        </div>
+                    {/* PORTRAIT BACK LAYOUT */}
+                    {orientation === 'portrait' && (
+                      <div className="flex flex-col h-full justify-between">
+                        {/* Magnetic Stripe representation */}
+                        <div className={`w-full h-6 bg-slate-900 shrink-0 ${showLanyardSlot ? 'mt-5' : 'mt-2.5'}`} />
 
-                        <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-[10px] space-y-1">
-                          <div className="font-bold text-slate-800 flex items-center gap-1">
-                            <AlertCircle className="w-3 h-3 text-amber-500" />
-                            <span>IF FOUND, PLEASE RETURN TO:</span>
-                          </div>
-                          <div className="text-slate-600 pl-4 space-y-0.5">
-                            <div>HR & Administration Directorate</div>
-                            <div>GT Printing & Packaging Plant, Addis Ababa</div>
-                            <div className="font-mono text-slate-800">Direct Hotline: +251 911 234 567</div>
-                          </div>
-                        </div>
-
-                        {/* Emergency Contact */}
-                        <div className="grid grid-cols-2 gap-2 text-[10px] pt-1 border-t border-slate-100">
-                          <div>
-                            <span className="text-slate-400 block text-[8px] uppercase font-bold">Emergency Phone</span>
-                            <span className="font-mono font-bold text-slate-800">{emergencyPhone}</span>
-                          </div>
-                          {showBloodGroup && (
-                            <div>
-                              <span className="text-slate-400 block text-[8px] uppercase font-bold">Medical / Blood</span>
-                              <span className="font-bold text-rose-600">{bloodGroup}</span>
+                        <div className="p-3.5 flex flex-col justify-between flex-1 overflow-hidden text-left text-xs bg-linear-to-b from-slate-50 to-white">
+                          {/* Terms & Return Information */}
+                          <div className="space-y-2">
+                            <div className="text-[9.5px] text-slate-600 leading-snug">
+                              <strong className="text-slate-800">TERMS OF USE:</strong> This credential is the exclusive property of{' '}
+                              <span className="font-bold text-slate-900">{companyName}</span>. It must be displayed on premises at all times
+                              and surrendered upon end of employment.
                             </div>
-                          )}
-                        </div>
-                      </div>
 
-                      {/* QR Code and Signatures */}
-                      <div className="flex items-end justify-between pt-2 border-t border-slate-200">
-                        {showQrCode ? (
-                          <div className="flex items-center gap-2">
-                            <QrCodeSvg
-                              text={`GT-EMP:${employeeBadgeCode}|${employee.fullName}|${employee.department}`}
-                              size={52}
-                            />
-                            <div className="text-[8px] text-slate-400 leading-tight">
-                              Scan to verify
-                              <br />
-                              GT ERP Secure
-                              <br />
-                              HR Registry
+                            <div className="p-2.5 rounded-xl bg-white border border-slate-200 text-[9.5px] space-y-1 shadow-xs">
+                              <div className="font-bold text-slate-800 flex items-center gap-1">
+                                <AlertCircle className="w-3 h-3 text-amber-500 shrink-0" />
+                                <span>IF FOUND, PLEASE RETURN TO:</span>
+                              </div>
+                              <div className="text-slate-600 pl-4 space-y-0.5 text-[9px] leading-tight">
+                                <div>HR & Administration Directorate</div>
+                                <div>GT Printing & Packaging Plant, Addis Ababa</div>
+                                <div className="font-mono font-medium text-slate-800">Hotline: +251 911 234 567</div>
+                              </div>
+                            </div>
+
+                            {/* Emergency Contact */}
+                            <div className="grid grid-cols-2 gap-2 text-[9.5px] pt-1.5 border-t border-slate-100">
+                              <div>
+                                <span className="text-slate-400 block text-[8px] uppercase font-bold">Emergency Phone</span>
+                                <span className="font-mono font-bold text-slate-800 text-[10px]">{emergencyPhone}</span>
+                              </div>
+                              {showBloodGroup && (
+                                <div>
+                                  <span className="text-slate-400 block text-[8px] uppercase font-bold">Medical / Blood</span>
+                                  <span className="font-bold text-rose-600 text-[10px]">{bloodGroup}</span>
+                                </div>
+                              )}
                             </div>
                           </div>
-                        ) : (
-                          <div className="text-[9px] font-mono text-slate-400">GT-SECURITY-SYSTEMS</div>
-                        )}
 
-                        <div className="text-right">
-                          <div className="w-28 border-b border-slate-400 pb-0.5 mb-1 font-serif italic text-slate-500 text-[11px] text-center">
-                            Authorized HR
+                          {/* QR Code and Signatures */}
+                          <div className="flex items-end justify-between pt-2 border-t border-slate-200">
+                            {showQrCode ? (
+                              <div className="flex items-center gap-2">
+                                <QrCodeSvg
+                                  text={verifyUrl}
+                                  size={54}
+                                />
+                                <div className="text-[8px] text-slate-500 leading-tight">
+                                  <span className="font-bold block text-slate-700">Scan to verify</span>
+                                  GT ERP Secure
+                                  <br />
+                                  HR Registry
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="text-[9px] font-mono text-slate-400">GT-SECURITY-SYSTEMS</div>
+                            )}
+
+                            <div className="text-right">
+                              <div className="w-24 border-b border-slate-400 pb-0.5 mb-1 font-serif italic text-slate-600 text-[10px] text-center">
+                                Authorized HR
+                              </div>
+                              <span className="text-[7.5px] font-bold text-slate-500 uppercase tracking-wider block">
+                                Authorized Signatory
+                              </span>
+                            </div>
                           </div>
-                          <span className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">
-                            Authorized Signatory
+                        </div>
+
+                        {/* Footer color strip */}
+                        <div className={`py-1 ${currentTheme.headerBg} text-center shrink-0`}>
+                          <span className="text-[8px] font-bold text-slate-300 tracking-wider">
+                            GT ENTERPRISE AUTHORIZED IDENTITY PASS
                           </span>
                         </div>
                       </div>
-                    </div>
+                    )}
+
+                    {/* LANDSCAPE BACK LAYOUT */}
+                    {orientation === 'landscape' && (
+                      <div className="flex flex-col h-full justify-between">
+                        {/* Magnetic Stripe representation */}
+                        <div className={`w-full h-5 bg-slate-900 shrink-0 ${showLanyardSlot ? 'mt-4' : 'mt-1.5'}`} />
+
+                        <div className="flex-1 p-2.5 flex gap-3 text-left overflow-hidden bg-linear-to-b from-slate-50 to-white">
+                          {/* Left Column: Terms, Return Info, Emergency */}
+                          <div className="flex-1 flex flex-col justify-between overflow-hidden">
+                            {/* Terms */}
+                            <div className="text-[8px] text-slate-600 leading-tight">
+                              <strong className="text-slate-800">TERMS OF USE:</strong> This credential is the exclusive property of{' '}
+                              <span className="font-bold text-slate-900">{companyName}</span>. Must be displayed on premises at all times and surrendered upon end of employment.
+                            </div>
+
+                            {/* Return Info Box */}
+                            <div className="p-1.5 rounded-lg bg-white border border-slate-200 text-[8px] space-y-0.5 shadow-xs">
+                              <div className="font-bold text-slate-800 flex items-center gap-1">
+                                <AlertCircle className="w-2.5 h-2.5 text-amber-500 shrink-0" />
+                                <span>IF FOUND, PLEASE RETURN TO:</span>
+                              </div>
+                              <div className="text-slate-600 pl-3.5 space-y-0.5 text-[7.5px] leading-tight">
+                                <div>HR & Administration Directorate</div>
+                                <div>GT Printing & Packaging Plant, Addis Ababa</div>
+                                <div className="font-mono text-slate-800 font-semibold">Hotline: +251 911 234 567</div>
+                              </div>
+                            </div>
+
+                            {/* Emergency & Blood Group */}
+                            <div className="grid grid-cols-2 gap-2 text-[8px] pt-1 border-t border-slate-200">
+                              <div>
+                                <span className="text-slate-400 block text-[7px] uppercase font-bold">Emergency Contact</span>
+                                <span className="font-mono font-bold text-slate-800 text-[8.5px]">{emergencyPhone}</span>
+                              </div>
+                              {showBloodGroup && (
+                                <div>
+                                  <span className="text-slate-400 block text-[7px] uppercase font-bold">Blood Group</span>
+                                  <span className="font-bold text-rose-600 text-[8.5px]">{bloodGroup}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Right Column: Credential ID, QR Code, Signatory */}
+                          <div className="w-36 shrink-0 border-l border-slate-200 pl-2.5 flex flex-col justify-between">
+                            <div className="flex items-center justify-between pb-1 border-b border-slate-100">
+                              <span className="text-[7.5px] font-bold text-slate-400 uppercase tracking-wider">Credential ID</span>
+                              <span className="font-mono font-bold text-slate-800 text-[8.5px]">{employeeBadgeCode}</span>
+                            </div>
+
+                            <div className="flex items-center gap-2 py-1 my-auto">
+                              {showQrCode ? (
+                                <>
+                                  <QrCodeSvg
+                                    text={verifyUrl}
+                                    size={50}
+                                  />
+                                  <div className="text-[7.5px] text-slate-500 leading-tight">
+                                    <span className="font-bold text-slate-700 block">Scan to verify</span>
+                                    GT ERP Secure
+                                    <br />
+                                    Registry
+                                  </div>
+                                </>
+                              ) : (
+                                <div className="text-[8px] font-mono text-slate-400">GT-SECURITY</div>
+                              )}
+                            </div>
+
+                            <div className="text-center pt-1 border-t border-slate-200">
+                              <div className="w-24 mx-auto border-b border-slate-400 pb-0.5 mb-0.5 font-serif italic text-slate-600 text-[9.5px]">
+                                Authorized HR
+                              </div>
+                              <span className="text-[7px] font-bold text-slate-500 uppercase tracking-wider block">
+                                Authorized Signatory
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Footer Strip */}
+                        <div className={`py-0.5 ${currentTheme.headerBg} text-center shrink-0`}>
+                          <span className="text-[7.5px] font-bold text-slate-300 tracking-wider">
+                            PROPERTY OF GT ENTERPRISE • AUTHORIZED IDENTITY PASS
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

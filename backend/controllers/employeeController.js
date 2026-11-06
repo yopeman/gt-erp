@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Employee from '../models/Employee.js';
 import User from '../models/User.js';
 import LeaveBalance from '../models/LeaveBalance.js';
@@ -713,6 +714,85 @@ export const addEducation = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to add education',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Public Endpoint: Verify Employee ID & return public card details
+ * Used when scanning QR code on employee ID badge
+ */
+export const getPublicEmployeeCard = async (req, res) => {
+  try {
+    const { identifier } = req.params;
+    if (!identifier) {
+      return res.status(400).json({
+        success: false,
+        message: 'Identifier is required for verification'
+      });
+    }
+
+    let employee = null;
+
+    // 1. Check if identifier is valid MongoDB ObjectId
+    if (mongoose.Types.ObjectId.isValid(identifier)) {
+      employee = await Employee.findById(identifier)
+        .select('fullName employeeCode position department branch profileImage hiredAt status nationalId bloodGroup emergency')
+        .lean();
+    }
+
+    // 2. Check by employeeCode (e.g. GTE-001 or custom)
+    if (!employee) {
+      employee = await Employee.findOne({
+        $or: [
+          { employeeCode: identifier },
+          { employeeCode: identifier.toUpperCase() }
+        ]
+      })
+        .select('fullName employeeCode position department branch profileImage hiredAt status nationalId bloodGroup emergency')
+        .lean();
+    }
+
+    // 3. Check by GTE- last 6 digits of _id
+    if (!employee && (identifier.toUpperCase().startsWith('GTE-') || identifier.length === 6)) {
+      const suffix = identifier.toUpperCase().replace('GTE-', '').toLowerCase();
+      const allEmps = await Employee.find({})
+        .select('fullName employeeCode position department branch profileImage hiredAt status nationalId bloodGroup emergency')
+        .lean();
+
+      employee = allEmps.find((e) => e._id.toString().slice(-6).toLowerCase() === suffix);
+    }
+
+    // 4. Check by nationalId if matches
+    if (!employee) {
+      employee = await Employee.findOne({ nationalId: identifier })
+        .select('fullName employeeCode position department branch profileImage hiredAt status nationalId bloodGroup emergency')
+        .lean();
+    }
+
+    if (!employee) {
+      return res.status(404).json({
+        success: false,
+        message: 'Employee ID credential record not found in registry'
+      });
+    }
+
+    // Fetch company settings for dynamic branding
+    const company = await CompanySetting.findOne().lean();
+
+    res.status(200).json({
+      success: true,
+      data: {
+        employee,
+        companyName: company?.companyName || 'GT PRINTING & PACKAGING PLC',
+        verifiedAt: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to verify employee identity',
       error: error.message
     });
   }
