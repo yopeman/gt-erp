@@ -1,4 +1,5 @@
 import Supplier from '../models/Supplier.js';
+import PurchaseOrder from '../models/PurchaseOrder.js';
 import { sendSuccess, sendError } from '../utils/apiResponse.js';
 
 // Create supplier
@@ -20,6 +21,8 @@ export const createSupplier = async (req, res) => {
       supplierType,
       suppliedItems,
       paymentTerms,
+      creditLimit,
+      creditPeriodDays,
       bankDetails,
       documents,
       rating,
@@ -52,6 +55,8 @@ export const createSupplier = async (req, res) => {
       supplierType,
       suppliedItems: suppliedItems || [],
       paymentTerms: paymentTerms || 'cash',
+      creditLimit: Number(creditLimit || 0),
+      creditPeriodDays: Number(creditPeriodDays || 30),
       bankDetails: bankDetails || [],
       documents: documents || [],
       rating: rating || 0,
@@ -207,4 +212,76 @@ export const addSupplierDocument = async (req, res) => {
     return sendError(res, 'Failed to add supplier document', 500, error);
   }
 };
+
+// Get credit summary and recalculate balance for a supplier
+export const getSupplierCreditSummary = async (req, res) => {
+  try {
+    const supplier = await Supplier.findById(req.params.id);
+    if (!supplier) {
+      return sendError(res, 'Supplier not found', 404);
+    }
+
+    // Find credit orders for this supplier (exclude cancelled/rejected)
+    const orders = await PurchaseOrder.find({
+      supplier: supplier._id,
+      paymentType: 'credit',
+      status: { $nin: ['cancelled', 'rejected'] }
+    }).select('purchaseOrderNumber grandTotal paidAmount balanceDue paymentStatus paymentDueDate orderDate status');
+
+    const now = new Date();
+    let totalCreditPurchases = 0;
+    let totalPaid = 0;
+    let totalBalanceDue = 0;
+    let overdueAmount = 0;
+    let overdueOrdersCount = 0;
+    let unpaidOrdersCount = 0;
+
+    for (const order of orders) {
+      totalCreditPurchases += order.grandTotal || 0;
+      totalPaid += order.paidAmount || 0;
+      totalBalanceDue += order.balanceDue || 0;
+
+      if ((order.balanceDue || 0) > 0) {
+        unpaidOrdersCount++;
+        if (order.paymentDueDate && new Date(order.paymentDueDate) < now) {
+          overdueAmount += order.balanceDue;
+          overdueOrdersCount++;
+        }
+      }
+    }
+
+    // Keep supplier current credit balance synced
+    supplier.currentCreditBalance = totalBalanceDue;
+    await supplier.save();
+
+    const limit = Number(supplier.creditLimit || 0);
+    const availableCredit = limit > 0 ? Math.max(0, limit - totalBalanceDue) : null;
+    const creditUtilizationPct = limit > 0 ? Number(((totalBalanceDue / limit) * 100).toFixed(1)) : null;
+
+    const summary = {
+      supplierId: supplier._id,
+      supplierName: supplier.supplierName,
+      supplierCode: supplier.supplierCode,
+      paymentTerms: supplier.paymentTerms,
+      creditLimit: limit,
+      creditPeriodDays: supplier.creditPeriodDays || 30,
+      currentCreditBalance: totalBalanceDue,
+      availableCredit,
+      creditUtilizationPct,
+      creditLimitExceeded: limit > 0 && totalBalanceDue > limit,
+      totalCreditPurchases,
+      totalPaid,
+      totalBalanceDue,
+      overdueAmount,
+      unpaidOrdersCount,
+      overdueOrdersCount,
+      activeOrders: orders
+    };
+
+    return sendSuccess(res, 'Supplier credit summary retrieved successfully', summary);
+  } catch (error) {
+    return sendError(res, 'Failed to retrieve supplier credit summary', 500, error);
+  }
+};
+
 

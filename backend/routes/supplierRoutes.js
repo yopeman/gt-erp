@@ -5,7 +5,8 @@ import {
   getSupplierById,
   updateSupplier,
   deleteSupplier,
-  addSupplierDocument
+  addSupplierDocument,
+  getSupplierCreditSummary
 } from '../controllers/supplierController.js';
 import { protect } from '../middleware/auth.js';
 
@@ -23,6 +24,7 @@ router.route('/:id')
   .delete(deleteSupplier);
 
 router.post('/:id/documents', addSupplierDocument);
+router.get('/:id/credit-summary', getSupplierCreditSummary);
 
 export default router;
 

@@ -85,7 +85,7 @@ purchaseOrderItemSchema.pre('validate', function (next) {
     const withTax = discounted + (discounted * (this.taxPercentage || 0)) / 100;
     this.totalPrice = Math.max(0, withTax);
   }
-  next();
+  if (typeof next === 'function') next();
 });
 
 const purchaseOrderSchema = new mongoose.Schema(
@@ -160,6 +160,41 @@ const purchaseOrderSchema = new mongoose.Schema(
       type: String,
       trim: true
     },
+    paymentType: {
+      type: String,
+      enum: ['cash', 'credit', 'partial'],
+      default: 'cash',
+      trim: true
+    },
+    paymentStatus: {
+      type: String,
+      enum: ['unpaid', 'partially paid', 'paid', 'overdue'],
+      default: 'unpaid',
+      trim: true
+    },
+    paidAmount: {
+      type: Number,
+      default: 0,
+      min: [0, 'Paid amount cannot be negative']
+    },
+    balanceDue: {
+      type: Number,
+      default: 0,
+      min: [0, 'Balance due cannot be negative']
+    },
+    creditPeriodDays: {
+      type: Number,
+      default: 30,
+      min: [0, 'Credit period cannot be negative']
+    },
+    paymentDueDate: {
+      type: Date,
+      default: null
+    },
+    creditLimitExceeded: {
+      type: Boolean,
+      default: false
+    },
     orderDate: {
       type: Date,
       default: Date.now
@@ -224,7 +259,30 @@ purchaseOrderSchema.pre('save', function (next) {
       (this.otherExpenses || 0);
     this.grandTotal = Math.max(0, calculatedGrand);
   }
-  next();
+
+  // Handle Credit Purchasing & Payment Calculations
+  const paid = Number(this.paidAmount || 0);
+  this.balanceDue = Math.max(0, Number(this.grandTotal || 0) - paid);
+
+  // Auto calculate paymentDueDate for credit purchases if not set
+  if (this.paymentType === 'credit' && !this.paymentDueDate) {
+    const baseDate = this.orderDate ? new Date(this.orderDate) : new Date();
+    const days = Number(this.creditPeriodDays || 30);
+    this.paymentDueDate = new Date(baseDate.getTime() + days * 24 * 60 * 60 * 1000);
+  }
+
+  // Update payment status dynamically
+  if (this.balanceDue === 0 && this.grandTotal > 0) {
+    this.paymentStatus = 'paid';
+  } else if (paid > 0 && this.balanceDue > 0) {
+    this.paymentStatus = 'partially paid';
+  } else if (this.paymentDueDate && new Date(this.paymentDueDate) < new Date() && this.balanceDue > 0) {
+    this.paymentStatus = 'overdue';
+  } else {
+    this.paymentStatus = 'unpaid';
+  }
+
+  if (typeof next === 'function') next();
 });
 
 purchaseOrderSchema.index({ purchaseOrderNumber: 1 });
@@ -233,6 +291,9 @@ purchaseOrderSchema.index({ warehouse: 1 });
 purchaseOrderSchema.index({ purchaseRequest: 1 });
 purchaseOrderSchema.index({ status: 1 });
 purchaseOrderSchema.index({ orderDate: -1 });
+purchaseOrderSchema.index({ paymentType: 1 });
+purchaseOrderSchema.index({ paymentStatus: 1 });
+purchaseOrderSchema.index({ paymentDueDate: 1 });
 
 const PurchaseOrder = mongoose.model('PurchaseOrder', purchaseOrderSchema);
 

@@ -31,6 +31,7 @@ import purchaseOrderRoutes from './purchaseOrderRoutes.js';
 import goodsReceiptRoutes from './goodsReceiptRoutes.js';
 import purchasePaymentRoutes from './purchasePaymentRoutes.js';
 import supplierReturnRoutes from './supplierReturnRoutes.js';
+import creditPurchaseRoutes from './creditPurchaseRoutes.js';
 
 // System Support Routes
 import approvalHistoryRoutes from './approvalHistoryRoutes.js';
@@ -74,6 +75,7 @@ router.use('/purchase-orders', purchaseOrderRoutes);
 router.use('/goods-receipts', goodsReceiptRoutes);
 router.use('/purchase-payments', purchasePaymentRoutes);
 router.use('/supplier-returns', supplierReturnRoutes);
+router.use('/credit-purchases', creditPurchaseRoutes);
 
 // System Support
 router.use('/approval-history', approvalHistoryRoutes);
