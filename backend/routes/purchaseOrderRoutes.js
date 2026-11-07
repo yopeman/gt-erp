@@ -5,13 +5,16 @@ import {
   getPurchaseOrderById,
   updatePurchaseOrder,
   approvePurchaseOrder,
-  sendPurchaseOrderToSupplier
+  sendPurchaseOrderToSupplier,
+  getPurchasingDashboard
 } from '../controllers/purchaseOrderController.js';
 import { protect } from '../middleware/auth.js';
 
 const router = express.Router();
 
 router.use(protect);
+
+router.get('/dashboard', getPurchasingDashboard);
 
 router.route('/')
   .get(getPurchaseOrders)

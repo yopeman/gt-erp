@@ -154,7 +154,11 @@ export default function StockAdjustments() {
     setSubmitting(true);
     setFormError('');
     try {
-      const res = await storeService.createStockAdjustment(formData);
+      const res = await storeService.createStockAdjustment({
+        ...formData,
+        physicalQuantity: Number(formData.physicalQuantity),
+        systemQuantity: Number(formData.systemQuantity)
+      });
       if (res.success) {
         setIsCreateModalOpen(false);
         fetchData();
@@ -254,7 +258,7 @@ export default function StockAdjustments() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search adjustment #, item name, code, warehouse..."
+            placeholder={t('Search adjustment #, item name, code, warehouse...')}
             className="w-full pl-9 pr-4 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-hidden focus:ring-2 focus:ring-primary-500"
           />
         </div>
@@ -265,10 +269,10 @@ export default function StockAdjustments() {
             onChange={(e) => setStatusFilter(e.target.value)}
             className="px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:ring-primary-500"
           >
-            <option value="">All Statuses</option>
-            <option value="pending">Pending Approval</option>
-            <option value="approved">Approved & Reconciled</option>
-            <option value="rejected">Rejected</option>
+            <option value="">{t('All Statuses')}</option>
+            <option value="pending">{t('Pending Approval')}</option>
+            <option value="approved">{t('Approved & Reconciled')}</option>
+            <option value="rejected">{t('Rejected')}</option>
           </select>
 
           <select
@@ -276,10 +280,10 @@ export default function StockAdjustments() {
             onChange={(e) => setReasonFilter(e.target.value)}
             className="px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:ring-primary-500"
           >
-            <option value="">All Discrepancy Reasons</option>
+            <option value="">{t('All Discrepancy Reasons')}</option>
             {ADJUSTMENT_REASONS.map((r) => (
               <option key={r.value} value={r.value}>
-                {r.label}
+                {t(r.label)}
               </option>
             ))}
           </select>
@@ -289,7 +293,7 @@ export default function StockAdjustments() {
             onChange={(e) => setWarehouseFilter(e.target.value)}
             className="px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:ring-primary-500"
           >
-            <option value="">All Warehouses</option>
+            <option value="">{t('All Warehouses')}</option>
             {warehouses.map((w) => (
               <option key={w._id} value={w._id}>
                 {w.warehouseName}
@@ -392,15 +396,15 @@ export default function StockAdjustments() {
               <table className="w-full text-left text-xs">
                 <thead className="bg-slate-50 dark:bg-slate-900/50 uppercase font-semibold text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700 sticky top-0">
                   <tr>
-                    <th className="px-4 py-3">Adjustment #</th>
-                    <th className="px-4 py-3">Warehouse</th>
-                    <th className="px-4 py-3">Item</th>
-                    <th className="px-4 py-3 text-center">System Qty</th>
-                    <th className="px-4 py-3 text-center">Physical Count</th>
-                    <th className="px-4 py-3 text-center">Variance / Difference</th>
-                    <th className="px-4 py-3">Reason</th>
-                    <th className="px-4 py-3 text-center">Status</th>
-                    <th className="px-4 py-3 text-right">Actions</th>
+                    <th className="px-4 py-3">{t('Adjustment #')}</th>
+                    <th className="px-4 py-3">{t('table.warehouse')}</th>
+                    <th className="px-4 py-3">{t('table.item')}</th>
+                    <th className="px-4 py-3 text-center">{t('System Qty')}</th>
+                    <th className="px-4 py-3 text-center">{t('Physical Count')}</th>
+                    <th className="px-4 py-3 text-center">{t('Variance / Difference')}</th>
+                    <th className="px-4 py-3">{t('table.reason')}</th>
+                    <th className="px-4 py-3 text-center">{t('table.status')}</th>
+                    <th className="px-4 py-3 text-right">{t('table.actions')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60">
@@ -446,10 +450,10 @@ export default function StockAdjustments() {
                           </span>
                         </td>
                         <td className="px-4 py-3 text-slate-600 dark:text-slate-300 capitalize">
-                          {adj.reason}
+                          {t(adj.reason)}
                         </td>
                         <td className="px-4 py-3 text-center">
-                          <Badge status={adj.status || 'pending'} size="xs" />
+                          <Badge status={adj.status || 'pending'} text={t(adj.status)} size="xs" />
                         </td>
                         <td className="px-4 py-3 text-right">
                           {canApprove && (
@@ -458,14 +462,14 @@ export default function StockAdjustments() {
                                 onClick={() => handleApprove(adj, false)}
                                 className="px-2 py-1 rounded-lg text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-[11px] font-bold"
                               >
-                                Reject
+                                {t('actions.reject')}
                               </button>
                               <button
                                 onClick={() => handleApprove(adj, true)}
                                 className="px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 text-[11px] font-bold flex items-center gap-1"
                               >
                                 <CheckCircle2 className="w-3.5 h-3.5" />
-                                <span>Reconcile</span>
+                                <span>{t('Approve & Reconcile')}</span>
                               </button>
                             </div>
                           )}

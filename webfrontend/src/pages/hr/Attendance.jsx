@@ -712,15 +712,15 @@ export default function Attendance() {
             <table className="w-full text-left text-xs sm:text-sm">
               <thead className="bg-slate-50 dark:bg-slate-900/60 text-xs uppercase font-bold text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700 sticky top-0">
                 <tr>
-                  <th className="px-4 py-3">Employee</th>
-                  <th className="px-4 py-3">Department</th>
-                  <th className="px-4 py-3">Date</th>
-                  <th className="px-4 py-3">Clock In</th>
-                  <th className="px-4 py-3">Clock Out</th>
-                  <th className="px-4 py-3">Duration</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Perimeter</th>
-                  <th className="px-4 py-3 text-right">Actions</th>
+                  <th className="px-4 py-3">{t('employee')}</th>
+                  <th className="px-4 py-3">{t('department')}</th>
+                  <th className="px-4 py-3">{t('date')}</th>
+                  <th className="px-4 py-3">{t('actions.clockIn')}</th>
+                  <th className="px-4 py-3">{t('actions.clockOut')}</th>
+                  <th className="px-4 py-3">{t('work duration')}</th>
+                  <th className="px-4 py-3">{t('status')}</th>
+                  <th className="px-4 py-3">{t('perimeter', 'Perimeter')}</th>
+                  <th className="px-4 py-3 text-right">{t('actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60">

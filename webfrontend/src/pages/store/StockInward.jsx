@@ -78,9 +78,6 @@ export default function StockInward() {
       if (supRes.status === 'fulfilled' && supRes.value?.data) {
         setSuppliers(Array.isArray(supRes.value.data) ? supRes.value.data : []);
       }
-      if (itemsRes.status === 'fulfilled' && itemsRes.value?.data) {
-        setItemsCatalog(Array.isArray(itemsRes.value.data) ? itemsRes.value.data : []);
-      }
     } catch (err) {
       console.error('Failed to load goods receipts:', err);
       setError(err.message || 'Failed to load goods receipts');
@@ -308,7 +305,7 @@ export default function StockInward() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by GRV #, PO #, supplier name, delivery note..."
+            placeholder={t('search...')}
             className="w-full pl-9 pr-4 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-hidden focus:ring-2 focus:ring-primary-500"
           />
         </div>
@@ -319,11 +316,11 @@ export default function StockInward() {
             onChange={(e) => setStatusFilter(e.target.value)}
             className="px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:ring-primary-500"
           >
-            <option value="">All Statuses</option>
-            <option value="pending inspection">Pending Inspection</option>
-            <option value="accepted">Accepted / Completed</option>
-            <option value="partially accepted">Partially Accepted</option>
-            <option value="rejected">Rejected</option>
+            <option value="">{t('all statuses')}</option>
+            <option value="pending inspection">{t('pending inspection')}</option>
+            <option value="accepted">{t('accepted')}</option>
+            <option value="partially accepted">{t('partially accepted')}</option>
+            <option value="rejected">{t('rejected')}</option>
           </select>
 
           <select
@@ -331,7 +328,7 @@ export default function StockInward() {
             onChange={(e) => setWarehouseFilter(e.target.value)}
             className="px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:ring-primary-500"
           >
-            <option value="">All Warehouses</option>
+            <option value="">{t('all warehouses')}</option>
             {warehouses.map((w) => (
               <option key={w._id} value={w._id}>
                 {w.warehouseName}

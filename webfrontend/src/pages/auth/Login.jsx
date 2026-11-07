@@ -79,7 +79,7 @@ export default function Login() {
           <form className="space-y-4" onSubmit={handleSubmit}>
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                Email Address
+                {t('email address')}
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -98,7 +98,7 @@ export default function Login() {
 
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                Password
+                {t('password')}
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -129,7 +129,7 @@ export default function Login() {
               className="w-full mt-2 py-3 px-4 rounded-xl font-bold text-sm text-white bg-primary-500 hover:bg-primary-600 active:scale-98 shadow-md hover:shadow-lg transition flex items-center justify-center gap-2 disabled:opacity-50"
             >
               {loading ? (
-                <span>Verifying...</span>
+                <span>{t('submitting...')}</span>
               ) : (
                 <>
                   <span>{t('nav.login')}</span>

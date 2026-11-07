@@ -384,7 +384,7 @@ export default function StockOutward() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by Request #, purpose, job reference, requester..."
+            placeholder={t('Search by Request #, purpose, job reference, requester...')}
             className="w-full pl-9 pr-4 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-hidden focus:ring-2 focus:ring-primary-500"
           />
         </div>
@@ -395,12 +395,12 @@ export default function StockOutward() {
             onChange={(e) => setStatusFilter(e.target.value)}
             className="px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:ring-primary-500"
           >
-            <option value="">All Statuses</option>
-            <option value="pending">Pending Approval</option>
-            <option value="approved">Approved (Awaiting Issue)</option>
-            <option value="partially issued">Partially Issued</option>
-            <option value="completed">Completed</option>
-            <option value="rejected">Rejected</option>
+            <option value="">{t('All Statuses')}</option>
+            <option value="pending">{t('Pending Approval')}</option>
+            <option value="approved">{t('Approved (Awaiting Issue)')}</option>
+            <option value="partially issued">{t('Partially Issued')}</option>
+            <option value="completed">{t('Completed')}</option>
+            <option value="rejected">{t('Rejected')}</option>
           </select>
 
           <select
@@ -408,10 +408,10 @@ export default function StockOutward() {
             onChange={(e) => setDeptFilter(e.target.value)}
             className="px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:ring-primary-500"
           >
-            <option value="">All Departments</option>
+            <option value="">{t('All Departments')}</option>
             {DEPARTMENTS.map((d) => (
               <option key={d} value={d}>
-                {d}
+                {t(d)}
               </option>
             ))}
           </select>
@@ -421,7 +421,7 @@ export default function StockOutward() {
             onChange={(e) => setWarehouseFilter(e.target.value)}
             className="px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:ring-primary-500"
           >
-            <option value="">All Warehouses</option>
+            <option value="">{t('All Warehouses')}</option>
             {warehouses.map((w) => (
               <option key={w._id} value={w._id}>
                 {w.warehouseName}
@@ -531,15 +531,15 @@ export default function StockOutward() {
               <table className="w-full text-left text-xs">
                 <thead className="bg-slate-50 dark:bg-slate-900/50 uppercase font-semibold text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700 sticky top-0">
                   <tr>
-                    <th className="px-4 py-3">Request #</th>
-                    <th className="px-4 py-3">Department</th>
-                    <th className="px-4 py-3">Purpose / Job Reference</th>
-                    <th className="px-4 py-3">Warehouse</th>
-                    <th className="px-4 py-3">Requested By</th>
-                    <th className="px-4 py-3 text-center">Items</th>
-                    <th className="px-4 py-3 text-center">Priority</th>
-                    <th className="px-4 py-3 text-center">Status</th>
-                    <th className="px-4 py-3 text-right">Actions</th>
+                    <th className="px-4 py-3">{t('Request #')}</th>
+                    <th className="px-4 py-3">{t('table.department')}</th>
+                    <th className="px-4 py-3">{t('Purpose / Job Reference')}</th>
+                    <th className="px-4 py-3">{t('table.warehouse')}</th>
+                    <th className="px-4 py-3">{t('Requested By')}</th>
+                    <th className="px-4 py-3 text-center">{t('Items')}</th>
+                    <th className="px-4 py-3 text-center">{t('Priority')}</th>
+                    <th className="px-4 py-3 text-center">{t('table.status')}</th>
+                    <th className="px-4 py-3 text-right">{t('table.actions')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60">
@@ -558,7 +558,7 @@ export default function StockOutward() {
                           {req.requestNumber}
                         </td>
                         <td className="px-4 py-3 font-semibold text-slate-800 dark:text-slate-200">
-                          {req.department}
+                          {t(req.department)}
                         </td>
                         <td className="px-4 py-3 text-slate-600 dark:text-slate-300 max-w-xs truncate">
                           {req.purpose || '-'}
@@ -570,20 +570,20 @@ export default function StockOutward() {
                           {req.requestedBy?.fullName || '-'}
                         </td>
                         <td className="px-4 py-3 text-center font-bold text-slate-800 dark:text-slate-200">
-                          {req.items?.length || 0} lines
+                          {req.items?.length || 0}
                         </td>
                         <td className="px-4 py-3 text-center">
-                          <Badge status={req.priority || 'medium'} text={req.priority} size="xs" />
+                          <Badge status={req.priority || 'medium'} text={t(req.priority)} size="xs" />
                         </td>
                         <td className="px-4 py-3 text-center">
-                          <Badge status={req.status || 'pending'} size="xs" />
+                          <Badge status={req.status || 'pending'} text={t(req.status)} size="xs" />
                         </td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center justify-end gap-1.5">
                             <button
                               onClick={() => handleOpenPrintModal(req)}
                               className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 transition"
-                              title="Print Store Issue Voucher (SIV)"
+                              title={t('Store Issue Voucher (SIV)')}
                             >
                               <Printer className="w-4 h-4" />
                             </button>
@@ -595,7 +595,7 @@ export default function StockOutward() {
                                 title="Approve Material Quantities"
                               >
                                 <ShieldCheck className="w-3.5 h-3.5" />
-                                <span>Approve</span>
+                                <span>{t('actions.approve')}</span>
                               </button>
                             )}
 
@@ -606,7 +606,7 @@ export default function StockOutward() {
                                 title="Issue Materials from Store"
                               >
                                 <ArrowUpFromLine className="w-3.5 h-3.5" />
-                                <span>Issue</span>
+                                <span>{t('actions.issue')}</span>
                               </button>
                             )}
                           </div>

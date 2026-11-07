@@ -151,7 +151,7 @@ export default function StoreDashboard() {
             onClick={fetchData}
             disabled={loading}
             className="p-2 sm:px-3 sm:py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition flex items-center gap-1.5"
-            title="Refresh dashboard"
+            title={t('actions.refresh')}
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             <span className="hidden sm:inline">{t('actions.refresh')}</span>
@@ -182,7 +182,7 @@ export default function StoreDashboard() {
             <AlertTriangle className="w-4 h-4 text-rose-500" />
             <span>{error}</span>
           </div>
-          <button onClick={fetchData} className="font-bold underline ml-2">Retry</button>
+          <button onClick={fetchData} className="font-bold underline ml-2">{t('retry')}</button>
         </div>
       )}
 
@@ -191,27 +191,27 @@ export default function StoreDashboard() {
         <StatCard
           title={t('store.totalValuation')}
           value={formatCurrency(totalValuation)}
-          subtitle={`${balances.length} stock location balances`}
+          subtitle={`${balances.length} ${t('warehouses')}`}
           icon={Boxes}
           tag="ETB"
         />
         <StatCard
           title={t('store.totalItems')}
           value={items.length}
-          subtitle={`${warehouses.length} active warehouses`}
+          subtitle={`${warehouses.length} ${t('warehouses')}`}
           icon={Layers}
         />
         <StatCard
           title={t('store.lowStockAlerts')}
           value={lowStockBalances.length}
-          subtitle="At or below minimum safety level"
+          subtitle={t('items require reorder attention')}
           icon={AlertTriangle}
           tag={lowStockBalances.length > 0 ? 'CRITICAL' : 'OPTIMAL'}
         />
         <StatCard
           title={t('store.pendingReceipts')}
           value={pendingGRVs.length}
-          subtitle={`${pendingRequests.length} pending issue requests`}
+          subtitle={`${pendingRequests.length} ${t('store.pendingIssues')}`}
           icon={ArrowDownToLine}
         />
       </div>
@@ -231,7 +231,7 @@ export default function StoreDashboard() {
                 {pendingRequests.length} {t('store.pendingIssues')}
               </div>
               <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                Awaiting storekeeper release
+                {t('awaiting storekeeper release')}
               </div>
             </div>
           </div>
@@ -248,10 +248,10 @@ export default function StoreDashboard() {
             </div>
             <div>
               <div className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                {inTransitTransfers.length} Transfers In-Transit
+                {inTransitTransfers.length} {t('transfers in-transit')}
               </div>
               <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                Moving between warehouses
+                {t('moving between warehouses')}
               </div>
             </div>
           </div>
@@ -271,7 +271,7 @@ export default function StoreDashboard() {
                 {pendingAdjustments.length} {t('store.pendingAdjustments')}
               </div>
               <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                Physical count discrepancies
+                {t('physical count discrepancies')}
               </div>
             </div>
           </div>
@@ -288,10 +288,10 @@ export default function StoreDashboard() {
             </div>
             <div>
               <h4 className="text-xs sm:text-sm font-bold text-amber-900 dark:text-amber-200">
-                {lowStockBalances.length} Items Require Reorder Attention
+                {lowStockBalances.length} {t('items require reorder attention')}
               </h4>
               <p className="text-[11px] sm:text-xs text-amber-700 dark:text-amber-300 mt-0.5">
-                Current quantities on hand have dropped below the configured safety threshold. Inspect catalog and raise purchase requests.
+                {t('current quantities on hand have dropped below the configured safety threshold. inspect catalog and raise purchase requests.')}
               </p>
             </div>
           </div>
@@ -299,7 +299,7 @@ export default function StoreDashboard() {
             to="/store/inventory?filter=low"
             className="px-3 py-1.5 rounded-xl bg-amber-600 text-white hover:bg-amber-700 text-xs font-bold shrink-0 self-start sm:self-auto transition"
           >
-            Review Low Stock
+            {t('review low stock')}
           </Link>
         </div>
       )}
@@ -312,14 +312,14 @@ export default function StoreDashboard() {
             <div className="flex items-center gap-2">
               <TrendingDown className="w-4 h-4 text-rose-500" />
               <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">
-                Low Stock & Reorder Watchlist
+                {t('low stock & reorder watchlist')}
               </h3>
             </div>
             <Link
               to="/store/inventory"
               className="text-xs font-semibold text-primary-500 hover:underline flex items-center gap-1"
             >
-              <span>View All</span>
+              <span>{t('view all')}</span>
               <ArrowRight className="w-3 h-3" />
             </Link>
           </div>
@@ -327,8 +327,8 @@ export default function StoreDashboard() {
           <div className="flex-1 overflow-y-auto">
             {lowStockBalances.length === 0 ? (
               <EmptyState
-                title="All Stock Levels Optimal"
-                description="No items are currently below minimum safety thresholds."
+                title={t('all stock levels optimal')}
+                description={t('no items are currently below minimum safety thresholds.')}
                 icon={CheckCircle2}
               />
             ) : (
@@ -349,15 +349,15 @@ export default function StoreDashboard() {
                             {b.item?.itemCode} • {b.warehouse?.warehouseName}
                           </div>
                         </div>
-                        <Badge status="low_stock" text="Low Stock" size="xs" />
+                        <Badge status="low_stock" text={t('low stock')} size="xs" />
                       </div>
                       <div className="mt-2 grid grid-cols-2 gap-1 text-[11px] text-slate-600 dark:text-slate-300">
                         <div>
-                          <span className="text-slate-400">On Hand:</span>{' '}
+                          <span className="text-slate-400">{t('on hand:')}</span>{' '}
                           <span className="font-bold text-rose-600 dark:text-rose-400">{b.quantityOnHand}</span> {b.item?.unitOfMeasurement}
                         </div>
                         <div>
-                          <span className="text-slate-400">Min Level:</span>{' '}
+                          <span className="text-slate-400">{t('min level:')}</span>{' '}
                           <span>{b.minimumStockLevel || b.item?.minimumStockLevel || 0}</span>
                         </div>
                       </div>
@@ -370,11 +370,11 @@ export default function StoreDashboard() {
                   <table className="w-full text-left text-xs">
                     <thead className="bg-slate-50 dark:bg-slate-900/50 uppercase font-semibold text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700">
                       <tr>
-                        <th className="px-3 py-2.5">Item</th>
-                        <th className="px-3 py-2.5">Warehouse</th>
-                        <th className="px-3 py-2.5 text-center">On Hand</th>
-                        <th className="px-3 py-2.5 text-center">Min Level</th>
-                        <th className="px-3 py-2.5 text-right">Status</th>
+                        <th className="px-3 py-2.5">{t('item')}</th>
+                        <th className="px-3 py-2.5">{t('warehouse')}</th>
+                        <th className="px-3 py-2.5 text-center">{t('on hand')}</th>
+                        <th className="px-3 py-2.5 text-center">{t('min level')}</th>
+                        <th className="px-3 py-2.5 text-right">{t('status')}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60">
@@ -423,7 +423,7 @@ export default function StoreDashboard() {
               to="/store/movements"
               className="text-xs font-semibold text-primary-500 hover:underline flex items-center gap-1"
             >
-              <span>Audit Ledger</span>
+              <span>{t('audit ledger')}</span>
               <ArrowRight className="w-3 h-3" />
             </Link>
           </div>
@@ -431,8 +431,8 @@ export default function StoreDashboard() {
           <div className="flex-1 overflow-y-auto space-y-3">
             {recentMovements.length === 0 ? (
               <EmptyState
-                title="No Movements Recorded"
-                description="Inventory movements will automatically appear here as GRVs, issues, and transfers occur."
+                title={t('no movements recorded')}
+                description={t('inventory movements will automatically appear here as grvs, issues, and transfers occur.')}
                 icon={History}
               />
             ) : (
@@ -463,7 +463,7 @@ export default function StoreDashboard() {
                         </div>
                         <div className="text-[10px] text-slate-400 flex items-center gap-1.5 mt-0.5">
                           <span className="uppercase font-semibold text-primary-500">
-                            {mov.movementType}
+                            {t(mov.movementType)}
                           </span>
                           <span>•</span>
                           <span>{mov.warehouse?.warehouseName}</span>
@@ -499,14 +499,14 @@ export default function StoreDashboard() {
           <div className="flex items-center gap-2">
             <WarehouseIcon className="w-4 h-4 text-primary-500" />
             <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">
-              Warehouses & Storage Facilities
+              {t('warehouses & storage facilities')}
             </h3>
           </div>
           <Link
             to="/store/warehouses"
             className="text-xs font-semibold text-primary-500 hover:underline flex items-center gap-1"
           >
-            <span>Manage Warehouses</span>
+            <span>{t('manage warehouses')}</span>
             <ArrowRight className="w-3 h-3" />
           </Link>
         </div>
@@ -537,18 +537,18 @@ export default function StoreDashboard() {
                   </div>
 
                   <div className="mt-3 text-xs text-slate-500 dark:text-slate-400 space-y-1">
-                    <div><span className="text-slate-400">Location:</span> {wh.location || '-'}</div>
-                    <div><span className="text-slate-400">Manager:</span> {wh.manager?.fullName || wh.contactPerson || '-'}</div>
+                    <div><span className="text-slate-400">{t('location:')}</span> {wh.location || '-'}</div>
+                    <div><span className="text-slate-400">{t('manager:')}</span> {wh.manager?.fullName || wh.contactPerson || '-'}</div>
                   </div>
                 </div>
 
                 <div className="mt-4 pt-3 border-t border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between text-xs">
                   <div>
-                    <span className="text-slate-400 text-[11px]">Items Stored:</span>{' '}
+                    <span className="text-slate-400 text-[11px]">{t('items stored:')}</span>{' '}
                     <span className="font-bold text-slate-800 dark:text-slate-200">{whBalances.length}</span>
                   </div>
                   <div className="font-bold text-primary-600 dark:text-primary-400">
-                    {totalUnits.toLocaleString()} units
+                    {totalUnits.toLocaleString()} {t('units')}
                   </div>
                 </div>
               </div>

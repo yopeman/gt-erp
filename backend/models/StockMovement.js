@@ -98,13 +98,23 @@ const stockMovementSchema = new mongoose.Schema(
     attachments: [movementAttachmentSchema],
     performedBy: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Employee',
+      refPath: 'performedByModel',
       default: null
+    },
+    performedByModel: {
+      type: String,
+      enum: ['User', 'Employee'],
+      default: 'User'
     },
     approvedBy: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Employee',
+      refPath: 'approvedByModel',
       default: null
+    },
+    approvedByModel: {
+      type: String,
+      enum: ['User', 'Employee'],
+      default: 'User'
     },
     movementDate: {
       type: Date,
@@ -120,7 +130,7 @@ stockMovementSchema.pre('save', function (next) {
   if (this.quantity && this.unitCost && (!this.totalCost || this.totalCost === 0)) {
     this.totalCost = Math.abs(this.quantity) * this.unitCost;
   }
-  next();
+  if (typeof next === 'function') next();
 });
 
 stockMovementSchema.index({ movementNumber: 1 });

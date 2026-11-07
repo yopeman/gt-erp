@@ -57,14 +57,19 @@ export const ERP_MODULES = [
     id: 'purchasing',
     titleKey: 'modules.purchasing',
     icon: 'ShoppingCart',
-    requiredRoles: ['admin', 'purchaser', 'manager'],
-    status: 'upcoming',
+    requiredRoles: ['admin', 'purchaser', 'manager', 'storekeeper', 'finance'],
+    status: 'active',
     phase: 'Phase 2',
-    description: 'Suppliers, Quotations, Purchase Orders (PO), Goods Received Vouchers',
+    description: 'Purchase Requests, Purchase Orders (PO), Suppliers, Goods Receiving (GRV), Credit & Accounts Payable',
     submodules: [
-      { id: 'purchasing-dashboard', path: '/purchasing/dashboard', titleKey: 'nav.dashboard', icon: 'LayoutDashboard', status: 'upcoming' },
-      { id: 'purchasing-suppliers', path: '/purchasing/suppliers', titleKey: 'Suppliers', icon: 'Building2', status: 'upcoming' },
-      { id: 'purchasing-orders', path: '/purchasing/orders', titleKey: 'Purchase Orders', icon: 'FileText', status: 'upcoming' }
+      { id: 'purchasing-dashboard', path: '/purchasing/dashboard', titleKey: 'nav.purchasingDashboard', icon: 'LayoutDashboard', requiredRoles: ['admin', 'purchaser', 'manager', 'finance'], status: 'active' },
+      { id: 'purchasing-requests', path: '/purchasing/requests', titleKey: 'nav.purchaseRequests', icon: 'FileText', requiredRoles: ['admin', 'purchaser', 'manager', 'storekeeper'], status: 'active' },
+      { id: 'purchasing-orders', path: '/purchasing/orders', titleKey: 'nav.purchaseOrders', icon: 'ShoppingCart', requiredRoles: ['admin', 'purchaser', 'manager', 'finance'], status: 'active' },
+      { id: 'purchasing-suppliers', path: '/purchasing/suppliers', titleKey: 'nav.suppliers', icon: 'Building2', requiredRoles: ['admin', 'purchaser', 'manager', 'finance'], status: 'active' },
+      { id: 'purchasing-goods-receipts', path: '/purchasing/goods-receipts', titleKey: 'nav.goodsReceipts', icon: 'ArrowDownToLine', requiredRoles: ['admin', 'purchaser', 'manager', 'storekeeper'], status: 'active' },
+      { id: 'purchasing-credit', path: '/purchasing/credit', titleKey: 'nav.creditPurchases', icon: 'CreditCard', requiredRoles: ['admin', 'purchaser', 'manager', 'finance'], status: 'active' },
+      { id: 'purchasing-payments', path: '/purchasing/payments', titleKey: 'nav.purchasePayments', icon: 'DollarSign', requiredRoles: ['admin', 'purchaser', 'manager', 'finance'], status: 'active' },
+      { id: 'purchasing-returns', path: '/purchasing/returns', titleKey: 'nav.supplierReturns', icon: 'RotateCcw', requiredRoles: ['admin', 'purchaser', 'manager', 'storekeeper'], status: 'active' },
     ]
   },
   {

@@ -26,6 +26,12 @@ export const createStockMovement = async (req, res) => {
       return sendError(res, 'Item, warehouse, movementType, and quantity are required', 400);
     }
 
+    const cleanRefId = (referenceId && typeof referenceId === 'string' && referenceId.trim() !== '') ? referenceId : (referenceId || null);
+    const performer = performedBy || (req.user?.employee?._id || req.user?.employee || req.user?._id);
+    const performedByModel = performedBy ? 'Employee' : (req.user?.employee ? 'Employee' : 'User');
+    const approver = (approvedBy && typeof approvedBy === 'string' && approvedBy.trim() !== '') ? approvedBy : (approvedBy || null);
+    const approvedByModel = req.user?.employee ? 'Employee' : 'User';
+
     const movement = await recordStockMovementWithBalance({
       movementNumber: movementNumber || generateCode('MOV'),
       item,
@@ -34,24 +40,31 @@ export const createStockMovement = async (req, res) => {
       quantity: Number(quantity),
       unitCost: Number(unitCost || 0),
       referenceType: referenceType || 'manual adjustment',
-      referenceId,
+      referenceId: cleanRefId,
       reason,
       note,
       attachments: attachments || [],
-      performedBy: performedBy || req.user?._id,
-      approvedBy,
+      performedBy: performer,
+      performedByModel,
+      approvedBy: approver,
+      approvedByModel,
       movementDate: movementDate ? new Date(movementDate) : new Date()
     });
 
-    const populated = await movement.populate([
+    const populatePaths = [
       { path: 'item', select: 'itemName itemCode unitOfMeasurement' },
       { path: 'warehouse', select: 'warehouseName warehouseCode' },
-      { path: 'performedBy', select: 'fullName email' },
-      { path: 'approvedBy', select: 'fullName email' }
-    ]);
+      { path: 'performedBy', select: 'fullName email' }
+    ];
+    if (movement.approvedBy) {
+      populatePaths.push({ path: 'approvedBy', select: 'fullName email' });
+    }
+
+    const populated = await movement.populate(populatePaths);
 
     return sendSuccess(res, 'Stock movement recorded successfully', populated, 201);
   } catch (error) {
+    console.error('Failed to record stock movement:', error);
     return sendError(res, 'Failed to record stock movement', 500, error);
   }
 };

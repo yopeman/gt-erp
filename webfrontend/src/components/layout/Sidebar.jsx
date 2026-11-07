@@ -32,6 +32,9 @@ import {
   SlidersHorizontal,
   History,
   Warehouse,
+  FileText,
+  DollarSign,
+  RotateCcw,
   ChevronDown,
   ChevronRight,
   X
@@ -65,7 +68,10 @@ const iconMap = {
   Repeat,
   SlidersHorizontal,
   History,
-  Warehouse
+  Warehouse,
+  FileText,
+  DollarSign,
+  RotateCcw
 };
 
 export default function Sidebar({ isOpen, onClose }) {
@@ -78,6 +84,7 @@ export default function Sidebar({ isOpen, onClose }) {
     hr: true,
     admin: true,
     store: true,
+    purchasing: true,
   });
 
   const toggleModule = (moduleId) => {

@@ -78,7 +78,7 @@ purchaseRequestItemSchema.pre('validate', function (next) {
   if (this.requestedQuantity && this.estimatedUnitPrice && (!this.estimatedTotal || this.estimatedTotal === 0)) {
     this.estimatedTotal = this.requestedQuantity * this.estimatedUnitPrice;
   }
-  next();
+  if (typeof next === 'function') next();
 });
 
 const purchaseRequestSchema = new mongoose.Schema(
@@ -91,8 +91,13 @@ const purchaseRequestSchema = new mongoose.Schema(
     },
     requestedBy: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Employee',
-      required: [true, 'Requested by employee is required']
+      refPath: 'requestedByModel',
+      required: [true, 'Requested by user or employee is required']
+    },
+    requestedByModel: {
+      type: String,
+      enum: ['User', 'Employee'],
+      default: 'User'
     },
     department: {
       type: String,
@@ -180,7 +185,7 @@ purchaseRequestSchema.pre('save', function (next) {
   if (this.items && this.items.length > 0) {
     this.estimatedTotalAmount = this.items.reduce((sum, item) => sum + (item.estimatedTotal || 0), 0);
   }
-  next();
+  if (typeof next === 'function') next();
 });
 
 purchaseRequestSchema.index({ requestNumber: 1 });

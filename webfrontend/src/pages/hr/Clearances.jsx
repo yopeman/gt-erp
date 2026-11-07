@@ -254,14 +254,14 @@ export default function Clearances() {
                         }`}
                       >
                         <CheckCircle2 className="w-3.5 h-3.5" />
-                        <span>Grant Final HR Approval</span>
+                        <span>{t('Grant Final HR Approval')}</span>
                       </button>
                     )}
 
                     {isAlreadyApproved && (
                       <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-1 rounded-xl border border-emerald-200/60 dark:border-emerald-900/40">
                         <CheckCircle2 className="w-3.5 h-3.5" />
-                        <span>HR Approved & Finalized</span>
+                        <span>{t('HR Approved & Finalized')}</span>
                       </div>
                     )}
                   </div>
@@ -271,7 +271,7 @@ export default function Clearances() {
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                      Multi-Department Signoff Checklist
+                      {t('Multi-Department Signoff Checklist')}
                     </span>
                     <span className="text-[11px] font-semibold text-slate-400">
                       {item.checklist?.filter((c) => c.status === 'cleared' || c.confirmedBy).length || 0}{' '}

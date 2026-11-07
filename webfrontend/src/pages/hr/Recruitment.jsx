@@ -258,7 +258,7 @@ export default function Recruitment() {
             title="Open Public Careers Board in new tab"
           >
             <ExternalLink className="w-4 h-4 text-primary-500" />
-            <span className="hidden sm:inline">Public Careers Board</span>
+            <span className="hidden sm:inline">{t('Public Careers Board')}</span>
           </a>
 
           <button
@@ -293,7 +293,7 @@ export default function Recruitment() {
           }`}
         >
           <Briefcase className="w-4 h-4" />
-          <span>Open Positions ({positions.length})</span>
+          <span>{t('Open Positions')} ({positions.length})</span>
         </button>
 
         <button
@@ -305,7 +305,7 @@ export default function Recruitment() {
           }`}
         >
           <Users className="w-4 h-4" />
-          <span>Job Applicants ({applications.length})</span>
+          <span>{t('Job Applicants')} ({applications.length})</span>
         </button>
       </div>
 
@@ -380,7 +380,7 @@ export default function Recruitment() {
                       title="Open Public Application Page"
                     >
                       <ExternalLink className="w-3.5 h-3.5" />
-                      <span>Public Page</span>
+                      <span>{t('Public Page')}</span>
                     </a>
 
                     {/* Copy Public Link */}
@@ -528,7 +528,7 @@ export default function Recruitment() {
                       onClick={() => handleOpenInterviewModal(app)}
                       className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-primary-50 text-primary-600 dark:bg-primary-950/60 dark:text-primary-400 hover:bg-primary-100"
                     >
-                      Schedule
+                      {t('Schedule')}
                     </button>
 
                     <select
@@ -536,12 +536,12 @@ export default function Recruitment() {
                       onChange={(e) => handleStatusChange(app._id, e.target.value)}
                       className="text-xs px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900"
                     >
-                      <option value="applied">Applied</option>
-                      <option value="screening">Screening</option>
-                      <option value="interview">Interview</option>
-                      <option value="offered">Offered</option>
-                      <option value="hired">Hired</option>
-                      <option value="rejected">Rejected</option>
+                      <option value="applied">{t('applied')}</option>
+                      <option value="screening">{t('screening')}</option>
+                      <option value="interview">{t('interview')}</option>
+                      <option value="offered">{t('offered')}</option>
+                      <option value="hired">{t('hired')}</option>
+                      <option value="rejected">{t('rejected')}</option>
                     </select>
                   </>
                 )}

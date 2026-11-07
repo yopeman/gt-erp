@@ -436,7 +436,7 @@ export default function StoreInventory() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by item name, SKU code, brand..."
+            placeholder={t('search...')}
             className="w-full pl-9 pr-4 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-hidden focus:ring-2 focus:ring-primary-500"
           />
         </div>
@@ -449,7 +449,7 @@ export default function StoreInventory() {
                 onChange={(e) => setCategoryFilter(e.target.value)}
                 className="px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:ring-primary-500"
               >
-                <option value="">All Categories</option>
+                <option value="">{t('all')} {t('store.categories')}</option>
                 {categories.map((c) => (
                   <option key={c._id} value={c._id}>
                     {c.name}
@@ -462,10 +462,10 @@ export default function StoreInventory() {
                 onChange={(e) => setTypeFilter(e.target.value)}
                 className="px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:ring-primary-500"
               >
-                <option value="">All Item Types</option>
-                {ITEM_TYPES.map((t) => (
-                  <option key={t.value} value={t.value}>
-                    {t.label}
+                <option value="">{t('all')} {t('type')}</option>
+                {ITEM_TYPES.map((tItem) => (
+                  <option key={tItem.value} value={tItem.value}>
+                    {t(tItem.label)}
                   </option>
                 ))}
               </select>
@@ -478,7 +478,7 @@ export default function StoreInventory() {
               onChange={(e) => setWarehouseFilter(e.target.value)}
               className="px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:ring-primary-500"
             >
-              <option value="">All Warehouses</option>
+              <option value="">{t('all warehouses')}</option>
               {warehouses.map((w) => (
                 <option key={w._id} value={w._id}>
                   {w.warehouseName} ({w.warehouseCode})
@@ -492,10 +492,10 @@ export default function StoreInventory() {
             onChange={(e) => setStockLevelFilter(e.target.value)}
             className="px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:ring-primary-500"
           >
-            <option value="all">All Stock Levels</option>
-            <option value="low">Low Stock Alerts Only</option>
-            <option value="out">Out of Stock Only</option>
-            <option value="healthy">Healthy Stock</option>
+            <option value="all">{t('all')}</option>
+            <option value="low">{t('low stock')}</option>
+            <option value="out">{t('out of stock')}</option>
+            <option value="healthy">{t('optimal')}</option>
           </select>
         </div>
       </div>
@@ -604,16 +604,16 @@ export default function StoreInventory() {
                 <table className="w-full text-left text-xs">
                   <thead className="bg-slate-50 dark:bg-slate-900/50 uppercase font-semibold text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700 sticky top-0">
                     <tr>
-                      <th className="px-4 py-3">Code / SKU</th>
-                      <th className="px-4 py-3">Item Name</th>
-                      <th className="px-4 py-3">Category</th>
-                      <th className="px-4 py-3">Type</th>
-                      <th className="px-4 py-3 text-center">UOM</th>
-                      <th className="px-4 py-3 text-center">Total On Hand</th>
-                      <th className="px-4 py-3 text-center">Min / Reorder</th>
-                      <th className="px-4 py-3 text-right">Unit Cost</th>
-                      <th className="px-4 py-3 text-center">Status</th>
-                      <th className="px-4 py-3 text-right">Actions</th>
+                      <th className="px-4 py-3">{t('store.itemCode')}</th>
+                      <th className="px-4 py-3">{t('store.itemName')}</th>
+                      <th className="px-4 py-3">{t('store.category')}</th>
+                      <th className="px-4 py-3">{t('type')}</th>
+                      <th className="px-4 py-3 text-center">{t('uom')}</th>
+                      <th className="px-4 py-3 text-center">{t('on hand')}</th>
+                      <th className="px-4 py-3 text-center">{t('min level')}</th>
+                      <th className="px-4 py-3 text-right">{t('unit cost')}</th>
+                      <th className="px-4 py-3 text-center">{t('status')}</th>
+                      <th className="px-4 py-3 text-right">{t('actions')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60">
@@ -788,14 +788,14 @@ export default function StoreInventory() {
                 <table className="w-full text-left text-xs">
                   <thead className="bg-slate-50 dark:bg-slate-900/50 uppercase font-semibold text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700 sticky top-0">
                     <tr>
-                      <th className="px-4 py-3">Warehouse</th>
-                      <th className="px-4 py-3">SKU</th>
-                      <th className="px-4 py-3">Item Name</th>
-                      <th className="px-4 py-3 text-center">On Hand</th>
-                      <th className="px-4 py-3 text-center">Reserved</th>
-                      <th className="px-4 py-3 text-center">Available</th>
-                      <th className="px-4 py-3 text-center">Damaged</th>
-                      <th className="px-4 py-3 text-right">Value (ETB)</th>
+                      <th className="px-4 py-3">{t('store.warehouse')}</th>
+                      <th className="px-4 py-3">{t('store.itemCode')}</th>
+                      <th className="px-4 py-3">{t('store.itemName')}</th>
+                      <th className="px-4 py-3 text-center">{t('on hand')}</th>
+                      <th className="px-4 py-3 text-center">{t('store.reservedQuantity')}</th>
+                      <th className="px-4 py-3 text-center">{t('store.availableQuantity')}</th>
+                      <th className="px-4 py-3 text-center">{t('store.damagedQuantity')}</th>
+                      <th className="px-4 py-3 text-right">{t('amount')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60">

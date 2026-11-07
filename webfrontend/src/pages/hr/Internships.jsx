@@ -420,13 +420,13 @@ export default function Internships() {
             <table className="w-full text-left text-xs sm:text-sm">
               <thead className="bg-slate-50 dark:bg-slate-900/60 text-xs uppercase font-bold text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700 sticky top-0">
                 <tr>
-                  <th className="px-4 py-3">Intern Employee</th>
-                  <th className="px-4 py-3">Supervisor</th>
-                  <th className="px-4 py-3">Department</th>
-                  <th className="px-4 py-3">Stipend</th>
-                  <th className="px-4 py-3">Duration</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3 text-right">Actions</th>
+                  <th className="px-4 py-3">{t('Intern Employee')}</th>
+                  <th className="px-4 py-3">{t('Supervisor')}</th>
+                  <th className="px-4 py-3">{t('table.department')}</th>
+                  <th className="px-4 py-3">{t('Stipend')}</th>
+                  <th className="px-4 py-3">{t('Duration')}</th>
+                  <th className="px-4 py-3">{t('table.status')}</th>
+                  <th className="px-4 py-3 text-right">{t('table.actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60">
@@ -480,9 +480,9 @@ export default function Internships() {
                               : 'border-rose-200 bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-900'
                           }`}
                         >
-                          <option value="ongoing">Ongoing</option>
-                          <option value="completed">Completed</option>
-                          <option value="terminated">Terminated</option>
+                          <option value="ongoing">{t('Ongoing')}</option>
+                          <option value="completed">{t('status.completed')}</option>
+                          <option value="terminated">{t('Terminated')}</option>
                         </select>
                       ) : (
                         <Badge status={item.status} text={item.status} />

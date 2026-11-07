@@ -1,7 +1,9 @@
 import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
+import { useTranslation } from '../../i18n';
 
 export default function Modal({ isOpen, onClose, title, children, maxWidth = 'max-w-xl', zIndex = 'z-50' }) {
+  const { t } = useTranslation();
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') onClose();
@@ -36,7 +38,7 @@ export default function Modal({ isOpen, onClose, title, children, maxWidth = 'ma
           {/* Header */}
           <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-700/80">
             <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100">
-              {title}
+              {t(title)}
             </h3>
             <button
               onClick={onClose}

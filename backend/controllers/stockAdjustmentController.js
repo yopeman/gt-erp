@@ -36,6 +36,9 @@ export const createStockAdjustment = async (req, res) => {
     const difference = Number(physicalQuantity) - Number(sysQty);
     const adjustmentNumber = generateCode('ADJ');
 
+    const requesterId = req.user?.employee?._id || req.user?.employee || req.user?._id;
+    const requestedByModel = req.user?.employee ? 'Employee' : 'User';
+
     const adjustment = await StockAdjustment.create({
       adjustmentNumber,
       warehouse,
@@ -46,7 +49,8 @@ export const createStockAdjustment = async (req, res) => {
       reason,
       description,
       attachments: attachments || [],
-      requestedBy: req.user?._id,
+      requestedBy: requesterId,
+      requestedByModel,
       status: 'pending'
     });
 
@@ -55,6 +59,7 @@ export const createStockAdjustment = async (req, res) => {
       referenceId: adjustment._id,
       action: 'submitted',
       actionBy: req.user?._id,
+      actionByModel: 'User',
       comment: `Stock adjustment ${adjustmentNumber} created`
     });
 
@@ -66,6 +71,7 @@ export const createStockAdjustment = async (req, res) => {
 
     return sendSuccess(res, 'Stock adjustment request created successfully', populated, 201);
   } catch (error) {
+    console.error('Failed to create stock adjustment:', error);
     return sendError(res, 'Failed to create stock adjustment', 500, error);
   }
 };
@@ -140,7 +146,8 @@ export const getStockAdjustmentById = async (req, res) => {
 // Approve or reject stock adjustment
 export const handleApproval = async (req, res) => {
   try {
-    const { status, comment } = req.body; // 'approved' or 'rejected'
+    const status = req.body.status || (req.body.approved === true ? 'approved' : req.body.approved === false ? 'rejected' : undefined);
+    const comment = req.body.comment;
 
     if (!['approved', 'rejected'].includes(status)) {
       return sendError(res, 'Status must be approved or rejected', 400);
@@ -155,8 +162,12 @@ export const handleApproval = async (req, res) => {
       return sendError(res, `Cannot modify adjustment with status "${adjustment.status}"`, 400);
     }
 
+    const approverId = req.user?.employee?._id || req.user?.employee || req.user?._id;
+    const approvedByModel = req.user?.employee ? 'Employee' : 'User';
+
     adjustment.status = status === 'approved' ? 'completed' : 'rejected';
-    adjustment.approvedBy = req.user?._id;
+    adjustment.approvedBy = approverId;
+    adjustment.approvedByModel = approvedByModel;
     await adjustment.save();
 
     // If approved, create Stock Movement and update Stock Balance!
@@ -176,7 +187,9 @@ export const handleApproval = async (req, res) => {
         reason: adjustment.reason,
         note: adjustment.description,
         performedBy: adjustment.requestedBy,
-        approvedBy: req.user?._id
+        performedByModel: adjustment.requestedByModel || 'User',
+        approvedBy: approverId,
+        approvedByModel
       });
 
       await recordAudit({
@@ -193,11 +206,13 @@ export const handleApproval = async (req, res) => {
       referenceId: adjustment._id,
       action: status,
       actionBy: req.user?._id,
+      actionByModel: 'User',
       comment: comment || `Adjustment ${status}`
     });
 
     return sendSuccess(res, `Stock adjustment ${status} successfully`, adjustment);
   } catch (error) {
+    console.error('Failed to process stock adjustment approval:', error);
     return sendError(res, 'Failed to process stock adjustment approval', 500, error);
   }
 };

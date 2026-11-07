@@ -1,5 +1,7 @@
 import PurchaseOrder from '../models/PurchaseOrder.js';
 import Supplier from '../models/Supplier.js';
+import PurchaseRequest from '../models/PurchaseRequest.js';
+import GoodsReceipt from '../models/GoodsReceipt.js';
 import { sendSuccess, sendError } from '../utils/apiResponse.js';
 import { generateCode, recordApproval } from '../utils/inventoryHelper.js';
 
@@ -289,6 +291,232 @@ export const sendPurchaseOrderToSupplier = async (req, res) => {
     return sendSuccess(res, 'Purchase order marked as sent to supplier', order);
   } catch (error) {
     return sendError(res, 'Failed to send purchase order', 500, error);
+  }
+};
+
+// Executive Purchasing Dashboard & Analytics
+export const getPurchasingDashboard = async (req, res) => {
+  try {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+
+    // 1. Purchase Orders stats
+    const poStats = await PurchaseOrder.aggregate([
+      {
+        $facet: {
+          overall: [
+            { $match: { status: { $ne: 'cancelled' } } },
+            {
+              $group: {
+                _id: null,
+                totalOrders: { $sum: 1 },
+                totalPurchasesValue: { $sum: '$grandTotal' },
+                totalPaid: { $sum: '$paidAmount' },
+                totalBalanceDue: { $sum: '$balanceDue' }
+              }
+            }
+          ],
+          thisMonth: [
+            { $match: { status: { $ne: 'cancelled' }, orderDate: { $gte: startOfMonth } } },
+            {
+              $group: {
+                _id: null,
+                count: { $sum: 1 },
+                spend: { $sum: '$grandTotal' }
+              }
+            }
+          ],
+          lastMonth: [
+            { $match: { status: { $ne: 'cancelled' }, orderDate: { $gte: startOfLastMonth, $lte: endOfLastMonth } } },
+            {
+              $group: {
+                _id: null,
+                count: { $sum: 1 },
+                spend: { $sum: '$grandTotal' }
+              }
+            }
+          ],
+          byStatus: [
+            {
+              $group: {
+                _id: '$status',
+                count: { $sum: 1 },
+                totalAmount: { $sum: '$grandTotal' }
+              }
+            }
+          ],
+          creditPayables: [
+            { $match: { paymentType: 'credit', status: { $nin: ['cancelled', 'rejected'] } } },
+            {
+              $group: {
+                _id: null,
+                totalCreditOrders: { $sum: 1 },
+                totalCreditAmount: { $sum: '$grandTotal' },
+                outstandingCredit: { $sum: '$balanceDue' }
+              }
+            }
+          ],
+          overdueCredit: [
+            {
+              $match: {
+                paymentType: 'credit',
+                status: { $nin: ['cancelled', 'rejected'] },
+                balanceDue: { $gt: 0 },
+                paymentDueDate: { $lt: now }
+              }
+            },
+            {
+              $group: {
+                _id: null,
+                overdueCount: { $sum: 1 },
+                overdueAmount: { $sum: '$balanceDue' }
+              }
+            }
+          ]
+        }
+      }
+    ]);
+
+    // 2. Purchase Requests stats
+    const prStats = await PurchaseRequest.aggregate([
+      {
+        $group: {
+          _id: '$status',
+          count: { $sum: 1 },
+          estimatedTotal: { $sum: '$estimatedTotalAmount' }
+        }
+      }
+    ]);
+
+    // 3. Goods Receipts stats (pending inspection, total)
+    const grStats = await GoodsReceipt.aggregate([
+      {
+        $group: {
+          _id: '$status',
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    // 4. Supplier count
+    const totalSuppliers = await Supplier.countDocuments({ isDeleted: false });
+    const activeSuppliers = await Supplier.countDocuments({ isDeleted: false, status: 'active' });
+
+    // 5. Recent Purchase Orders
+    const recentOrders = await PurchaseOrder.find()
+      .populate('supplier', 'supplierName supplierCode')
+      .populate('warehouse', 'warehouseName')
+      .populate('createdBy', 'fullName email')
+      .sort({ createdAt: -1 })
+      .limit(6);
+
+    // 6. Recent Purchase Requests
+    const recentRequests = await PurchaseRequest.find()
+      .populate('warehouse', 'warehouseName')
+      .populate('requestedBy', 'fullName email department')
+      .sort({ createdAt: -1 })
+      .limit(6);
+
+    // 7. Top Suppliers by Purchase Volume
+    const topSuppliers = await PurchaseOrder.aggregate([
+      { $match: { status: { $nin: ['cancelled', 'rejected'] } } },
+      {
+        $group: {
+          _id: '$supplier',
+          totalOrders: { $sum: 1 },
+          totalSpend: { $sum: '$grandTotal' }
+        }
+      },
+      { $sort: { totalSpend: -1 } },
+      { $limit: 5 },
+      {
+        $lookup: {
+          from: 'suppliers',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'supplier'
+        }
+      },
+      { $unwind: '$supplier' },
+      {
+        $project: {
+          supplierId: '$_id',
+          supplierName: '$supplier.supplierName',
+          supplierCode: '$supplier.supplierCode',
+          totalOrders: 1,
+          totalSpend: 1
+        }
+      }
+    ]);
+
+    // Format results cleanly
+    const poFacet = poStats[0] || {};
+    const overall = poFacet.overall?.[0] || { totalOrders: 0, totalPurchasesValue: 0, totalPaid: 0, totalBalanceDue: 0 };
+    const thisMonth = poFacet.thisMonth?.[0] || { count: 0, spend: 0 };
+    const lastMonth = poFacet.lastMonth?.[0] || { count: 0, spend: 0 };
+    const credit = poFacet.creditPayables?.[0] || { totalCreditOrders: 0, totalCreditAmount: 0, outstandingCredit: 0 };
+    const overdue = poFacet.overdueCredit?.[0] || { overdueCount: 0, overdueAmount: 0 };
+
+    const prMap = {};
+    let totalPRs = 0;
+    (prStats || []).forEach((item) => {
+      prMap[item._id] = item.count;
+      totalPRs += item.count;
+    });
+
+    const grMap = {};
+    let totalGRs = 0;
+    (grStats || []).forEach((item) => {
+      grMap[item._id] = item.count;
+      totalGRs += item.count;
+    });
+
+    const poStatusMap = {};
+    (poFacet.byStatus || []).forEach((item) => {
+      poStatusMap[item._id] = item.count;
+    });
+
+    return sendSuccess(res, 'Purchasing dashboard metrics retrieved successfully', {
+      totalPurchasesValue: overall.totalPurchasesValue,
+      totalOrdersCount: overall.totalOrders,
+      totalPaid: overall.totalPaid,
+      totalBalanceDue: overall.totalBalanceDue,
+      thisMonthSpend: thisMonth.spend,
+      thisMonthOrdersCount: thisMonth.count,
+      lastMonthSpend: lastMonth.spend,
+      lastMonthOrdersCount: lastMonth.count,
+      creditOverview: {
+        totalCreditOrders: credit.totalCreditOrders,
+        totalCreditAmount: credit.totalCreditAmount,
+        outstandingCredit: credit.outstandingCredit,
+        overdueCount: overdue.overdueCount,
+        overdueAmount: overdue.overdueAmount
+      },
+      purchaseOrdersByStatus: poStatusMap,
+      purchaseRequests: {
+        total: totalPRs,
+        pending: prMap['pending'] || 0,
+        approved: prMap['approved'] || 0,
+        rejected: prMap['rejected'] || 0,
+        converted: prMap['converted to purchase order'] || 0
+      },
+      goodsReceipts: {
+        total: totalGRs,
+        pendingInspection: grMap['pending inspection'] || 0,
+        completed: grMap['completed'] || 0
+      },
+      suppliers: {
+        total: totalSuppliers,
+        active: activeSuppliers
+      },
+      topSuppliers,
+      recentOrders,
+      recentRequests
+    });
+  } catch (error) {
+    return sendError(res, 'Failed to retrieve purchasing dashboard metrics', 500, error);
   }
 };
 

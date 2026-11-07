@@ -39,9 +39,13 @@ export const createPurchaseRequest = async (req, res) => {
 
     const estimatedTotalAmount = formattedItems.reduce((sum, item) => sum + item.estimatedTotal, 0);
 
+    const requesterId = req.user?.employee?._id || req.user?.employee || req.user?._id;
+    const requestedByModel = req.user?.employee ? 'Employee' : 'User';
+
     const purchaseRequest = await PurchaseRequest.create({
       requestNumber,
-      requestedBy: req.user?._id,
+      requestedBy: requesterId,
+      requestedByModel,
       department,
       warehouse: warehouse || null,
       items: formattedItems,
@@ -60,6 +64,7 @@ export const createPurchaseRequest = async (req, res) => {
       referenceId: purchaseRequest._id,
       action: 'submitted',
       actionBy: req.user?._id,
+      actionByModel: 'User',
       comment: `Purchase request ${requestNumber} submitted`
     });
 
@@ -90,6 +95,7 @@ export const createPurchaseRequest = async (req, res) => {
 
     return sendSuccess(res, 'Purchase request created successfully', populated, 201);
   } catch (error) {
+    console.error('Failed to create purchase request:', error);
     return sendError(res, 'Failed to create purchase request', 500, error);
   }
 };

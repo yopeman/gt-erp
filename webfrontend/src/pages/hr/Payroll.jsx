@@ -628,13 +628,13 @@ export default function Payroll() {
             <table className="w-full text-left text-xs sm:text-sm">
               <thead className="bg-slate-50 dark:bg-slate-900/60 text-xs uppercase font-bold text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700 sticky top-0">
                 <tr>
-                  <th className="px-4 py-3">Employee</th>
-                  <th className="px-4 py-3">Period</th>
-                  <th className="px-4 py-3 text-right">Gross Salary</th>
-                  <th className="px-4 py-3 text-right">Deductions</th>
-                  <th className="px-4 py-3 text-right">Net Payable</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3 text-right">Workflow</th>
+                  <th className="px-4 py-3">{t('employee')}</th>
+                  <th className="px-4 py-3">{t('payroll period')}</th>
+                  <th className="px-4 py-3 text-right">{t('gross salary')}</th>
+                  <th className="px-4 py-3 text-right">{t('deductions')}</th>
+                  <th className="px-4 py-3 text-right">{t('net salary')}</th>
+                  <th className="px-4 py-3">{t('status')}</th>
+                  <th className="px-4 py-3 text-right">{t('actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60">

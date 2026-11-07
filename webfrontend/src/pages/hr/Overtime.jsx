@@ -498,7 +498,7 @@ export default function Overtime() {
           <span className="flex items-center gap-1.5 font-semibold">
             <Clock className="w-3.5 h-3.5 text-primary-500" />
             <span>
-              Standard Day:{' '}
+              {t('Standard Day')}:{' '}
               <strong className="text-slate-800 dark:text-slate-100">
                 {companySetting?.payrollSettings?.overtimeRateRegular ? `${companySetting.payrollSettings.overtimeRateRegular}x` : '—'}
               </strong>
@@ -506,7 +506,7 @@ export default function Overtime() {
           </span>
           <span className="text-slate-300 dark:text-slate-700 hidden sm:inline">•</span>
           <span>
-            Weekend / Rest Day:{' '}
+            {t('Weekend / Rest Day')}:{' '}
             <strong className="text-slate-800 dark:text-slate-100">
               {companySetting?.payrollSettings?.overtimeRateWeekend ? `${companySetting.payrollSettings.overtimeRateWeekend}x` : '—'}
             </strong>
@@ -515,7 +515,7 @@ export default function Overtime() {
           <span className="flex items-center gap-1">
             <Sparkles className="w-3.5 h-3.5 text-amber-500" />
             <span>
-              Public Holiday:{' '}
+              {t('Public Holiday')}:{' '}
               <strong className="text-amber-700 dark:text-amber-300">
                 {companySetting?.payrollSettings?.overtimeRateHoliday ? `${companySetting.payrollSettings.overtimeRateHoliday}x` : '—'}
               </strong>
@@ -524,7 +524,7 @@ export default function Overtime() {
         </div>
         {companySetting?.workSchedule?.standardDailyHours && (
           <span className="text-[11px] text-slate-400">
-            Standard Shift Threshold: {companySetting.workSchedule.standardDailyHours} hrs/day
+            {t('Standard Shift Threshold')}: {companySetting.workSchedule.standardDailyHours} hrs/day
           </span>
         )}
       </div>
@@ -533,7 +533,7 @@ export default function Overtime() {
       <div className="flex flex-wrap items-center gap-3 p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800 text-xs">
         <div className="flex items-center gap-1.5 text-slate-500 font-semibold">
           <Filter className="w-3.5 h-3.5" />
-          <span>Filters:</span>
+          <span>{t('Filters')}:</span>
         </div>
 
         {/* Status Filter */}
@@ -542,10 +542,10 @@ export default function Overtime() {
           onChange={(e) => setFilterStatus(e.target.value)}
           className="px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-medium"
         >
-          <option value="all">All Statuses</option>
-          <option value="pending">Pending</option>
-          <option value="approved">Approved</option>
-          <option value="rejected">Rejected</option>
+          <option value="all">{t('All Statuses')}</option>
+          <option value="pending">{t('status.pending')}</option>
+          <option value="approved">{t('status.approved')}</option>
+          <option value="rejected">{t('status.rejected')}</option>
         </select>
 
         {/* Type Filter */}
@@ -554,10 +554,10 @@ export default function Overtime() {
           onChange={(e) => setFilterType(e.target.value)}
           className="px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-medium capitalize"
         >
-          <option value="all">All Overtime Types</option>
+          <option value="all">{t('All Overtime Types')}</option>
           {overtimeTypes.map((ot) => (
             <option key={ot.value} value={ot.value}>
-              {ot.label}
+              {t(ot.label)}
             </option>
           ))}
         </select>
@@ -569,10 +569,10 @@ export default function Overtime() {
             onChange={(e) => setFilterEmp(e.target.value)}
             className="px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-medium max-w-xs truncate"
           >
-            <option value="all">All Staff ({employees.length})</option>
+            <option value="all">{t('All Staff')} ({employees.length})</option>
             {employees.map((emp) => (
               <option key={emp._id} value={emp._id}>
-                {emp.fullName} ({emp.department})
+                {emp.fullName} ({t(emp.department)})
               </option>
             ))}
           </select>
@@ -587,7 +587,7 @@ export default function Overtime() {
             }}
             className="text-[11px] text-primary-500 hover:underline font-bold ml-auto"
           >
-            Reset Filters
+            {t('Reset Filters')}
           </button>
         )}
       </div>
@@ -743,15 +743,15 @@ export default function Overtime() {
             <table className="w-full text-left text-xs sm:text-sm">
               <thead className="bg-slate-50 dark:bg-slate-900/60 text-xs uppercase font-bold text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700 sticky top-0">
                 <tr>
-                  <th className="px-4 py-3.5">Employee</th>
-                  <th className="px-4 py-3.5">Date & Time</th>
-                  <th className="px-4 py-3.5">Type</th>
-                  <th className="px-4 py-3.5 text-center">Hours Worked</th>
-                  <th className="px-4 py-3.5 text-center">Calculation Rate</th>
-                  <th className="px-4 py-3.5">Reason / Project</th>
-                  <th className="px-4 py-3.5 text-center">Approval</th>
-                  <th className="px-4 py-3.5 text-center">Payment</th>
-                  <th className="px-4 py-3.5 text-right">Actions</th>
+                  <th className="px-4 py-3.5">{t('table.employee')}</th>
+                  <th className="px-4 py-3.5">{t('Date & Time')}</th>
+                  <th className="px-4 py-3.5">{t('table.type')}</th>
+                  <th className="px-4 py-3.5 text-center">{t('Hours Worked')}</th>
+                  <th className="px-4 py-3.5 text-center">{t('Calculation Rate')}</th>
+                  <th className="px-4 py-3.5">{t('Reason / Project')}</th>
+                  <th className="px-4 py-3.5 text-center">{t('Approval')}</th>
+                  <th className="px-4 py-3.5 text-center">{t('Payment')}</th>
+                  <th className="px-4 py-3.5 text-right">{t('table.actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60">

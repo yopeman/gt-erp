@@ -214,13 +214,13 @@ export default function LeaveRequests() {
             <table className="w-full text-left text-xs sm:text-sm">
               <thead className="bg-slate-50 dark:bg-slate-900/60 text-xs uppercase font-bold text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700 sticky top-0">
                 <tr>
-                  <th className="px-4 py-3">Employee</th>
-                  <th className="px-4 py-3">Leave Type</th>
-                  <th className="px-4 py-3">Start Date</th>
-                  <th className="px-4 py-3">End Date</th>
-                  <th className="px-4 py-3">Reason</th>
-                  <th className="px-4 py-3">Decision</th>
-                  {canDecide && <th className="px-4 py-3 text-right">Workflow</th>}
+                  <th className="px-4 py-3">{t('table.employee')}</th>
+                  <th className="px-4 py-3">{t('leave type')}</th>
+                  <th className="px-4 py-3">{t('start date')}</th>
+                  <th className="px-4 py-3">{t('end date')}</th>
+                  <th className="px-4 py-3">{t('table.reason')}</th>
+                  <th className="px-4 py-3">{t('table.status')}</th>
+                  {canDecide && <th className="px-4 py-3 text-right">{t('table.actions')}</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60">
@@ -252,13 +252,13 @@ export default function LeaveRequests() {
                               onClick={() => handleDecision(leave._id, 'accepted')}
                               className="px-2.5 py-1 text-xs font-bold text-emerald-700 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 rounded-lg transition"
                             >
-                              Approve
+                              {t('actions.approve')}
                             </button>
                             <button
                               onClick={() => handleDecision(leave._id, 'rejected')}
                               className="px-2.5 py-1 text-xs font-bold text-rose-700 bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 rounded-lg transition"
                             >
-                              Reject
+                              {t('actions.reject')}
                             </button>
                           </>
                         ) : (

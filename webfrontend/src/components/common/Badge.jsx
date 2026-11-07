@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from '../../i18n';
 
 const statusStyles = {
   active: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800',
@@ -41,15 +42,17 @@ const statusStyles = {
 };
 
 export default function Badge({ status, text, size = 'sm' }) {
+  const { t } = useTranslation();
   const normalized = (status || '').toLowerCase();
   const style = statusStyles[normalized] || 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700';
 
   const sizeClass = size === 'xs' ? 'px-2 py-0.5 text-[10px]' : 'px-2.5 py-0.5 text-xs';
+  const displayLabel = t(text || status);
 
   return (
     <span className={`inline-flex items-center gap-1 font-semibold rounded-full border ${sizeClass} ${style}`}>
       <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70" />
-      {text || status}
+      {displayLabel}
     </span>
   );
 }

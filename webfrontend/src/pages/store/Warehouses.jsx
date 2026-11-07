@@ -228,7 +228,7 @@ export default function Warehouses() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search warehouse name, code, address, contact person..."
+            placeholder={t('Search warehouse name, code, address, contact person...')}
             className="w-full pl-9 pr-4 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-hidden focus:ring-2 focus:ring-primary-500"
           />
         </div>
@@ -239,9 +239,9 @@ export default function Warehouses() {
             onChange={(e) => setStatusFilter(e.target.value)}
             className="px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:ring-primary-500"
           >
-            <option value="">All Statuses</option>
-            <option value="active">Active Only</option>
-            <option value="inactive">Inactive Only</option>
+            <option value="">{t('All Statuses')}</option>
+            <option value="active">{t('Active Only')}</option>
+            <option value="inactive">{t('Inactive Only')}</option>
           </select>
         </div>
       </div>
@@ -324,30 +324,30 @@ export default function Warehouses() {
                   <div className="mt-5 pt-3 border-t border-slate-100 dark:border-slate-700/60 space-y-3">
                     <div className="grid grid-cols-2 gap-2 text-xs">
                       <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-900/50">
-                        <span className="text-[10px] text-slate-400 block font-semibold">SKUs Stored</span>
-                        <span className="font-bold text-slate-800 dark:text-slate-200">{totalItems} items</span>
+                        <span className="text-[10px] text-slate-400 block font-semibold">{t('SKUs Stored')}</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200">{totalItems}</span>
                       </div>
                       <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-900/50">
-                        <span className="text-[10px] text-slate-400 block font-semibold">Stock Quantity</span>
-                        <span className="font-black text-primary-600 dark:text-primary-400">{totalUnits.toLocaleString()} units</span>
+                        <span className="text-[10px] text-slate-400 block font-semibold">{t('Stock Quantity')}</span>
+                        <span className="font-black text-primary-600 dark:text-primary-400">{totalUnits.toLocaleString()}</span>
                       </div>
                     </div>
 
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-[11px] text-slate-400">Valuation: {formatCurrency(totalValuation)}</span>
+                      <span className="text-[11px] text-slate-400">{t('Valuation')}: {formatCurrency(totalValuation)}</span>
                       {hasRole(['admin', 'storekeeper']) && (
                         <div className="flex items-center gap-1">
                           <button
                             onClick={() => handleOpenEdit(wh)}
                             className="p-1.5 rounded-lg text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-950/40 transition"
-                            title="Edit Warehouse"
+                            title={t('actions.edit')}
                           >
                             <Edit className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleDelete(wh._id)}
                             className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition"
-                            title="Delete Warehouse"
+                            title={t('actions.delete')}
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>

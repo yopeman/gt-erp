@@ -1,6 +1,9 @@
 import React from 'react';
+import { useTranslation } from '../../i18n';
 
 export default function StatCard({ title, value, subtitle, icon: Icon, tag, trend, onClick }) {
+  const { t } = useTranslation();
+
   return (
     <div 
       onClick={onClick}
@@ -14,7 +17,7 @@ export default function StatCard({ title, value, subtitle, icon: Icon, tag, tren
         </div>
         {tag && (
           <span className="px-2 py-0.5 text-[10px] font-bold uppercase rounded-md bg-slate-100 text-slate-600 dark:bg-slate-700/60 dark:text-slate-300">
-            {tag}
+            {t(tag)}
           </span>
         )}
       </div>
@@ -24,11 +27,11 @@ export default function StatCard({ title, value, subtitle, icon: Icon, tag, tren
           {value}
         </div>
         <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
-          {title}
+          {t(title)}
         </div>
         {subtitle && (
           <div className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
-            {subtitle}
+            {t(subtitle)}
           </div>
         )}
       </div>

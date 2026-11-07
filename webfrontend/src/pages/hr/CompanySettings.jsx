@@ -553,7 +553,7 @@ export default function CompanySettings() {
         <div>
           <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
             <Building2 className="w-6 h-6 text-primary-500" />
-            <span>Company & Holiday Settings</span>
+            <span>{t('Company & Holiday Settings')}</span>
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
             Configure office locations, attendance geofence perimeters, shift schedules, standard leave entitlements, and public holidays.
@@ -580,7 +580,7 @@ export default function CompanySettings() {
               className="px-4 py-2.5 bg-primary-500 hover:bg-primary-600 text-white font-bold text-xs rounded-xl shadow-md transition active:scale-95 flex items-center gap-2 disabled:opacity-50"
             >
               <Save className="w-4 h-4" />
-              <span>{savingSettings ? 'Saving...' : 'Save HR Settings'}</span>
+              <span>{savingSettings ? 'Saving...' : t('Save HR Settings')}</span>
             </button>
           ) : (
             <button
@@ -588,7 +588,7 @@ export default function CompanySettings() {
               className="px-4 py-2.5 bg-primary-500 hover:bg-primary-600 text-white font-bold text-xs rounded-xl shadow-md transition active:scale-95 flex items-center gap-2"
             >
               <Plus className="w-4 h-4" />
-              <span>Add Holiday</span>
+              <span>{t('Add Holiday')}</span>
             </button>
           )}
         </div>
@@ -631,7 +631,7 @@ export default function CompanySettings() {
           }`}
         >
           <Settings className="w-4 h-4" />
-          <span>General HR & Geofence Policy</span>
+          <span>{t('General HR & Geofence Policy')}</span>
         </button>
         <button
           onClick={() => setActiveTab('holidays')}
@@ -642,7 +642,7 @@ export default function CompanySettings() {
           }`}
         >
           <CalendarDays className="w-4 h-4" />
-          <span>Public Holidays Calendar ({holidays.length})</span>
+          <span>{t('Public Holidays Calendar')} ({holidays.length})</span>
         </button>
       </div>
 

@@ -738,7 +738,7 @@ export default function LeaveManagement({ initialTab = 'requests' }) {
           }`}
         >
           <CalendarDays className="w-4 h-4" />
-          <span>Leave Requests ({leaves.length})</span>
+          <span>{t('leave requests')} ({leaves.length})</span>
         </button>
         <button
           onClick={() => setActiveTab('balances')}
@@ -749,7 +749,7 @@ export default function LeaveManagement({ initialTab = 'requests' }) {
           }`}
         >
           <Scale className="w-4 h-4" />
-          <span>Leave Balances & Quotas ({balances.length})</span>
+          <span>{t('leave balances')} ({balances.length})</span>
         </button>
       </div>
 
@@ -1031,13 +1031,13 @@ export default function LeaveManagement({ initialTab = 'requests' }) {
                 <table className="w-full text-left text-xs sm:text-sm">
                   <thead className="bg-slate-50 dark:bg-slate-900/60 text-xs uppercase font-bold text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700 sticky top-0">
                     <tr>
-                      <th className="px-4 py-3.5">Employee</th>
-                      <th className="px-4 py-3.5">Leave Type</th>
-                      <th className="px-4 py-3.5">Duration & Dates</th>
-                      <th className="px-4 py-3.5">Reason & Attachment</th>
-                      <th className="px-4 py-3.5 text-center">Available Balance</th>
-                      <th className="px-4 py-3.5 text-center">Status</th>
-                      <th className="px-4 py-3.5 text-right">Actions</th>
+                      <th className="px-4 py-3.5">{t('employee')}</th>
+                      <th className="px-4 py-3.5">{t('leave type')}</th>
+                      <th className="px-4 py-3.5">{t('work duration')}</th>
+                      <th className="px-4 py-3.5">{t('purpose')}</th>
+                      <th className="px-4 py-3.5 text-center">{t('remaining balance')}</th>
+                      <th className="px-4 py-3.5 text-center">{t('status')}</th>
+                      <th className="px-4 py-3.5 text-right">{t('actions')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60">
@@ -1453,14 +1453,14 @@ export default function LeaveManagement({ initialTab = 'requests' }) {
                 <table className="w-full text-left text-xs sm:text-sm">
                   <thead className="bg-slate-50 dark:bg-slate-900/60 text-xs uppercase font-bold text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700 sticky top-0">
                     <tr>
-                      <th className="px-4 py-3.5">Employee</th>
-                      <th className="px-4 py-3.5">Year</th>
-                      <th className="px-4 py-3.5">Leave Type</th>
-                      <th className="px-4 py-3.5 text-center">Total Entitlement</th>
-                      <th className="px-4 py-3.5 text-center">Used Days</th>
-                      <th className="px-4 py-3.5 text-center">Remaining Days</th>
-                      <th className="px-4 py-3.5 text-center">Payable</th>
-                      <th className="px-4 py-3.5 text-right">Actions</th>
+                      <th className="px-4 py-3.5">{t('employee')}</th>
+                      <th className="px-4 py-3.5">{t('year')}</th>
+                      <th className="px-4 py-3.5">{t('leave type')}</th>
+                      <th className="px-4 py-3.5 text-center">{t('total')}</th>
+                      <th className="px-4 py-3.5 text-center">{t('used', 'Used')}</th>
+                      <th className="px-4 py-3.5 text-center">{t('remaining days')}</th>
+                      <th className="px-4 py-3.5 text-center">{t('paid')}</th>
+                      <th className="px-4 py-3.5 text-right">{t('actions')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60">

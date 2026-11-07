@@ -32,6 +32,16 @@ import StockAdjustments from './pages/store/StockAdjustments';
 import StockMovements from './pages/store/StockMovements';
 import Warehouses from './pages/store/Warehouses';
 
+// Purchasing & Procurement Module Pages (Section 4 of requirements PDF)
+import PurchasingDashboard from './pages/purchasing/PurchasingDashboard';
+import PurchaseRequests from './pages/purchasing/PurchaseRequests';
+import PurchaseOrders from './pages/purchasing/PurchaseOrders';
+import Suppliers from './pages/purchasing/Suppliers';
+import GoodsReceipts from './pages/purchasing/GoodsReceipts';
+import CreditPurchases from './pages/purchasing/CreditPurchases';
+import PurchasePayments from './pages/purchasing/PurchasePayments';
+import SupplierReturns from './pages/purchasing/SupplierReturns';
+
 // Public Careers & Job Application Pages
 import PublicJobs from './pages/careers/PublicJobs';
 import PublicJobDetail from './pages/careers/PublicJobDetail';
@@ -44,6 +54,9 @@ import UpcomingModule from './pages/modules/UpcomingModule';
 
 function IndexRedirect() {
   const { user } = useAuth();
+  if (user?.roles?.includes('purchaser') && !user?.roles?.includes('admin') && !user?.roles?.includes('hr')) {
+    return <Navigate to="/purchasing/dashboard" replace />;
+  }
   if (user?.roles?.includes('storekeeper') && !user?.roles?.includes('admin') && !user?.roles?.includes('hr')) {
     return <Navigate to="/store/dashboard" replace />;
   }
@@ -176,8 +189,74 @@ export default function App() {
             }
           />
 
+          {/* Purchasing & Procurement Module Subroutes (Section 4) */}
+          <Route path="purchasing" element={<Navigate to="/purchasing/dashboard" replace />} />
+          <Route
+            path="purchasing/dashboard"
+            element={
+              <ProtectedRoute roles={['admin', 'purchaser', 'manager', 'finance']}>
+                <PurchasingDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="purchasing/requests"
+            element={
+              <ProtectedRoute roles={['admin', 'purchaser', 'manager', 'storekeeper']}>
+                <PurchaseRequests />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="purchasing/orders"
+            element={
+              <ProtectedRoute roles={['admin', 'purchaser', 'manager', 'finance']}>
+                <PurchaseOrders />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="purchasing/suppliers"
+            element={
+              <ProtectedRoute roles={['admin', 'purchaser', 'manager', 'finance']}>
+                <Suppliers />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="purchasing/goods-receipts"
+            element={
+              <ProtectedRoute roles={['admin', 'purchaser', 'manager', 'storekeeper']}>
+                <GoodsReceipts />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="purchasing/credit"
+            element={
+              <ProtectedRoute roles={['admin', 'purchaser', 'manager', 'finance']}>
+                <CreditPurchases />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="purchasing/payments"
+            element={
+              <ProtectedRoute roles={['admin', 'purchaser', 'manager', 'finance']}>
+                <PurchasePayments />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="purchasing/returns"
+            element={
+              <ProtectedRoute roles={['admin', 'purchaser', 'manager', 'storekeeper']}>
+                <SupplierReturns />
+              </ProtectedRoute>
+            }
+          />
+
           {/* Non-Blocking Planned Modules */}
-          <Route path="purchasing/*" element={<UpcomingModule moduleId="purchasing" />} />
           <Route path="production/*" element={<UpcomingModule moduleId="production" />} />
           <Route path="crm/*" element={<UpcomingModule moduleId="crm" />} />
           <Route path="finance/*" element={<UpcomingModule moduleId="finance" />} />

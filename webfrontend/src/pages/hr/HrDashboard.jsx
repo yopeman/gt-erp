@@ -120,7 +120,7 @@ export default function HrDashboard() {
         <StatCard
           title={t('nav.employees')}
           value={loading ? '...' : stats.totalEmployees}
-          subtitle={`${stats.activeEmployees} active workforce`}
+          subtitle={`${stats.activeEmployees} ${t('active workforce')}`}
           icon={Users}
           tag="Staff"
           onClick={() => navigate('/hr/employees')}
@@ -128,7 +128,7 @@ export default function HrDashboard() {
         <StatCard
           title={t('nav.attendance')}
           value={loading ? '...' : stats.attendancesToday}
-          subtitle="Today's attendance log"
+          subtitle={t("today's attendance log")}
           icon={Clock}
           tag="Daily"
           onClick={() => navigate('/hr/attendance')}
@@ -136,7 +136,7 @@ export default function HrDashboard() {
         <StatCard
           title={t('nav.leave')}
           value={loading ? '...' : stats.pendingLeaves}
-          subtitle="Pending decision"
+          subtitle={t('pending decision')}
           icon={CalendarDays}
           tag="Approvals"
           onClick={() => navigate('/hr/leave')}
@@ -144,7 +144,7 @@ export default function HrDashboard() {
         <StatCard
           title={t('nav.clearances')}
           value={loading ? '...' : stats.pendingClearances}
-          subtitle="Ongoing exit signoffs"
+          subtitle={t('ongoing exit signoffs')}
           icon={FileCheck2}
           tag="Clearance"
           onClick={() => navigate('/hr/clearances')}
@@ -172,20 +172,20 @@ export default function HrDashboard() {
           <div className="mt-3 divide-y divide-slate-100 dark:divide-slate-700/60">
             {recentLeaves.length === 0 ? (
               <div className="py-6 text-center text-xs text-slate-400">
-                No leave requests filed yet in the system.
+                {t('no leave requests filed yet in the system.')}
               </div>
             ) : (
               recentLeaves.map((item) => (
                 <div key={item._id} className="py-2.5 flex items-center justify-between">
                   <div>
                     <div className="text-xs font-bold text-slate-900 dark:text-slate-100">
-                      {item.employee?.fullName || 'Employee'}
+                      {item.employee?.fullName || t('Employee')}
                     </div>
                     <div className="text-[11px] text-slate-400">
-                      {item.type} • {new Date(item.startDate).toLocaleDateString()} to {new Date(item.endDate).toLocaleDateString()}
+                      {t(item.type)} • {new Date(item.startDate).toLocaleDateString()} to {new Date(item.endDate).toLocaleDateString()}
                     </div>
                   </div>
-                  <Badge status={item.decision} text={item.decision} />
+                  <Badge status={item.decision} text={t(item.decision)} />
                 </div>
               ))
             )}
@@ -211,20 +211,20 @@ export default function HrDashboard() {
           <div className="mt-3 divide-y divide-slate-100 dark:divide-slate-700/60">
             {recentAttendances.length === 0 ? (
               <div className="py-6 text-center text-xs text-slate-400">
-                No attendance punches recorded today.
+                {t('no attendance punches recorded today.')}
               </div>
             ) : (
               recentAttendances.map((att) => (
                 <div key={att._id} className="py-2.5 flex items-center justify-between">
                   <div>
                     <div className="text-xs font-bold text-slate-900 dark:text-slate-100">
-                      {att.employee?.fullName || 'Employee'}
+                      {att.employee?.fullName || t('Employee')}
                     </div>
                     <div className="text-[11px] text-slate-400">
                       In: {att.startTime || '--:--'} • Out: {att.endTime || '--:--'}
                     </div>
                   </div>
-                  <Badge status={att.type || 'onTime'} text={att.type || 'On Time'} />
+                  <Badge status={att.type || 'onTime'} text={t(att.type || 'On Time')} />
                 </div>
               ))
             )}

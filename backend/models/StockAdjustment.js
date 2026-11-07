@@ -66,13 +66,23 @@ const stockAdjustmentSchema = new mongoose.Schema(
     attachments: [adjustmentAttachmentSchema],
     requestedBy: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Employee',
-      required: [true, 'Requested by employee is required']
+      refPath: 'requestedByModel',
+      required: [true, 'Requested by user or employee is required']
+    },
+    requestedByModel: {
+      type: String,
+      enum: ['User', 'Employee'],
+      default: 'User'
     },
     approvedBy: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Employee',
+      refPath: 'approvedByModel',
       default: null
+    },
+    approvedByModel: {
+      type: String,
+      enum: ['User', 'Employee'],
+      default: 'User'
     },
     status: {
       type: String,
@@ -94,7 +104,7 @@ stockAdjustmentSchema.pre('validate', function (next) {
   if (this.systemQuantity !== undefined && this.physicalQuantity !== undefined && this.difference === undefined) {
     this.difference = this.physicalQuantity - this.systemQuantity;
   }
-  next();
+  if (typeof next === 'function') next();
 });
 
 stockAdjustmentSchema.index({ adjustmentNumber: 1 });

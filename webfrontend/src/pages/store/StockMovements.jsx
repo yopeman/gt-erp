@@ -229,30 +229,30 @@ export default function StockMovements() {
       {/* Overview Stat Badges */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-xs">
-          <span className="text-[11px] text-slate-400 block font-semibold">Total Logged</span>
+          <span className="text-[11px] text-slate-400 block font-semibold">{t('Total Logged')}</span>
           <span className="text-lg sm:text-xl font-black text-slate-900 dark:text-slate-100">
-            {movements.length} transactions
+            {movements.length}
           </span>
         </div>
 
         <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-xs">
-          <span className="text-[11px] text-emerald-600 dark:text-emerald-400 block font-semibold">Inward Flow</span>
+          <span className="text-[11px] text-emerald-600 dark:text-emerald-400 block font-semibold">{t('Inward Flow')}</span>
           <span className="text-lg sm:text-xl font-black text-emerald-600 dark:text-emerald-400">
-            +{totalInwardUnits.toLocaleString()} units
+            +{totalInwardUnits.toLocaleString()}
           </span>
         </div>
 
         <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-xs">
-          <span className="text-[11px] text-indigo-600 dark:text-indigo-400 block font-semibold">Outward Releases</span>
+          <span className="text-[11px] text-indigo-600 dark:text-indigo-400 block font-semibold">{t('Outward Releases')}</span>
           <span className="text-lg sm:text-xl font-black text-indigo-600 dark:text-indigo-400">
-            -{totalOutwardUnits.toLocaleString()} units
+            -{totalOutwardUnits.toLocaleString()}
           </span>
         </div>
 
         <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-xs">
-          <span className="text-[11px] text-slate-400 block font-semibold">Active Locations</span>
+          <span className="text-[11px] text-slate-400 block font-semibold">{t('Active Locations')}</span>
           <span className="text-lg sm:text-xl font-black text-slate-900 dark:text-slate-100">
-            {warehouses.length} Warehouses
+            {warehouses.length} {t('nav.warehouses')}
           </span>
         </div>
       </div>
@@ -265,7 +265,7 @@ export default function StockMovements() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search movement #, item, warehouse, staff..."
+            placeholder={t('Search movement #, item, warehouse, staff...')}
             className="w-full pl-9 pr-4 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-hidden focus:ring-2 focus:ring-primary-500"
           />
         </div>
@@ -276,10 +276,10 @@ export default function StockMovements() {
             onChange={(e) => setTypeFilter(e.target.value)}
             className="px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:ring-primary-500"
           >
-            <option value="">All Movement Types</option>
+            <option value="">{t('All Movement Types')}</option>
             {MOVEMENT_TYPES.map((m) => (
               <option key={m.value} value={m.value}>
-                {m.label}
+                {t(m.label)}
               </option>
             ))}
           </select>
@@ -289,7 +289,7 @@ export default function StockMovements() {
             onChange={(e) => setWarehouseFilter(e.target.value)}
             className="px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:ring-primary-500"
           >
-            <option value="">All Warehouses</option>
+            <option value="">{t('All Warehouses')}</option>
             {warehouses.map((w) => (
               <option key={w._id} value={w._id}>
                 {w.warehouseName}
@@ -302,7 +302,7 @@ export default function StockMovements() {
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
             className="px-2.5 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100"
-            title="Start date"
+            title={t('common.startDate')}
           />
 
           <input
@@ -310,7 +310,7 @@ export default function StockMovements() {
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
             className="px-2.5 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100"
-            title="End date"
+            title={t('common.endDate')}
           />
         </div>
       </div>
@@ -403,16 +403,16 @@ export default function StockMovements() {
               <table className="w-full text-left text-xs">
                 <thead className="bg-slate-50 dark:bg-slate-900/50 uppercase font-semibold text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700 sticky top-0">
                   <tr>
-                    <th className="px-4 py-3">Movement #</th>
-                    <th className="px-4 py-3">Timestamp</th>
-                    <th className="px-4 py-3">Warehouse</th>
-                    <th className="px-4 py-3">SKU & Item</th>
-                    <th className="px-4 py-3">Transaction Type</th>
-                    <th className="px-4 py-3 text-center">Quantity</th>
-                    <th className="px-4 py-3 text-right">Unit Cost</th>
-                    <th className="px-4 py-3 text-right">Total Valuation</th>
-                    <th className="px-4 py-3">Logged By</th>
-                    <th className="px-4 py-3 text-right">Details</th>
+                    <th className="px-4 py-3">{t('Movement #')}</th>
+                    <th className="px-4 py-3">{t('table.timestamp')}</th>
+                    <th className="px-4 py-3">{t('table.warehouse')}</th>
+                    <th className="px-4 py-3">{t('SKU & Item')}</th>
+                    <th className="px-4 py-3">{t('Transaction Type')}</th>
+                    <th className="px-4 py-3 text-center">{t('table.quantity')}</th>
+                    <th className="px-4 py-3 text-right">{t('table.unitPrice')}</th>
+                    <th className="px-4 py-3 text-right">{t('Total Valuation')}</th>
+                    <th className="px-4 py-3">{t('Logged By')}</th>
+                    <th className="px-4 py-3 text-right">{t('table.actions')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60">
@@ -450,7 +450,7 @@ export default function StockMovements() {
                                 : 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400'
                             }`}
                           >
-                            {mov.movementType}
+                            {t(mov.movementType)}
                           </span>
                         </td>
                         <td className="px-4 py-3 text-center">
@@ -475,7 +475,7 @@ export default function StockMovements() {
                           <button
                             onClick={() => handleOpenDetails(mov)}
                             className="p-1.5 rounded-lg text-slate-400 hover:text-primary-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition"
-                            title="Inspect movement"
+                            title={t('actions.viewDetails')}
                           >
                             <Eye className="w-4 h-4" />
                           </button>

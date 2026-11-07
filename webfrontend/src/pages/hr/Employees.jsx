@@ -647,7 +647,7 @@ export default function Employees() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by name, email, position, ID, or phone..."
+            placeholder={t('search by name, email, position, id, or phone...')}
             className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
           />
         </div>
@@ -657,15 +657,15 @@ export default function Employees() {
           onChange={(e) => setDeptFilter(e.target.value)}
           className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs sm:text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500"
         >
-          <option value="">All Departments</option>
-          <option value="Pre-press">Pre-press</option>
-          <option value="Press/Offset">Press / Offset</option>
-          <option value="Digital Print">Digital Print</option>
-          <option value="Finishing">Post-press / Finishing</option>
-          <option value="Store">Store & Inventory</option>
-          <option value="Finance">Finance</option>
-          <option value="HR">HR & Admin</option>
-          <option value="Sales">Sales & Marketing</option>
+          <option value="">{t('all departments')}</option>
+          <option value="Pre-press">{t('pre-press')}</option>
+          <option value="Press/Offset">{t('press/offset')}</option>
+          <option value="Digital Print">{t('digital print')}</option>
+          <option value="Finishing">{t('post-press / finishing')}</option>
+          <option value="Store">{t('store')}</option>
+          <option value="Finance">{t('finance')}</option>
+          <option value="HR">{t('hr')}</option>
+          <option value="Sales">{t('sales')}</option>
         </select>
 
         <select
@@ -673,23 +673,23 @@ export default function Employees() {
           onChange={(e) => setStatusFilter(e.target.value)}
           className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs sm:text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500"
         >
-          <option value="">All Statuses</option>
-          <option value="active">Active</option>
-          <option value="inactive">Inactive</option>
-          <option value="suspended">Suspended</option>
-          <option value="terminated">Terminated</option>
+          <option value="">{t('all statuses')}</option>
+          <option value="active">{t('active')}</option>
+          <option value="inactive">{t('inactive')}</option>
+          <option value="suspended">{t('suspended')}</option>
+          <option value="terminated">{t('terminated')}</option>
         </select>
       </div>
 
       {/* Data Presentation */}
       {loading ? (
         <div className="p-12 text-center text-xs text-slate-400 animate-pulse">
-          Fetching workforce records from backend...
+          {t('fetching workforce records from backend...')}
         </div>
       ) : filteredEmployees.length === 0 ? (
         <EmptyState
-          title="No employees registered"
-          message="No employees match your filter or the database is currently empty. Add your first employee to initiate records."
+          title={t('no employees registered')}
+          message={t('no employees match your filter or the database is currently empty. add your first employee to initiate records.')}
           actionText={canManage ? t('actions.createEmployee') : null}
           onAction={handleOpenCreateModal}
           icon={Users}
@@ -845,15 +845,15 @@ export default function Employees() {
             <table className="w-full text-left text-xs sm:text-sm">
               <thead className="bg-slate-50 dark:bg-slate-900/60 text-xs uppercase font-bold text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700 sticky top-0">
                 <tr>
-                  <th className="px-4 py-3">Employee</th>
-                  <th className="px-4 py-3">National ID</th>
-                  <th className="px-4 py-3">Department</th>
-                  <th className="px-4 py-3">Position</th>
-                  <th className="px-4 py-3">Phone</th>
-                  <th className="px-4 py-3">Type</th>
-                  <th className="px-4 py-3">System Access</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3 text-right">Actions</th>
+                  <th className="px-4 py-3">{t('employee')}</th>
+                  <th className="px-4 py-3">{t('national id')}</th>
+                  <th className="px-4 py-3">{t('department')}</th>
+                  <th className="px-4 py-3">{t('position')}</th>
+                  <th className="px-4 py-3">{t('phone')}</th>
+                  <th className="px-4 py-3">{t('type')}</th>
+                  <th className="px-4 py-3">{t('system access')}</th>
+                  <th className="px-4 py-3">{t('status')}</th>
+                  <th className="px-4 py-3 text-right">{t('actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60">

@@ -54,7 +54,7 @@ const stockBalanceSchema = new mongoose.Schema(
 // Calculate available quantity before save: Available Quantity = Quantity on Hand - Reserved Quantity
 stockBalanceSchema.pre('save', function (next) {
   this.availableQuantity = (this.quantityOnHand || 0) - (this.reservedQuantity || 0);
-  next();
+  if (typeof next === 'function') next();
 });
 
 // Compound unique index for item + warehouse

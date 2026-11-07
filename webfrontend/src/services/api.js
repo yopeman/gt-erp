@@ -59,7 +59,12 @@ export async function apiRequest(endpoint, options = {}) {
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-      const errorMsg = data.message || `Request failed with status ${response.status}`;
+      const detail = data.error
+        ? (typeof data.error === 'string' ? data.error : data.error.message || JSON.stringify(data.error))
+        : '';
+      const errorMsg = detail && data.message
+        ? `${data.message} (${detail})`
+        : (detail || data.message || `Request failed with status ${response.status}`);
       const error = new Error(errorMsg);
       error.status = response.status;
       error.data = data;

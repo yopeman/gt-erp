@@ -68,10 +68,13 @@ export const recordStockMovementWithBalance = async ({
   note = '',
   attachments = [],
   performedBy = null,
+  performedByModel = 'User',
   approvedBy = null,
+  approvedByModel = 'User',
   movementDate = new Date()
 }) => {
   const code = movementNumber || generateCode('MOV');
+  const validRefId = referenceId && typeof referenceId === 'string' && referenceId.trim() !== '' ? referenceId : (referenceId || null);
 
   const movement = await StockMovement.create({
     movementNumber: code,
@@ -82,12 +85,14 @@ export const recordStockMovementWithBalance = async ({
     unitCost,
     totalCost: Math.abs(quantity) * (unitCost || 0),
     referenceType,
-    referenceId,
+    referenceId: validRefId,
     reason,
     note,
     attachments,
-    performedBy,
-    approvedBy,
+    performedBy: performedBy || null,
+    performedByModel: performedByModel || 'User',
+    approvedBy: approvedBy || null,
+    approvedByModel: approvedByModel || 'User',
     movementDate
   });
 

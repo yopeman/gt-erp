@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from '../../i18n';
 import api from '../../services/api';
 import {
   Briefcase,
@@ -15,6 +16,7 @@ import {
 } from 'lucide-react';
 
 export default function PublicJobs() {
+  const { t, lang, setLanguage } = useTranslation();
   const [positions, setPositions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -74,11 +76,20 @@ export default function PublicJobs() {
             </div>
           </Link>
 
-          {/* Empty right area or branding tag */}
+          {/* Right area with language switch */}
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => setLanguage(lang === 'en' ? 'am' : 'en')}
+              className="px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-1.5 transition active:scale-95"
+              title="Switch Language"
+            >
+              <span>{lang === 'en' ? '🇪🇹' : '🇬🇧'}</span>
+              <span className="font-bold">{lang === 'en' ? 'አማርኛ' : 'EN'}</span>
+            </button>
+
             <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary-50 dark:bg-primary-950/40 text-primary-600 dark:text-primary-400 text-xs font-semibold">
               <Sparkles className="w-3.5 h-3.5" />
-              <span>Join Our Team</span>
+              <span>{t('Join Our Team')}</span>
             </span>
           </div>
         </div>

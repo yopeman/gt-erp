@@ -24,6 +24,7 @@ import {
 
 const AVAILABLE_ROLES = [
   { id: 'admin', label: 'Admin (Full Access)', desc: 'Full system management and configuration' },
+  { id: 'purchaser', label: 'Purchaser (Procurement)', desc: 'Purchase requests, POs, suppliers, credit & GRV' },
   { id: 'storekeeper', label: 'Storekeeper (Store & Inventory)', desc: 'Warehouse, stock in/out, clearances & SIV' },
   { id: 'hr', label: 'HR Officer', desc: 'Employee records, attendance, leave & payroll' },
   { id: 'manager', label: 'Department Manager', desc: 'Departmental approvals and team oversight' },
@@ -35,6 +36,8 @@ const getRoleBadgeStyle = (role) => {
   switch (role) {
     case 'admin':
       return 'bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border-purple-500/30';
+    case 'purchaser':
+      return 'bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border-teal-500/30 font-bold';
     case 'storekeeper':
       return 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-500/40 font-bold';
     case 'hr':
@@ -272,7 +275,7 @@ export default function UsersPage() {
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search by user name, email, department or role..."
+            placeholder={t('search...')}
             className="w-full pl-9 pr-4 py-2 text-xs sm:text-sm rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-500/30 transition"
           />
         </div>
@@ -285,12 +288,12 @@ export default function UsersPage() {
               onChange={(e) => setRoleFilter(e.target.value)}
               className="w-full pl-9 pr-8 py-2 text-xs sm:text-sm rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-500/30 text-slate-700 dark:text-slate-200 appearance-none cursor-pointer"
             >
-              <option value="">All Roles ({users.length})</option>
+              <option value="">{t('all')} {t('roles')} ({users.length})</option>
               {AVAILABLE_ROLES.map((r) => {
                 const count = users.filter((u) => u.roles?.includes(r.id)).length;
                 return (
                   <option key={r.id} value={r.id}>
-                    {r.label} ({count})
+                    {t(r.id)} ({count})
                   </option>
                 );
               })}
@@ -418,11 +421,11 @@ export default function UsersPage() {
             <table className="w-full text-left text-xs sm:text-sm">
               <thead className="bg-slate-50 dark:bg-slate-900/60 text-xs uppercase font-bold text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700 sticky top-0">
                 <tr>
-                  <th className="px-4 py-3">User & Email</th>
-                  <th className="px-4 py-3">Linked Employee Profile</th>
-                  <th className="px-4 py-3">Assigned Roles</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3 text-right">Actions</th>
+                  <th className="px-4 py-3">{t('user')} & {t('email')}</th>
+                  <th className="px-4 py-3">{t('employee')} {t('profile')}</th>
+                  <th className="px-4 py-3">{t('roles')}</th>
+                  <th className="px-4 py-3">{t('status')}</th>
+                  <th className="px-4 py-3 text-right">{t('actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60">
