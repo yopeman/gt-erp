@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../../i18n';
 import { useAuth } from '../../context/AuthContext';
 import Modal from '../../components/common/Modal';
@@ -34,7 +35,15 @@ import {
   User,
   Check,
   KeyRound,
-  Copy
+  Copy,
+  Boxes,
+  PackageCheck,
+  PackageMinus,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  ArrowUpRight,
+  ExternalLink
 } from 'lucide-react';
 
 const ETHIOPIAN_BANKS = [
@@ -110,8 +119,10 @@ const INITIAL_FORM_STATE = {
 
 export default function Employees() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { hasRole } = useAuth();
   const canManage = hasRole(['admin', 'hr']);
+  const isStorekeeper = hasRole(['admin', 'storekeeper']);
 
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -131,9 +142,20 @@ export default function Employees() {
   // Detail Modal State
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
-  const [profileTab, setProfileTab] = useState('overview'); // 'overview' | 'address' | 'emergency' | 'bank' | 'docs' | 'education'
+  const [profileTab, setProfileTab] = useState('overview'); // 'overview' | 'address' | 'emergency' | 'bank' | 'docs' | 'education' | 'store'
   const [docModalOpen, setDocModalOpen] = useState(false);
   const [eduModalOpen, setEduModalOpen] = useState(false);
+
+  // Store Custody & Clearance State
+  const [storeClearance, setStoreClearance] = useState(null);
+  const [storeRequests, setStoreRequests] = useState([]);
+  const [loadingStoreData, setLoadingStoreData] = useState(false);
+  const [signingClearance, setSigningClearance] = useState(false);
+  const [clearanceRemarksModal, setClearanceRemarksModal] = useState({
+    isOpen: false,
+    status: 'rejected',
+    remarks: ''
+  });
 
   // ID Card Generator Modal State
   const [idCardEmployee, setIdCardEmployee] = useState(null);
@@ -170,6 +192,86 @@ export default function Employees() {
       console.error('Error fetching employees:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchEmployeeStoreData = async (employeeId) => {
+    if (!employeeId) return;
+    setLoadingStoreData(true);
+    try {
+      const clearanceRes = await api.get(`/clearances?employee=${employeeId}`);
+      const clearanceList =
+        clearanceRes.success && Array.isArray(clearanceRes.data)
+          ? clearanceRes.data
+          : Array.isArray(clearanceRes)
+          ? clearanceRes
+          : [];
+      setStoreClearance(clearanceList[0] || null);
+
+      const requestsRes = await api.get(`/stock-requests?requestedBy=${employeeId}&limit=50`);
+      const reqList =
+        requestsRes.success && Array.isArray(requestsRes.data)
+          ? requestsRes.data
+          : Array.isArray(requestsRes)
+          ? requestsRes
+          : [];
+      setStoreRequests(reqList);
+    } catch (err) {
+      console.error('Failed to load employee store custody/clearance:', err);
+    } finally {
+      setLoadingStoreData(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isDetailOpen && profileTab === 'store' && selectedEmployee?._id) {
+      fetchEmployeeStoreData(selectedEmployee._id);
+    }
+  }, [isDetailOpen, profileTab, selectedEmployee]);
+
+  const handleUpdateStoreClearance = async (newStatus, customRemarks = '') => {
+    if (!storeClearance) return;
+    const storeItem = storeClearance.checklist?.find((i) =>
+      i.title?.toLowerCase().includes('store') || i.title?.toLowerCase().includes('inventory')
+    );
+    if (!storeItem) return;
+
+    setSigningClearance(true);
+    try {
+      const res = await api.patch(`/clearances/${storeClearance._id}/checklist/${storeItem._id}`, {
+        status: newStatus,
+        remarks:
+          customRemarks ||
+          (newStatus === 'cleared'
+            ? 'All tools, equipment and assets returned to warehouse.'
+            : 'Store clearance updated.')
+      });
+      if (res.success) {
+        await fetchEmployeeStoreData(selectedEmployee._id);
+        setClearanceRemarksModal({ isOpen: false, status: 'rejected', remarks: '' });
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to update store clearance');
+    } finally {
+      setSigningClearance(false);
+    }
+  };
+
+  const handleInitializeClearance = async () => {
+    if (!selectedEmployee?._id) return;
+    setSigningClearance(true);
+    try {
+      const res = await api.post('/clearances', {
+        employee: selectedEmployee._id,
+        reason: 'Store custody audit & exit clearance initialization'
+      });
+      if (res.success) {
+        await fetchEmployeeStoreData(selectedEmployee._id);
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to initialize clearance');
+    } finally {
+      setSigningClearance(false);
     }
   };
 
@@ -646,9 +748,14 @@ export default function Employees() {
                         {emp.user.roles?.map((r) => (
                           <span
                             key={r}
-                            className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-primary-50 dark:bg-primary-950/60 text-primary-600 dark:text-primary-400 border border-primary-500/20"
+                            className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase border ${
+                              r === 'storekeeper'
+                                ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-500/40'
+                                : 'bg-primary-50 dark:bg-primary-950/60 text-primary-600 dark:text-primary-400 border-primary-500/20'
+                            }`}
                           >
-                            {r}
+                            {r === 'storekeeper' && <Boxes className="w-3 h-3 text-amber-600 dark:text-amber-400" />}
+                            <span>{r}</span>
                           </span>
                         ))}
                       </div>
@@ -658,18 +765,35 @@ export default function Employees() {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between pt-1">
-                  <button
-                    onClick={() => {
-                      setSelectedEmployee(emp);
-                      setProfileTab('overview');
-                      setIsDetailOpen(true);
-                    }}
-                    className="px-3 py-1.5 rounded-lg text-xs font-semibold text-primary-600 bg-primary-50 dark:bg-primary-950/60 hover:bg-primary-100 transition flex items-center gap-1"
-                  >
-                    <Eye className="w-3.5 h-3.5" />
-                    <span>View Profile</span>
-                  </button>
+                <div className="flex items-center justify-between pt-1 flex-wrap gap-1">
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => {
+                        setSelectedEmployee(emp);
+                        setProfileTab('overview');
+                        setIsDetailOpen(true);
+                      }}
+                      className="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-primary-600 bg-primary-50 dark:bg-primary-950/60 hover:bg-primary-100 transition flex items-center gap-1"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>Profile</span>
+                    </button>
+
+                    {(isStorekeeper || canManage) && (
+                      <button
+                        onClick={() => {
+                          setSelectedEmployee(emp);
+                          setProfileTab('store');
+                          setIsDetailOpen(true);
+                        }}
+                        className="px-2 py-1.5 rounded-lg text-xs font-semibold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition flex items-center gap-1 border border-amber-200 dark:border-amber-800"
+                        title="Store Custody & Clearance"
+                      >
+                        <Boxes className="w-3.5 h-3.5 text-amber-600" />
+                        <span>Custody</span>
+                      </button>
+                    )}
+                  </div>
 
                   <div className="flex items-center gap-1">
                     <button
@@ -773,9 +897,14 @@ export default function Employees() {
                           {emp.user.roles?.map((r) => (
                             <span
                               key={r}
-                              className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase bg-primary-50 dark:bg-primary-950/60 text-primary-600 dark:text-primary-400 border border-primary-500/20"
+                              className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase border ${
+                                r === 'storekeeper'
+                                  ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-500/40'
+                                  : 'bg-primary-50 dark:bg-primary-950/60 text-primary-600 dark:text-primary-400 border-primary-500/20'
+                              }`}
                             >
-                              {r}
+                              {r === 'storekeeper' && <Boxes className="w-3 h-3 text-amber-600 dark:text-amber-400" />}
+                              <span>{r}</span>
                             </span>
                           ))}
                         </div>
@@ -799,6 +928,19 @@ export default function Employees() {
                       >
                         Profile
                       </button>
+                      {(isStorekeeper || canManage) && (
+                        <button
+                          onClick={() => {
+                            setSelectedEmployee(emp);
+                            setProfileTab('store');
+                            setIsDetailOpen(true);
+                          }}
+                          className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40 rounded-lg transition"
+                          title="Store Custody & Clearance"
+                        >
+                          <Boxes className="w-4 h-4 text-amber-600" />
+                        </button>
+                      )}
                       <button
                         onClick={() => setIdCardEmployee(emp)}
                         className="p-1.5 text-slate-400 hover:text-sky-600 hover:bg-sky-50 dark:hover:bg-sky-950/40 rounded-lg transition"
@@ -910,7 +1052,8 @@ export default function Employees() {
                 { id: 'emergency', label: 'Emergency & Warranty' },
                 { id: 'bank', label: `Bank Accounts (${Array.isArray(selectedEmployee.accountDetails) ? selectedEmployee.accountDetails.length : 1})` },
                 { id: 'docs', label: `Documents (${selectedEmployee.documents?.length || 0})` },
-                { id: 'education', label: `Education (${selectedEmployee.educations?.length || 0})` }
+                { id: 'education', label: `Education (${selectedEmployee.educations?.length || 0})` },
+                { id: 'store', label: 'Store Custody & Clearance' }
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -1237,6 +1380,342 @@ export default function Employees() {
                       </div>
                     ))}
                   </div>
+                )}
+              </div>
+            )}
+
+            {/* Tab 7: Store Custody & Clearance */}
+            {profileTab === 'store' && (
+              <div className="space-y-4 text-xs">
+                {/* Header Banner */}
+                <div className="p-3.5 rounded-2xl bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/20 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                      <Boxes className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="font-black text-sm text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                        <span>Store Custody & Exit Clearance</span>
+                        {isStorekeeper && (
+                          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase bg-amber-500 text-white">
+                            Storekeeper Mode
+                          </span>
+                        )}
+                      </h4>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                        Manage tools, machinery equipment custody, material requisitions, and exit store clearance sign-offs.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => fetchEmployeeStoreData(selectedEmployee._id)}
+                      disabled={loadingStoreData}
+                      className="p-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition"
+                      title="Refresh Store Data"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${loadingStoreData ? 'animate-spin' : ''}`} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsDetailOpen(false);
+                        navigate('/store/outward');
+                      }}
+                      className="px-3 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center gap-1.5"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      <span>Issue Material / SIV</span>
+                    </button>
+                  </div>
+                </div>
+
+                {loadingStoreData ? (
+                  <div className="p-8 text-center text-xs text-slate-400 animate-pulse">
+                    Loading live store clearance checklist & requisitions history...
+                  </div>
+                ) : (
+                  <>
+                    {/* SECTION 1: EXIT STORE CLEARANCE SIGN-OFF */}
+                    <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <PackageCheck className="w-4 h-4 text-primary-500" />
+                          <h5 className="font-bold text-xs text-slate-900 dark:text-slate-100 uppercase tracking-wider">
+                            Store & Inventory Exit Clearance Sign-Off
+                          </h5>
+                        </div>
+                        {storeClearance && (
+                          <Badge
+                            status={storeClearance.status}
+                            text={`Clearance: ${storeClearance.status.toUpperCase()}`}
+                          />
+                        )}
+                      </div>
+
+                      {(() => {
+                        if (!storeClearance) {
+                          return (
+                            <div className="p-3.5 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                              <div>
+                                <p className="font-semibold text-slate-700 dark:text-slate-300">
+                                  No Exit Clearance Initialized
+                                </p>
+                                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                                  This employee does not have an active offboarding clearance workflow. When staff separates, storekeepers verify that all borrowed tools and keys are returned.
+                                </p>
+                              </div>
+                              {(isStorekeeper || canManage) && (
+                                <button
+                                  type="button"
+                                  onClick={handleInitializeClearance}
+                                  disabled={signingClearance}
+                                  className="px-3 py-1.5 bg-slate-900 dark:bg-slate-700 hover:bg-slate-800 text-white font-bold text-xs rounded-xl transition whitespace-nowrap self-start sm:self-auto shrink-0"
+                                >
+                                  {signingClearance ? 'Initializing...' : 'Initialize Clearance'}
+                                </button>
+                              )}
+                            </div>
+                          );
+                        }
+
+                        const storeItem = storeClearance.checklist?.find((i) =>
+                          i.title?.toLowerCase().includes('store') || i.title?.toLowerCase().includes('inventory')
+                        );
+
+                        if (!storeItem) {
+                          return (
+                            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 text-slate-500">
+                              Store checklist item not defined in this clearance record.
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/40 space-y-3">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                              <div>
+                                <span className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                                  {storeItem.status === 'cleared' ? (
+                                    <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                                  ) : storeItem.status === 'rejected' ? (
+                                    <XCircle className="w-4 h-4 text-rose-500 shrink-0" />
+                                  ) : (
+                                    <Clock className="w-4 h-4 text-amber-500 shrink-0" />
+                                  )}
+                                  <span>{storeItem.title}</span>
+                                </span>
+                                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                                  {storeItem.remarks || 'No remarks recorded yet.'}
+                                </p>
+                              </div>
+
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className={`px-2.5 py-1 rounded-lg text-[11px] font-black uppercase ${
+                                    storeItem.status === 'cleared'
+                                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                                      : storeItem.status === 'rejected'
+                                      ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/30'
+                                      : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30'
+                                  }`}
+                                >
+                                  {storeItem.status}
+                                </span>
+                              </div>
+                            </div>
+
+                            {storeItem.confirmedAt && (
+                              <div className="text-[11px] text-slate-400 dark:text-slate-500 border-t border-slate-200/60 dark:border-slate-800 pt-2 flex items-center justify-between">
+                                <span>Sign-off Record:</span>
+                                <span>{new Date(storeItem.confirmedAt).toLocaleString()}</span>
+                              </div>
+                            )}
+
+                            {/* Storekeeper Action Buttons */}
+                            {(isStorekeeper || canManage) && (
+                              <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-200/60 dark:border-slate-800">
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateStoreClearance('cleared')}
+                                  disabled={signingClearance || storeItem.status === 'cleared'}
+                                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center gap-1.5"
+                                >
+                                  <CheckCircle2 className="w-3.5 h-3.5" />
+                                  <span>Sign Off Clearance (Cleared)</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setClearanceRemarksModal({
+                                      isOpen: true,
+                                      status: 'rejected',
+                                      remarks: storeItem.remarks || ''
+                                    })
+                                  }
+                                  disabled={signingClearance}
+                                  className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center gap-1.5"
+                                >
+                                  <XCircle className="w-3.5 h-3.5" />
+                                  <span>Hold / Missing Tools</span>
+                                </button>
+
+                                {storeItem.status !== 'pending' && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleUpdateStoreClearance('pending', 'Inspection reset')}
+                                    disabled={signingClearance}
+                                    className="px-2.5 py-1.5 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold text-xs rounded-xl transition"
+                                  >
+                                    Reset to Pending
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
+                    </div>
+
+                    {/* SECTION 2: MATERIAL & TOOLS REQUISITIONS (CUSTODY) */}
+                    <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <PackageMinus className="w-4 h-4 text-amber-500" />
+                          <h5 className="font-bold text-xs text-slate-900 dark:text-slate-100 uppercase tracking-wider">
+                            Material Requisitions & Issued Tool History ({storeRequests.length})
+                          </h5>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsDetailOpen(false);
+                            navigate('/store/outward');
+                          }}
+                          className="text-[11px] font-bold text-primary-500 hover:text-primary-600 flex items-center gap-1"
+                        >
+                          <span>Go to Outward Portal</span>
+                          <ArrowUpRight className="w-3 h-3" />
+                        </button>
+                      </div>
+
+                      {storeRequests.length === 0 ? (
+                        <div className="p-6 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 text-center text-xs text-slate-400">
+                          No store material requests or tool issuances on record for this employee.
+                        </div>
+                      ) : (
+                        <>
+                          {/* Mobile Cards (< sm) */}
+                          <div className="block sm:hidden space-y-2.5">
+                            {storeRequests.map((req) => (
+                              <div
+                                key={req._id}
+                                className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 space-y-2"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span className="font-mono font-bold text-xs text-slate-900 dark:text-slate-100">
+                                    {req.requestNumber}
+                                  </span>
+                                  <Badge status={req.status} text={req.status} />
+                                </div>
+                                <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between">
+                                  <span>{req.warehouse?.warehouseName || 'Warehouse'}</span>
+                                  <span>{req.createdAt ? new Date(req.createdAt).toLocaleDateString() : '-'}</span>
+                                </div>
+                                {req.purpose && (
+                                  <p className="text-[11px] text-slate-600 dark:text-slate-300 italic">
+                                    "{req.purpose}"
+                                  </p>
+                                )}
+                                <div className="pt-2 border-t border-slate-200/60 dark:border-slate-800 space-y-1">
+                                  <span className="text-[10px] uppercase font-bold text-slate-400 block">
+                                    Items Issued / Requested:
+                                  </span>
+                                  {req.items?.map((it, idx) => (
+                                    <div
+                                      key={idx}
+                                      className="flex items-center justify-between text-[11px] text-slate-700 dark:text-slate-300"
+                                    >
+                                      <span>{it.item?.itemName || 'Item'}</span>
+                                      <span className="font-mono font-bold">
+                                        {it.issuedQuantity || 0} / {it.requestedQuantity}{' '}
+                                        <span className="text-slate-400 font-normal">{it.unitOfMeasurement}</span>
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Desktop Table (>= sm) */}
+                          <div className="hidden sm:block overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
+                            <table className="w-full text-left text-xs">
+                              <thead className="bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 uppercase text-[10px] font-bold border-b border-slate-200 dark:border-slate-800">
+                                <tr>
+                                  <th className="px-3 py-2.5">Request #</th>
+                                  <th className="px-3 py-2.5">Date</th>
+                                  <th className="px-3 py-2.5">Warehouse</th>
+                                  <th className="px-3 py-2.5">Priority</th>
+                                  <th className="px-3 py-2.5">Items & Quantities</th>
+                                  <th className="px-3 py-2.5">Status</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                {storeRequests.map((req) => (
+                                  <tr
+                                    key={req._id}
+                                    className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition"
+                                  >
+                                    <td className="px-3 py-2.5 font-mono font-bold text-slate-900 dark:text-slate-100">
+                                      {req.requestNumber}
+                                    </td>
+                                    <td className="px-3 py-2.5 text-slate-500 dark:text-slate-400">
+                                      {req.createdAt ? new Date(req.createdAt).toLocaleDateString() : '-'}
+                                    </td>
+                                    <td className="px-3 py-2.5 text-slate-700 dark:text-slate-300">
+                                      {req.warehouse?.warehouseName || '-'}
+                                    </td>
+                                    <td className="px-3 py-2.5">
+                                      <span
+                                        className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                                          req.priority === 'urgent'
+                                            ? 'bg-rose-500/10 text-rose-600'
+                                            : req.priority === 'high'
+                                            ? 'bg-amber-500/10 text-amber-600'
+                                            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                                        }`}
+                                      >
+                                        {req.priority || 'normal'}
+                                      </span>
+                                    </td>
+                                    <td className="px-3 py-2.5">
+                                      <div className="space-y-0.5 max-w-xs">
+                                        {req.items?.map((it, idx) => (
+                                          <div key={idx} className="text-[11px] flex items-center justify-between gap-2">
+                                            <span className="truncate">{it.item?.itemName || 'Item'}</span>
+                                            <span className="font-mono font-semibold shrink-0">
+                                              {it.issuedQuantity || 0}/{it.requestedQuantity} {it.unitOfMeasurement}
+                                            </span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </td>
+                                    <td className="px-3 py-2.5">
+                                      <Badge status={req.status} text={req.status} />
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </>
                 )}
               </div>
             )}
@@ -2185,6 +2664,59 @@ export default function Employees() {
           </div>
         </Modal>
       )}
+
+      {/* Clearance Remarks Submodal */}
+      <Modal
+        isOpen={clearanceRemarksModal.isOpen}
+        onClose={() => setClearanceRemarksModal({ isOpen: false, status: 'rejected', remarks: '' })}
+        title="Hold / Flag Unreturned Store Assets"
+        maxWidth="max-w-md"
+      >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleUpdateStoreClearance(clearanceRemarksModal.status, clearanceRemarksModal.remarks);
+          }}
+          className="space-y-3"
+        >
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Specify the unreturned tools, machinery parts, or equipment preventing this employee's exit clearance.
+          </p>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+              Storekeeper Remarks / Missing Asset Notes *
+            </label>
+            <textarea
+              required
+              rows={3}
+              value={clearanceRemarksModal.remarks}
+              onChange={(e) =>
+                setClearanceRemarksModal({ ...clearanceRemarksModal, remarks: e.target.value })
+              }
+              placeholder="e.g. Cordless drill kit #2 and safety helmet not yet returned to Warehouse B."
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs focus:ring-2 focus:ring-primary-500"
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+            <button
+              type="button"
+              onClick={() => setClearanceRemarksModal({ isOpen: false, status: 'rejected', remarks: '' })}
+              className="px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+            >
+              {t('actions.cancel')}
+            </button>
+            <button
+              type="submit"
+              disabled={signingClearance}
+              className="px-4 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-xs transition"
+            >
+              {signingClearance ? 'Saving...' : 'Hold Store Clearance'}
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

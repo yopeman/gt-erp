@@ -25,6 +25,13 @@ import {
   Globe,
   Settings,
   Building2,
+  Boxes,
+  ArrowDownToLine,
+  ArrowUpFromLine,
+  Repeat,
+  SlidersHorizontal,
+  History,
+  Warehouse,
   ChevronDown,
   ChevronRight,
   X
@@ -51,7 +58,14 @@ const iconMap = {
   TrendingUp,
   Landmark,
   Settings,
-  Building2
+  Building2,
+  Boxes,
+  ArrowDownToLine,
+  ArrowUpFromLine,
+  Repeat,
+  SlidersHorizontal,
+  History,
+  Warehouse
 };
 
 export default function Sidebar({ isOpen, onClose }) {
@@ -63,6 +77,7 @@ export default function Sidebar({ isOpen, onClose }) {
   const [expandedModules, setExpandedModules] = useState({
     hr: true,
     admin: true,
+    store: true,
   });
 
   const toggleModule = (moduleId) => {

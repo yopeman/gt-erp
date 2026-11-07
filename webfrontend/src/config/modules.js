@@ -12,7 +12,7 @@ export const ERP_MODULES = [
     status: 'active',
     submodules: [
       { id: 'dashboard', path: '/hr/dashboard', titleKey: 'nav.hrDashboard', icon: 'LayoutDashboard', requiredRoles: ['admin', 'hr', 'manager', 'employee'], status: 'active' },
-      { id: 'employees', path: '/hr/employees', titleKey: 'nav.employees', icon: 'UserCheck', requiredRoles: ['admin', 'hr', 'manager'], status: 'active' },
+      { id: 'employees', path: '/hr/employees', titleKey: 'nav.employees', icon: 'UserCheck', requiredRoles: ['admin', 'hr', 'manager', 'storekeeper'], status: 'active' },
       { id: 'attendance', path: '/hr/attendance', titleKey: 'nav.attendance', icon: 'Clock', requiredRoles: ['admin', 'hr', 'manager', 'employee'], status: 'active' },
       { id: 'overtimes', path: '/hr/overtimes', titleKey: 'nav.overtime', icon: 'Timer', requiredRoles: ['admin', 'hr', 'manager', 'employee'], status: 'active' },
       { id: 'leave-management', path: '/hr/leave', titleKey: 'nav.leave', icon: 'CalendarDays', requiredRoles: ['admin', 'hr', 'manager', 'employee'], status: 'active' },
@@ -20,7 +20,7 @@ export const ERP_MODULES = [
       { id: 'recruitment', path: '/hr/recruitment', titleKey: 'nav.recruitment', icon: 'Briefcase', requiredRoles: ['admin', 'hr'], status: 'active' },
       { id: 'careers', path: '/careers', titleKey: 'nav.careers', icon: 'Globe', requiredRoles: [], status: 'active' },
       { id: 'internships', path: '/hr/internships', titleKey: 'nav.internships', icon: 'GraduationCap', requiredRoles: ['admin', 'hr', 'manager'], status: 'active' },
-      { id: 'clearances', path: '/hr/clearances', titleKey: 'nav.clearances', icon: 'FileCheck2', requiredRoles: ['admin', 'hr', 'manager', 'employee'], status: 'active' },
+      { id: 'clearances', path: '/hr/clearances', titleKey: 'nav.clearances', icon: 'FileCheck2', requiredRoles: ['admin', 'hr', 'manager', 'storekeeper', 'employee'], status: 'active' },
       { id: 'settings', path: '/hr/settings', titleKey: 'nav.companySettings', icon: 'Building2', requiredRoles: ['admin', 'hr'], status: 'active' },
     ]
   },
@@ -39,14 +39,18 @@ export const ERP_MODULES = [
     titleKey: 'modules.store',
     icon: 'Package',
     requiredRoles: ['admin', 'storekeeper', 'manager'],
-    status: 'upcoming',
+    status: 'active',
     phase: 'Phase 2',
     description: 'Inventory, Raw Materials, Stock Movements, Inward GRV, Outward Releases',
     submodules: [
-      { id: 'store-dashboard', path: '/store/dashboard', titleKey: 'nav.dashboard', icon: 'LayoutDashboard', status: 'upcoming' },
-      { id: 'store-inventory', path: '/store/inventory', titleKey: 'Store Inventory', icon: 'Boxes', status: 'upcoming' },
-      { id: 'store-inward', path: '/store/inward', titleKey: 'Stock Inward (GRV)', icon: 'ArrowDownToLine', status: 'upcoming' },
-      { id: 'store-outward', path: '/store/outward', titleKey: 'Stock Outward', icon: 'ArrowUpFromLine', status: 'upcoming' }
+      { id: 'store-dashboard', path: '/store/dashboard', titleKey: 'nav.storeDashboard', icon: 'LayoutDashboard', requiredRoles: ['admin', 'storekeeper', 'manager'], status: 'active' },
+      { id: 'store-inventory', path: '/store/inventory', titleKey: 'nav.storeInventory', icon: 'Boxes', requiredRoles: ['admin', 'storekeeper', 'manager'], status: 'active' },
+      { id: 'store-inward', path: '/store/inward', titleKey: 'nav.storeInward', icon: 'ArrowDownToLine', requiredRoles: ['admin', 'storekeeper', 'manager'], status: 'active' },
+      { id: 'store-outward', path: '/store/outward', titleKey: 'nav.storeOutward', icon: 'ArrowUpFromLine', requiredRoles: ['admin', 'storekeeper', 'manager'], status: 'active' },
+      { id: 'store-transfers', path: '/store/transfers', titleKey: 'nav.storeTransfers', icon: 'Repeat', requiredRoles: ['admin', 'storekeeper', 'manager'], status: 'active' },
+      { id: 'store-adjustments', path: '/store/adjustments', titleKey: 'nav.storeAdjustments', icon: 'SlidersHorizontal', requiredRoles: ['admin', 'storekeeper', 'manager'], status: 'active' },
+      { id: 'store-movements', path: '/store/movements', titleKey: 'nav.storeMovements', icon: 'History', requiredRoles: ['admin', 'storekeeper', 'manager'], status: 'active' },
+      { id: 'store-warehouses', path: '/store/warehouses', titleKey: 'nav.storeWarehouses', icon: 'Warehouse', requiredRoles: ['admin', 'storekeeper', 'manager'], status: 'active' },
     ]
   },
   {

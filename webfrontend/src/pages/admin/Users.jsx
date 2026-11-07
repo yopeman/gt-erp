@@ -16,8 +16,37 @@ import {
   UserCheck,
   Briefcase,
   Building,
-  User
+  User,
+  Search,
+  Filter,
+  Boxes
 } from 'lucide-react';
+
+const AVAILABLE_ROLES = [
+  { id: 'admin', label: 'Admin (Full Access)', desc: 'Full system management and configuration' },
+  { id: 'storekeeper', label: 'Storekeeper (Store & Inventory)', desc: 'Warehouse, stock in/out, clearances & SIV' },
+  { id: 'hr', label: 'HR Officer', desc: 'Employee records, attendance, leave & payroll' },
+  { id: 'manager', label: 'Department Manager', desc: 'Departmental approvals and team oversight' },
+  { id: 'finance', label: 'Finance Officer', desc: 'Accounts, budgets, vouchers and settlements' },
+  { id: 'employee', label: 'Staff / Employee', desc: 'Self-service portal, clock-in, requests' }
+];
+
+const getRoleBadgeStyle = (role) => {
+  switch (role) {
+    case 'admin':
+      return 'bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border-purple-500/30';
+    case 'storekeeper':
+      return 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-500/40 font-bold';
+    case 'hr':
+      return 'bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border-sky-500/30';
+    case 'manager':
+      return 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border-indigo-500/30';
+    case 'finance':
+      return 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-500/30';
+    default:
+      return 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700';
+  }
+};
 
 export default function UsersPage() {
   const { t } = useTranslation();
@@ -26,6 +55,8 @@ export default function UsersPage() {
   const [users, setUsers] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [roleFilter, setRoleFilter] = useState('');
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -181,6 +212,21 @@ export default function UsersPage() {
     }
   };
 
+  const filteredUsers = users.filter((u) => {
+    const term = searchTerm.toLowerCase().trim();
+    const matchesSearch =
+      !term ||
+      u.fullName?.toLowerCase().includes(term) ||
+      u.email?.toLowerCase().includes(term) ||
+      u.employee?.fullName?.toLowerCase().includes(term) ||
+      u.employee?.department?.toLowerCase().includes(term) ||
+      u.roles?.some((r) => r.toLowerCase().includes(term));
+
+    const matchesRole = !roleFilter || u.roles?.includes(roleFilter);
+
+    return matchesSearch && matchesRole;
+  });
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -218,23 +264,69 @@ export default function UsersPage() {
         </div>
       </div>
 
+      {/* Search and Role Filter Bar */}
+      <div className="flex flex-col sm:flex-row items-center gap-3 bg-white dark:bg-slate-800 p-3 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-xs">
+        <div className="relative flex-1 w-full">
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search by user name, email, department or role..."
+            className="w-full pl-9 pr-4 py-2 text-xs sm:text-sm rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-500/30 transition"
+          />
+        </div>
+
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="relative w-full sm:w-56">
+            <Filter className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+            <select
+              value={roleFilter}
+              onChange={(e) => setRoleFilter(e.target.value)}
+              className="w-full pl-9 pr-8 py-2 text-xs sm:text-sm rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-500/30 text-slate-700 dark:text-slate-200 appearance-none cursor-pointer"
+            >
+              <option value="">All Roles ({users.length})</option>
+              {AVAILABLE_ROLES.map((r) => {
+                const count = users.filter((u) => u.roles?.includes(r.id)).length;
+                return (
+                  <option key={r.id} value={r.id}>
+                    {r.label} ({count})
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+        </div>
+      </div>
+
       {loading ? (
         <div className="p-12 text-center text-xs text-slate-400 animate-pulse">
           Loading system users and employee links from live API...
         </div>
-      ) : users.length === 0 ? (
+      ) : filteredUsers.length === 0 ? (
         <EmptyState
-          title="No system users found"
-          message="No user accounts retrieved from backend."
-          actionText={t('actions.createUser')}
-          onAction={handleOpenCreateModal}
+          title={searchTerm || roleFilter ? "No matching users found" : "No system users found"}
+          message={
+            searchTerm || roleFilter
+              ? "Try adjusting your search query or role filter criteria."
+              : "No user accounts retrieved from backend."
+          }
+          actionText={searchTerm || roleFilter ? "Clear Filters" : t('actions.createUser')}
+          onAction={
+            searchTerm || roleFilter
+              ? () => {
+                  setSearchTerm('');
+                  setRoleFilter('');
+                }
+              : handleOpenCreateModal
+          }
           icon={Shield}
         />
       ) : (
         <>
           {/* Mobile Card Deck (< md) */}
           <div className="block md:hidden space-y-3">
-            {users.map((u) => (
+            {filteredUsers.map((u) => (
               <div
                 key={u._id}
                 className="p-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-xs space-y-3"
@@ -287,9 +379,12 @@ export default function UsersPage() {
                   {u.roles?.map((role) => (
                     <span
                       key={role}
-                      className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase bg-primary-50 dark:bg-primary-950/60 text-primary-600 dark:text-primary-400 border border-primary-500/20"
+                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] uppercase border ${getRoleBadgeStyle(
+                        role
+                      )}`}
                     >
-                      {role}
+                      {role === 'storekeeper' && <Boxes className="w-3 h-3 text-amber-600 dark:text-amber-400" />}
+                      <span>{role}</span>
                     </span>
                   ))}
                 </div>
@@ -331,7 +426,7 @@ export default function UsersPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60">
-                {users.map((u) => (
+                {filteredUsers.map((u) => (
                   <tr key={u._id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2.5">
@@ -384,9 +479,14 @@ export default function UsersPage() {
                         {u.roles?.map((role) => (
                           <span
                             key={role}
-                            className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase bg-primary-50 dark:bg-primary-950/60 text-primary-600 dark:text-primary-400 border border-primary-500/20"
+                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] uppercase border ${getRoleBadgeStyle(
+                              role
+                            )}`}
                           >
-                            {role}
+                            {role === 'storekeeper' && (
+                              <Boxes className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+                            )}
+                            <span>{role}</span>
                           </span>
                         ))}
                       </div>
@@ -516,25 +616,38 @@ export default function UsersPage() {
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">
               Assign System Roles (RBAC Permissions)
             </label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
-              {['admin', 'hr', 'manager', 'finance', 'employee'].map((role) => (
-                <label
-                  key={role}
-                  className={`p-2.5 rounded-xl border flex items-center gap-2 cursor-pointer transition ${
-                    formData.roles.includes(role)
-                      ? 'bg-primary-50 dark:bg-primary-950/60 border-primary-500 text-primary-600 dark:text-primary-400 font-bold'
-                      : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={formData.roles.includes(role)}
-                    onChange={() => handleRoleToggle(role)}
-                    className="accent-primary-500 rounded"
-                  />
-                  <span className="uppercase">{role}</span>
-                </label>
-              ))}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+              {AVAILABLE_ROLES.map((r) => {
+                const isSelected = formData.roles.includes(r.id);
+                return (
+                  <label
+                    key={r.id}
+                    className={`p-2.5 rounded-xl border flex items-start gap-2.5 cursor-pointer transition ${
+                      isSelected
+                        ? 'bg-primary-50/70 dark:bg-primary-950/40 border-primary-500 text-primary-700 dark:text-primary-300 font-bold'
+                        : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 text-slate-700 dark:text-slate-300'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => handleRoleToggle(r.id)}
+                      className="accent-primary-500 rounded mt-0.5"
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-1.5 uppercase font-bold text-xs">
+                        {r.id === 'storekeeper' && (
+                          <Boxes className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                        )}
+                        <span>{r.label}</span>
+                      </div>
+                      <p className="text-[11px] font-normal text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
+                        {r.desc}
+                      </p>
+                    </div>
+                  </label>
+                );
+              })}
             </div>
           </div>
 

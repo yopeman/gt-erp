@@ -20,7 +20,7 @@ router.use(protect);
 router.get('/my-clearance', getMyClearance);
 
 // Checklist items & Final approval
-router.patch('/:id/checklist/:itemId', authorizeRoles('admin', 'hr', 'manager'), updateChecklistItem);
+router.patch('/:id/checklist/:itemId', authorizeRoles('admin', 'hr', 'manager', 'storekeeper'), updateChecklistItem);
 router.patch('/:id/final-approve', authorizeRoles('admin', 'hr'), finalApproveClearance);
 
 // Clearance CRUD

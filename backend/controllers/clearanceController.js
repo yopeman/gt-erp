@@ -28,7 +28,7 @@ export const createClearance = async (req, res) => {
     const { employee, reason, checklist } = req.body;
 
     const userRoles = req.user?.roles || [];
-    const canManage = userRoles.some((r) => ['admin', 'hr'].includes(r));
+    const canManage = userRoles.some((r) => ['admin', 'hr', 'storekeeper', 'manager'].includes(r));
 
     let targetEmployeeId = employee;
 
@@ -138,7 +138,7 @@ export const getClearances = async (req, res) => {
     } = req.query;
 
     const userRoles = req.user?.roles || [];
-    const canManage = userRoles.some((r) => ['admin', 'hr'].includes(r));
+    const canManage = userRoles.some((r) => ['admin', 'hr', 'storekeeper', 'manager'].includes(r));
 
     const query = {};
 
@@ -203,7 +203,7 @@ export const getClearanceById = async (req, res) => {
     }
 
     const userRoles = req.user?.roles || [];
-    const canManage = userRoles.some((r) => ['admin', 'hr'].includes(r));
+    const canManage = userRoles.some((r) => ['admin', 'hr', 'storekeeper', 'manager'].includes(r));
     if (!canManage) {
       const myEmpId = await resolveUserEmployeeId(req.user);
       if (!myEmpId || clearance.employee?._id?.toString() !== myEmpId.toString()) {
