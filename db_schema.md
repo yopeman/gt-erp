@@ -223,7 +223,7 @@ Examples:
 The central collection for all materials and products.
 - _id
 - item name
-- item code (unique)
+- item code (unique, autoincremented default: GT-001 with prefix GT-)
 - description
 - category: ObjectId refer Inventory Categories
 - item type: raw material, finished product, spare part, consumable, fixed asset

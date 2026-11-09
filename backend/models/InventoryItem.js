@@ -135,6 +135,39 @@ inventoryItemSchema.index({ preferredSupplier: 1 });
 inventoryItemSchema.index({ status: 1 });
 inventoryItemSchema.index({ isDeleted: 1 });
 
+// Automatically assign autoincremented itemCode with prefix GT- if not provided
+inventoryItemSchema.pre('validate', async function () {
+  if (!this.itemCode || !this.itemCode.trim()) {
+    try {
+      const items = await mongoose.model('InventoryItem').find(
+        { itemCode: { $regex: /^GT-\d+$/i } },
+        { itemCode: 1 }
+      ).lean();
+
+      let maxNumber = 0;
+      for (const item of items) {
+        const match = item.itemCode?.match(/^GT-(\d+)$/i);
+        if (match) {
+          const num = parseInt(match[1], 10);
+          if (!isNaN(num) && num > maxNumber) {
+            maxNumber = num;
+          }
+        }
+      }
+
+      let nextNumber = maxNumber + 1;
+      let candidateCode = `GT-${String(nextNumber).padStart(3, '0')}`;
+      while (await mongoose.model('InventoryItem').exists({ itemCode: candidateCode })) {
+        nextNumber++;
+        candidateCode = `GT-${String(nextNumber).padStart(3, '0')}`;
+      }
+      this.itemCode = candidateCode;
+    } catch {
+      if (!this.itemCode) this.itemCode = 'GT-001';
+    }
+  }
+});
+
 const InventoryItem = mongoose.model('InventoryItem', inventoryItemSchema);
 
 export default InventoryItem;

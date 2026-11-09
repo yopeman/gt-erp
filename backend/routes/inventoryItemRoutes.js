@@ -4,13 +4,16 @@ import {
   getItems,
   getItemById,
   updateItem,
-  deleteItem
+  deleteItem,
+  getNextItemCode
 } from '../controllers/inventoryItemController.js';
 import { protect } from '../middleware/auth.js';
 
 const router = express.Router();
 
 router.use(protect);
+
+router.get('/next-code', getNextItemCode);
 
 router.route('/')
   .get(getItems)

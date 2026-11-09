@@ -200,15 +200,43 @@ export default function StoreInventory() {
     return matchesSearch && matchesWarehouse && matchesStock;
   });
 
+  // Compute next GT-XXX item code from loaded items as client-side instant preview/fallback
+  const getClientNextItemCode = () => {
+    let maxNum = 0;
+    items.forEach((it) => {
+      const match = it.itemCode?.match(/^GT-(\d+)$/i);
+      if (match) {
+        const n = parseInt(match[1], 10);
+        if (!isNaN(n) && n > maxNum) maxNum = n;
+      }
+    });
+    return `GT-${String(maxNum + 1).padStart(3, '0')}`;
+  };
+
   // Open Create Item Modal
-  const handleOpenCreateItem = () => {
+  const handleOpenCreateItem = async () => {
     setEditingItem(null);
+    const initialCode = getClientNextItemCode();
     setItemFormData({
       ...initialItemForm,
+      itemCode: initialCode,
       category: categories[0]?._id || ''
     });
     setFormError('');
     setIsItemModalOpen(true);
+
+    // Fetch confirmed next code from backend
+    try {
+      const res = await storeService.getNextItemCode();
+      if (res.success && res.data?.nextCode) {
+        setItemFormData((prev) => ({
+          ...prev,
+          itemCode: res.data.nextCode
+        }));
+      }
+    } catch (err) {
+      console.warn('Using client-calculated item code:', err);
+    }
   };
 
   // Open Edit Item Modal
@@ -256,22 +284,28 @@ export default function StoreInventory() {
   // Save Item (Create or Update)
   const handleSubmitItem = async (e) => {
     e.preventDefault();
-    if (!itemFormData.itemName.trim() || !itemFormData.itemCode.trim() || !itemFormData.category) {
-      setFormError('Item name, item code, and category are required.');
+    if (!itemFormData.itemName.trim() || !itemFormData.category) {
+      setFormError('Item name and category are required.');
       return;
     }
+
+    const finalCode = (itemFormData.itemCode || '').trim() || getClientNextItemCode();
+    const payload = {
+      ...itemFormData,
+      itemCode: finalCode.toUpperCase()
+    };
 
     setSubmitting(true);
     setFormError('');
     try {
       if (editingItem) {
-        const res = await storeService.updateItem(editingItem._id, itemFormData);
+        const res = await storeService.updateItem(editingItem._id, payload);
         if (res.success) {
           setIsItemModalOpen(false);
           fetchAllData();
         }
       } else {
-        const res = await storeService.createItem(itemFormData);
+        const res = await storeService.createItem(payload);
         if (res.success) {
           setIsItemModalOpen(false);
           fetchAllData();
@@ -1046,17 +1080,44 @@ export default function StoreInventory() {
             </div>
 
             <div>
-              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-                {t('store.itemCode')} (SKU) *
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block font-bold text-slate-700 dark:text-slate-300">
+                  {t('store.itemCode')} (SKU) *
+                </label>
+                {!editingItem && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        const res = await storeService.getNextItemCode();
+                        if (res.success && res.data?.nextCode) {
+                          setItemFormData((prev) => ({ ...prev, itemCode: res.data.nextCode }));
+                        } else {
+                          setItemFormData((prev) => ({ ...prev, itemCode: getClientNextItemCode() }));
+                        }
+                      } catch {
+                        setItemFormData((prev) => ({ ...prev, itemCode: getClientNextItemCode() }));
+                      }
+                    }}
+                    className="text-[11px] font-semibold text-primary-600 dark:text-primary-400 hover:underline flex items-center gap-1 transition"
+                    title="Auto-increment next code (prefix GT-)"
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                    <span>Auto (GT-XXX)</span>
+                  </button>
+                )}
+              </div>
               <input
                 type="text"
                 required
                 value={itemFormData.itemCode}
                 onChange={(e) => setItemFormData({ ...itemFormData, itemCode: e.target.value })}
-                placeholder="e.g. RM-PAP-001"
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 uppercase"
+                placeholder="e.g. GT-001"
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 uppercase font-mono font-semibold"
               />
+              <p className="text-[11px] text-slate-400 mt-1">
+                Auto-incremented default with prefix <span className="font-semibold text-slate-600 dark:text-slate-300">GT-</span> (e.g. GT-001). You may keep or customize it.
+              </p>
             </div>
 
             <div>

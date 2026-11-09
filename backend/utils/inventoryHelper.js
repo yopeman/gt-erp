@@ -2,6 +2,38 @@ import StockBalance from '../models/StockBalance.js';
 import StockMovement from '../models/StockMovement.js';
 import InventoryAuditLog from '../models/InventoryAuditLog.js';
 import ApprovalHistory from '../models/ApprovalHistory.js';
+import InventoryItem from '../models/InventoryItem.js';
+
+/**
+ * Generate next sequential item code with prefix GT- (starting from GT-001)
+ */
+export const generateNextItemCode = async () => {
+  const items = await InventoryItem.find(
+    { itemCode: { $regex: /^GT-\d+$/i } },
+    { itemCode: 1 }
+  ).lean();
+
+  let maxNumber = 0;
+  for (const item of items) {
+    const match = item.itemCode?.match(/^GT-(\d+)$/i);
+    if (match) {
+      const num = parseInt(match[1], 10);
+      if (!isNaN(num) && num > maxNumber) {
+        maxNumber = num;
+      }
+    }
+  }
+
+  let nextNumber = maxNumber + 1;
+  let candidateCode = `GT-${String(nextNumber).padStart(3, '0')}`;
+
+  while (await InventoryItem.exists({ itemCode: candidateCode })) {
+    nextNumber++;
+    candidateCode = `GT-${String(nextNumber).padStart(3, '0')}`;
+  }
+
+  return candidateCode;
+};
 
 /**
  * Generate a random unique document number with prefix and date

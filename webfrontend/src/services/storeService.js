@@ -3,6 +3,7 @@ import api from './api';
 export const storeService = {
   // Inventory Items
   getItems: (params) => api.get('/inventory-items', { params }),
+  getNextItemCode: () => api.get('/inventory-items/next-code'),
   getItemById: (id) => api.get(`/inventory-items/${id}`),
   createItem: (data) => api.post('/inventory-items', data),
   updateItem: (id, data) => api.put(`/inventory-items/${id}`, data),

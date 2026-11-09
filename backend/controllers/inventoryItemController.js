@@ -1,7 +1,17 @@
 import InventoryItem from '../models/InventoryItem.js';
 import StockBalance from '../models/StockBalance.js';
 import { sendSuccess, sendError } from '../utils/apiResponse.js';
-import { recordAudit } from '../utils/inventoryHelper.js';
+import { recordAudit, generateNextItemCode } from '../utils/inventoryHelper.js';
+
+// Get next auto-incremented item code (e.g. GT-001)
+export const getNextItemCode = async (req, res) => {
+  try {
+    const nextCode = await generateNextItemCode();
+    return sendSuccess(res, 'Next item code generated successfully', { nextCode });
+  } catch (error) {
+    return sendError(res, 'Failed to generate next item code', 500, error);
+  }
+};
 
 // Create item
 export const createItem = async (req, res) => {
@@ -27,18 +37,23 @@ export const createItem = async (req, res) => {
       status
     } = req.body;
 
-    if (!itemName || !itemCode || !category || !itemType || !unitOfMeasurement) {
-      return sendError(res, 'Item name, code, category, itemType and unitOfMeasurement are required', 400);
+    if (!itemName || !category || !itemType || !unitOfMeasurement) {
+      return sendError(res, 'Item name, category, itemType and unitOfMeasurement are required', 400);
     }
 
-    const existing = await InventoryItem.findOne({ itemCode: itemCode.toUpperCase().trim() });
-    if (existing) {
-      return sendError(res, 'Item code already exists', 400);
+    let finalItemCode = itemCode && itemCode.trim() ? itemCode.toUpperCase().trim() : '';
+    if (!finalItemCode) {
+      finalItemCode = await generateNextItemCode();
+    } else {
+      const existing = await InventoryItem.findOne({ itemCode: finalItemCode });
+      if (existing) {
+        return sendError(res, 'Item code already exists', 400);
+      }
     }
 
     const item = await InventoryItem.create({
       itemName,
-      itemCode: itemCode.toUpperCase().trim(),
+      itemCode: finalItemCode,
       description,
       category,
       itemType,
