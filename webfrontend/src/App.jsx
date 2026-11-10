@@ -43,6 +43,9 @@ import CreditPurchases from './pages/purchasing/CreditPurchases';
 import PurchasePayments from './pages/purchasing/PurchasePayments';
 import SupplierReturns from './pages/purchasing/SupplierReturns';
 
+// Dedicated Reports & Analytics Center
+import ReportsCenter from './pages/reports/ReportsCenter';
+
 // Public Careers & Job Application Pages
 import PublicJobs from './pages/careers/PublicJobs';
 import PublicJobDetail from './pages/careers/PublicJobDetail';
@@ -77,6 +80,9 @@ function IndexRedirect() {
   if (user?.roles?.includes('storekeeper') && !user?.roles?.includes('admin') && !user?.roles?.includes('hr')) {
     return <Navigate to="/store/dashboard" replace />;
   }
+  if (user?.roles?.includes('employee') && !user?.roles?.includes('admin') && !user?.roles?.includes('hr') && !user?.roles?.includes('manager')) {
+    return <Navigate to="/store/outward" replace />;
+  }
   return <Navigate to="/hr/dashboard" replace />;
 }
 
@@ -109,16 +115,51 @@ export default function App() {
           <Route index element={<IndexRedirect />} />
 
           {/* HR Module Subroutes */}
-          <Route path="hr/dashboard" element={<HrDashboard />} />
-          <Route path="hr/employees" element={<Employees />} />
+          <Route
+            path="hr/dashboard"
+            element={
+              <ProtectedRoute roles={['admin', 'hr', 'manager']}>
+                <HrDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="hr/employees"
+            element={
+              <ProtectedRoute roles={['admin', 'hr', 'manager']}>
+                <Employees />
+              </ProtectedRoute>
+            }
+          />
           <Route path="hr/attendance" element={<Attendance />} />
           <Route path="hr/leave" element={<LeaveManagement />} />
           <Route path="hr/leave-requests" element={<LeaveManagement initialTab="requests" />} />
           <Route path="hr/leave-balances" element={<LeaveManagement initialTab="balances" />} />
           <Route path="hr/overtimes" element={<Overtime />} />
-          <Route path="hr/payrolls" element={<Payroll />} />
-          <Route path="hr/recruitment" element={<Recruitment />} />
-          <Route path="hr/internships" element={<Internships />} />
+          <Route
+            path="hr/payrolls"
+            element={
+              <ProtectedRoute roles={['admin', 'hr', 'finance', 'employee', 'storekeeper', 'purchaser', 'manager']}>
+                <Payroll />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="hr/recruitment"
+            element={
+              <ProtectedRoute roles={['admin', 'hr']}>
+                <Recruitment />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="hr/internships"
+            element={
+              <ProtectedRoute roles={['admin', 'hr', 'manager']}>
+                <Internships />
+              </ProtectedRoute>
+            }
+          />
           <Route path="hr/clearances" element={<Clearances />} />
           <Route
             path="hr/settings"
@@ -152,7 +193,7 @@ export default function App() {
           <Route
             path="store/inventory"
             element={
-              <ProtectedRoute roles={['admin', 'storekeeper', 'manager']}>
+              <ProtectedRoute roles={['admin', 'storekeeper', 'manager', 'purchaser']}>
                 <StoreInventory />
               </ProtectedRoute>
             }
@@ -210,6 +251,14 @@ export default function App() {
             element={
               <ProtectedRoute roles={['admin', 'storekeeper', 'manager']}>
                 <Warehouses />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="store/reports"
+            element={
+              <ProtectedRoute roles={['admin', 'storekeeper', 'manager', 'employee']}>
+                <ReportsCenter />
               </ProtectedRoute>
             }
           />
@@ -277,6 +326,22 @@ export default function App() {
             element={
               <ProtectedRoute roles={['admin', 'purchaser', 'manager', 'storekeeper']}>
                 <SupplierReturns />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="purchasing/reports"
+            element={
+              <ProtectedRoute roles={['admin', 'purchaser', 'manager', 'storekeeper', 'finance']}>
+                <ReportsCenter />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="reports"
+            element={
+              <ProtectedRoute>
+                <ReportsCenter />
               </ProtectedRoute>
             }
           />

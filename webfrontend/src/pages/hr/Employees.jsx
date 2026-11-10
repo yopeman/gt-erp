@@ -122,7 +122,6 @@ export default function Employees() {
   const navigate = useNavigate();
   const { hasRole } = useAuth();
   const canManage = hasRole(['admin', 'hr']);
-  const isStorekeeper = hasRole(['admin', 'storekeeper']);
 
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -779,7 +778,7 @@ export default function Employees() {
                       <span>Profile</span>
                     </button>
 
-                    {(isStorekeeper || canManage) && (
+                    {canManage && (
                       <button
                         onClick={() => {
                           setSelectedEmployee(emp);
@@ -928,7 +927,7 @@ export default function Employees() {
                       >
                         Profile
                       </button>
-                      {(isStorekeeper || canManage) && (
+                      {canManage && (
                         <button
                           onClick={() => {
                             setSelectedEmployee(emp);
@@ -1396,11 +1395,6 @@ export default function Employees() {
                     <div>
                       <h4 className="font-black text-sm text-slate-900 dark:text-slate-100 flex items-center gap-2">
                         <span>Store Custody & Exit Clearance</span>
-                        {isStorekeeper && (
-                          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase bg-amber-500 text-white">
-                            Storekeeper Mode
-                          </span>
-                        )}
                       </h4>
                       <p className="text-[11px] text-slate-500 dark:text-slate-400">
                         Manage tools, machinery equipment custody, material requisitions, and exit store clearance sign-offs.
@@ -1467,7 +1461,7 @@ export default function Employees() {
                                   This employee does not have an active offboarding clearance workflow. When staff separates, storekeepers verify that all borrowed tools and keys are returned.
                                 </p>
                               </div>
-                              {(isStorekeeper || canManage) && (
+                              {canManage && (
                                 <button
                                   type="button"
                                   onClick={handleInitializeClearance}
@@ -1534,8 +1528,8 @@ export default function Employees() {
                               </div>
                             )}
 
-                            {/* Storekeeper Action Buttons */}
-                            {(isStorekeeper || canManage) && (
+                            {/* Admin / HR Action Buttons */}
+                            {canManage && (
                               <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-200/60 dark:border-slate-800">
                                 <button
                                   type="button"

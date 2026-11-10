@@ -38,6 +38,7 @@ import creditPurchaseRoutes from './creditPurchaseRoutes.js';
 import approvalHistoryRoutes from './approvalHistoryRoutes.js';
 import inventoryAuditLogRoutes from './inventoryAuditLogRoutes.js';
 import notificationRoutes from './notificationRoutes.js';
+import reportRoutes from './reportRoutes.js';
 
 const router = express.Router();
 
@@ -84,5 +85,6 @@ router.use('/approval-history', approvalHistoryRoutes);
 router.use('/approval-histories', approvalHistoryRoutes);
 router.use('/inventory-audit-logs', inventoryAuditLogRoutes);
 router.use('/notifications', notificationRoutes);
+router.use('/reports', reportRoutes);
 
 export default router;

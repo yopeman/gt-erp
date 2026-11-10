@@ -35,6 +35,7 @@ import {
   FileText,
   DollarSign,
   RotateCcw,
+  BarChart3,
   ChevronDown,
   ChevronRight,
   X
@@ -71,7 +72,8 @@ const iconMap = {
   Warehouse,
   FileText,
   DollarSign,
-  RotateCcw
+  RotateCcw,
+  BarChart3
 };
 
 export default function Sidebar({ isOpen, onClose }) {

@@ -38,6 +38,7 @@
     "storeAdjustments": "Physical Adjustments",
     "storeMovements": "Movements Ledger",
     "storeWarehouses": "Warehouses & Storage",
+    "storeReports": "Store & Stock Reports",
     "purchasingDashboard": "Purchasing Overview",
     "purchaseRequests": "Purchase Requests (PR)",
     "purchaseOrders": "Purchase Orders (PO)",
@@ -46,6 +47,8 @@
     "creditPurchases": "Credit & AP Aging",
     "purchasePayments": "Payments History",
     "supplierReturns": "Supplier Returns",
+    "purchasingReports": "Procurement & Spend Reports",
+    "reports": "Reports & Analytics",
     "settings": "Settings",
     "logout": "Sign Out",
     "login": "Sign In"
