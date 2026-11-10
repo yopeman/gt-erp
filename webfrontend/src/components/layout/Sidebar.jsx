@@ -104,9 +104,6 @@ export default function Sidebar({ isOpen, onClose }) {
   // Track expanded modules in sidebar
   const [expandedModules, setExpandedModules] = useState({
     hr: true,
-    admin: true,
-    store: true,
-    purchasing: true,
   });
 
   const toggleModule = (moduleId) => {
@@ -134,12 +131,12 @@ export default function Sidebar({ isOpen, onClose }) {
 
       {/* Sidebar Panel */}
       <aside 
-        className={`fixed top-0 bottom-0 left-0 z-50 w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col transition-transform duration-200 ease-in-out lg:static lg:translate-x-0 ${
+        className={`fixed top-0 bottom-0 left-0 z-50 w-64 h-screen bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col transition-transform duration-200 ease-in-out lg:sticky lg:top-0 lg:h-screen lg:shrink-0 lg:translate-x-0 ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         {/* Brand Header */}
-        <div className="h-16 px-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+        <div className="h-16 px-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <img 
               src="/gt-logo.jpg" 
@@ -165,7 +162,7 @@ export default function Sidebar({ isOpen, onClose }) {
         </div>
 
         {/* Modules & Navigation Items */}
-        <div className="flex-1 overflow-y-auto px-3 py-4 space-y-4">
+        <div className="flex-1 overflow-y-auto overscroll-y-contain custom-scrollbar px-3 py-4 space-y-4">
           {visibleModules.map((module) => {
             const ModuleIcon = iconMap[module.icon] || Users;
             const isExpanded = expandedModules[module.id] ?? false;
@@ -236,7 +233,7 @@ export default function Sidebar({ isOpen, onClose }) {
         </div>
 
         {/* Footer info */}
-        <div className="p-3 border-t border-slate-200 dark:border-slate-800 text-[11px] text-slate-400 text-center">
+        <div className="p-3 border-t border-slate-200 dark:border-slate-800 text-[11px] text-slate-400 text-center shrink-0">
           GT Printing ERP v1.0 • Phase 1
         </div>
       </aside>
