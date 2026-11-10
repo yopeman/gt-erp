@@ -34,6 +34,24 @@ import purchasePaymentRoutes from './purchasePaymentRoutes.js';
 import supplierReturnRoutes from './supplierReturnRoutes.js';
 import creditPurchaseRoutes from './creditPurchaseRoutes.js';
 
+// CRM & Sales Module Routes (Phases 3A, 3B & 3C)
+import leadRoutes from './leadRoutes.js';
+import customerRoutes from './customerRoutes.js';
+import followupRoutes from './followupRoutes.js';
+import serviceRoutes from './serviceRoutes.js';
+import orderRoutes from './orderRoutes.js';
+import designRoutes from './designRoutes.js';
+import proformaRoutes from './proformaRoutes.js';
+import invoiceRoutes from './invoiceRoutes.js';
+import customerPaymentRoutes from './customerPaymentRoutes.js';
+
+// Machine & Production Operations Routes (Phases 4A, 4B & 4C)
+import machineRoutes from './machineRoutes.js';
+import machineCheckupRoutes from './machineCheckupRoutes.js';
+import machineMaintenanceRoutes from './machineMaintenanceRoutes.js';
+import productionJobRoutes from './productionJobRoutes.js';
+import productionWastageRoutes from './productionWastageRoutes.js';
+
 // System Support Routes
 import approvalHistoryRoutes from './approvalHistoryRoutes.js';
 import inventoryAuditLogRoutes from './inventoryAuditLogRoutes.js';
@@ -79,6 +97,27 @@ router.use('/goods-receipts', goodsReceiptRoutes);
 router.use('/purchase-payments', purchasePaymentRoutes);
 router.use('/supplier-returns', supplierReturnRoutes);
 router.use('/credit-purchases', creditPurchaseRoutes);
+
+// CRM & Sales Module (Phases 3A, 3B & 3C)
+router.use('/leads', leadRoutes);
+router.use('/customers', customerRoutes);
+router.use('/followups', followupRoutes);
+router.use('/follow-ups', followupRoutes);
+router.use('/services', serviceRoutes);
+router.use('/orders', orderRoutes);
+router.use('/designs', designRoutes);
+router.use('/proformas', proformaRoutes);
+router.use('/invoices', invoiceRoutes);
+router.use('/customer-payments', customerPaymentRoutes);
+
+// Machine & Production Operations Module (Phases 4A, 4B & 4C)
+router.use('/machines', machineRoutes);
+router.use('/machine-checkups', machineCheckupRoutes);
+router.use('/machine-maintenances', machineMaintenanceRoutes);
+router.use('/machine-maintenance', machineMaintenanceRoutes);
+router.use('/production-jobs', productionJobRoutes);
+router.use('/production-wastages', productionWastageRoutes);
+router.use('/production-wastage', productionWastageRoutes);
 
 // System Support
 router.use('/approval-history', approvalHistoryRoutes);
