@@ -30,15 +30,15 @@ export default function AppLayout() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col lg:flex-row antialiased">
+    <div className="min-h-screen lg:h-screen lg:overflow-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col lg:flex-row antialiased">
       {/* Sidebar (Desktop sticky / Mobile drawer) */}
       <Sidebar 
         isOpen={sidebarOpen} 
         onClose={() => setSidebarOpen(false)} 
       />
 
-      {/* Main Column */}
-      <div className="flex-1 flex flex-col min-w-0 min-h-screen">
+      {/* Main Column with independent scroll */}
+      <div className="flex-1 flex flex-col min-w-0 min-h-screen lg:min-h-0 lg:h-screen lg:overflow-y-auto">
         <Header 
           onToggleSidebar={() => setSidebarOpen((prev) => !prev)} 
           backendConnected={backendConnected}
