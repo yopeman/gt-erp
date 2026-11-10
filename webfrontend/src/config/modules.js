@@ -73,20 +73,6 @@ export const ERP_MODULES = [
     ]
   },
   {
-    id: 'production',
-    titleKey: 'modules.production',
-    icon: 'Factory',
-    requiredRoles: ['admin', 'production_manager', 'operator'],
-    status: 'upcoming',
-    phase: 'Phase 4',
-    description: 'Machine Management, Maintenance, Raw Material Requests, Wastage Tracking',
-    submodules: [
-      { id: 'production-dashboard', path: '/production/dashboard', titleKey: 'nav.dashboard', icon: 'LayoutDashboard', status: 'upcoming' },
-      { id: 'production-machines', path: '/production/machines', titleKey: 'Machines & Maintenance', icon: 'Cog', status: 'upcoming' },
-      { id: 'production-jobs', path: '/production/jobs', titleKey: 'Production Jobs & Wastage', icon: 'Workflow', status: 'upcoming' }
-    ]
-  },
-  {
     id: 'crm',
     titleKey: 'modules.crm',
     icon: 'TrendingUp',
@@ -98,6 +84,20 @@ export const ERP_MODULES = [
       { id: 'crm-dashboard', path: '/crm/dashboard', titleKey: 'nav.dashboard', icon: 'LayoutDashboard', status: 'upcoming' },
       { id: 'crm-customers', path: '/crm/customers', titleKey: 'Customers & Leads', icon: 'UserPlus', status: 'upcoming' },
       { id: 'crm-orders', path: '/crm/orders', titleKey: 'Printing Orders & Proforma', icon: 'Receipt', status: 'upcoming' }
+    ]
+  },
+  {
+    id: 'production',
+    titleKey: 'modules.production',
+    icon: 'Factory',
+    requiredRoles: ['admin', 'production_manager', 'operator'],
+    status: 'upcoming',
+    phase: 'Phase 4',
+    description: 'Machine Management, Maintenance, Raw Material Requests, Wastage Tracking',
+    submodules: [
+      { id: 'production-dashboard', path: '/production/dashboard', titleKey: 'nav.dashboard', icon: 'LayoutDashboard', status: 'upcoming' },
+      { id: 'production-machines', path: '/production/machines', titleKey: 'Machines & Maintenance', icon: 'Cog', status: 'upcoming' },
+      { id: 'production-jobs', path: '/production/jobs', titleKey: 'Production Jobs & Wastage', icon: 'Workflow', status: 'upcoming' }
     ]
   },
   {
