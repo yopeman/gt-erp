@@ -42,6 +42,12 @@ import CreditPurchases from './pages/purchasing/CreditPurchases';
 import PurchasePayments from './pages/purchasing/PurchasePayments';
 import SupplierReturns from './pages/purchasing/SupplierReturns';
 
+// CRM & Sales Module Pages (Phase 3A)
+import CrmDashboard from './pages/crm/CrmDashboard';
+import Leads from './pages/crm/Leads';
+import Customers from './pages/crm/Customers';
+import Followups from './pages/crm/Followups';
+
 // Public Careers & Job Application Pages
 import PublicJobs from './pages/careers/PublicJobs';
 import PublicJobDetail from './pages/careers/PublicJobDetail';
@@ -59,6 +65,9 @@ function IndexRedirect() {
   }
   if (user?.roles?.includes('storekeeper') && !user?.roles?.includes('admin') && !user?.roles?.includes('hr')) {
     return <Navigate to="/store/dashboard" replace />;
+  }
+  if (user?.roles?.includes('sales') && !user?.roles?.includes('admin') && !user?.roles?.includes('hr')) {
+    return <Navigate to="/crm/dashboard" replace />;
   }
   return <Navigate to="/hr/dashboard" replace />;
 }
@@ -255,6 +264,42 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+
+          {/* CRM & Sales Module Subroutes (Phase 3A) */}
+          <Route path="crm" element={<Navigate to="/crm/dashboard" replace />} />
+          <Route
+            path="crm/dashboard"
+            element={
+              <ProtectedRoute roles={['admin', 'sales', 'manager']}>
+                <CrmDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="crm/leads"
+            element={
+              <ProtectedRoute roles={['admin', 'sales', 'manager']}>
+                <Leads />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="crm/customers"
+            element={
+              <ProtectedRoute roles={['admin', 'sales', 'manager']}>
+                <Customers />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="crm/followups"
+            element={
+              <ProtectedRoute roles={['admin', 'sales', 'manager']}>
+                <Followups />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="crm/orders" element={<UpcomingModule moduleId="crm" />} />
 
           {/* Non-Blocking Planned Modules */}
           <Route path="production/*" element={<UpcomingModule moduleId="production" />} />

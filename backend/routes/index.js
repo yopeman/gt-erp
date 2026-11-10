@@ -33,6 +33,11 @@ import purchasePaymentRoutes from './purchasePaymentRoutes.js';
 import supplierReturnRoutes from './supplierReturnRoutes.js';
 import creditPurchaseRoutes from './creditPurchaseRoutes.js';
 
+// CRM & Sales Module Routes (Phase 3A)
+import leadRoutes from './leadRoutes.js';
+import customerRoutes from './customerRoutes.js';
+import followupRoutes from './followupRoutes.js';
+
 // System Support Routes
 import approvalHistoryRoutes from './approvalHistoryRoutes.js';
 import inventoryAuditLogRoutes from './inventoryAuditLogRoutes.js';
@@ -76,6 +81,12 @@ router.use('/goods-receipts', goodsReceiptRoutes);
 router.use('/purchase-payments', purchasePaymentRoutes);
 router.use('/supplier-returns', supplierReturnRoutes);
 router.use('/credit-purchases', creditPurchaseRoutes);
+
+// CRM & Sales Module (Phase 3A)
+router.use('/leads', leadRoutes);
+router.use('/customers', customerRoutes);
+router.use('/followups', followupRoutes);
+router.use('/follow-ups', followupRoutes);
 
 // System Support
 router.use('/approval-history', approvalHistoryRoutes);

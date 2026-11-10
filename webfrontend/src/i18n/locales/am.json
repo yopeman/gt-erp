@@ -45,6 +45,10 @@
     "creditPurchases": "የብድር ግዢና ዕዳ (AP)",
     "purchasePayments": "የክፍያዎች መዝገብ",
     "supplierReturns": "የተመላሽ ዕቃዎች መዝገብ",
+    "crmDashboard": "የሽያጭ አጠቃላይ እይታ",
+    "crmLeads": "እምቅ ደንበኞች (Leads)",
+    "crmCustomers": "የደንበኞች ማውጫ",
+    "crmFollowups": "የክትትል መርሃ-ግብር",
     "settings": "ቅንብሮች",
     "logout": "ውጣ",
     "login": "ግባ"

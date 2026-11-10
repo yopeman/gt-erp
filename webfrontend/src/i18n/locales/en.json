@@ -45,6 +45,10 @@
     "creditPurchases": "Credit & AP Aging",
     "purchasePayments": "Payments History",
     "supplierReturns": "Supplier Returns",
+    "crmDashboard": "CRM Overview",
+    "crmLeads": "Leads & Prospects",
+    "crmCustomers": "Customer Directory",
+    "crmFollowups": "Follow-up Schedule",
     "settings": "Settings",
     "logout": "Sign Out",
     "login": "Sign In"

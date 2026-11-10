@@ -35,6 +35,10 @@ import {
   FileText,
   DollarSign,
   RotateCcw,
+  Target,
+  CalendarClock,
+  Receipt,
+  UserPlus,
   ChevronDown,
   ChevronRight,
   X
@@ -71,7 +75,11 @@ const iconMap = {
   Warehouse,
   FileText,
   DollarSign,
-  RotateCcw
+  RotateCcw,
+  Target,
+  CalendarClock,
+  Receipt,
+  UserPlus
 };
 
 export default function Sidebar({ isOpen, onClose }) {

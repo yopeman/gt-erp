@@ -31,6 +31,11 @@ import GoodsReceipt from './GoodsReceipt.js';
 import PurchasePayment from './PurchasePayment.js';
 import SupplierReturn from './SupplierReturn.js';
 
+// CRM & Sales Module Models (Phase 3A)
+import Lead from './Lead.js';
+import Customer from './Customer.js';
+import Followup from './Followup.js';
+
 // System Support Models
 import ApprovalHistory from './ApprovalHistory.js';
 import InventoryAuditLog from './InventoryAuditLog.js';
@@ -68,6 +73,11 @@ export {
   GoodsReceipt,
   PurchasePayment,
   SupplierReturn,
+
+  // CRM & Sales
+  Lead,
+  Customer,
+  Followup,
 
   // System Support
   ApprovalHistory,
@@ -107,6 +117,11 @@ export default {
   GoodsReceipt,
   PurchasePayment,
   SupplierReturn,
+
+  // CRM & Sales
+  Lead,
+  Customer,
+  Followup,
 
   // System Support
   ApprovalHistory,

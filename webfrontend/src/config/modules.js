@@ -77,13 +77,15 @@ export const ERP_MODULES = [
     titleKey: 'modules.crm',
     icon: 'TrendingUp',
     requiredRoles: ['admin', 'sales', 'manager'],
-    status: 'upcoming',
+    status: 'active',
     phase: 'Phase 3',
-    description: 'Lead Management, Customer Quotations, Printing Order Workflow, Invoices',
+    description: 'Lead Management, Customer Directory, Scheduled Follow-ups, Quotations & Orders',
     submodules: [
-      { id: 'crm-dashboard', path: '/crm/dashboard', titleKey: 'nav.dashboard', icon: 'LayoutDashboard', status: 'upcoming' },
-      { id: 'crm-customers', path: '/crm/customers', titleKey: 'Customers & Leads', icon: 'UserPlus', status: 'upcoming' },
-      { id: 'crm-orders', path: '/crm/orders', titleKey: 'Printing Orders & Proforma', icon: 'Receipt', status: 'upcoming' }
+      { id: 'crm-dashboard', path: '/crm/dashboard', titleKey: 'nav.crmDashboard', icon: 'LayoutDashboard', requiredRoles: ['admin', 'sales', 'manager'], status: 'active' },
+      { id: 'crm-leads', path: '/crm/leads', titleKey: 'nav.crmLeads', icon: 'Target', requiredRoles: ['admin', 'sales', 'manager'], status: 'active' },
+      { id: 'crm-customers', path: '/crm/customers', titleKey: 'nav.crmCustomers', icon: 'Building2', requiredRoles: ['admin', 'sales', 'manager'], status: 'active' },
+      { id: 'crm-followups', path: '/crm/followups', titleKey: 'nav.crmFollowups', icon: 'CalendarClock', requiredRoles: ['admin', 'sales', 'manager'], status: 'active' },
+      { id: 'crm-orders', path: '/crm/orders', titleKey: 'Printing Orders & Proforma', icon: 'Receipt', requiredRoles: ['admin', 'sales', 'manager'], status: 'upcoming' }
     ]
   },
   {

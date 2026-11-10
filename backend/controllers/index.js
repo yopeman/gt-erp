@@ -10,6 +10,9 @@ import * as internshipController from './internshipController.js';
 import * as clearanceController from './clearanceController.js';
 import * as leaveBalanceController from './leaveBalanceController.js';
 import * as companySettingController from './companySettingController.js';
+import * as leadController from './leadController.js';
+import * as customerController from './customerController.js';
+import * as followupController from './followupController.js';
 
 export {
   userController,
@@ -23,7 +26,10 @@ export {
   internshipController,
   clearanceController,
   leaveBalanceController,
-  companySettingController
+  companySettingController,
+  leadController,
+  customerController,
+  followupController
 };
 
 export default {
@@ -38,5 +44,8 @@ export default {
   internshipController,
   clearanceController,
   leaveBalanceController,
-  companySettingController
+  companySettingController,
+  leadController,
+  customerController,
+  followupController
 };
