@@ -60,6 +60,13 @@ export const storeService = {
   getStockMovements: (params) => api.get('/stock-movements', { params }),
   createStockMovement: (data) => api.post('/stock-movements', data),
 
+  // Staff Material Returns
+  getStaffReturns: (params) => api.get('/staff-returns', { params }),
+  getStaffReturnById: (id) => api.get(`/staff-returns/${id}`),
+  createStaffReturn: (data) => api.post('/staff-returns', data),
+  receiveStaffReturn: (id, data) => api.post(`/staff-returns/${id}/receive`, data),
+  rejectStaffReturn: (id, data) => api.post(`/staff-returns/${id}/reject`, data),
+
   // Related data for select dropdowns
   getPurchaseOrders: (params) => api.get('/purchase-orders', { params }),
   getSuppliers: (params) => api.get('/suppliers', { params }),

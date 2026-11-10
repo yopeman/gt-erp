@@ -22,6 +22,7 @@ import StockMovement from './StockMovement.js';
 import StockAdjustment from './StockAdjustment.js';
 import StockTransfer from './StockTransfer.js';
 import StockRequest from './StockRequest.js';
+import StaffReturn from './StaffReturn.js';
 
 // Purchase Management Module Models
 import Supplier from './Supplier.js';
@@ -60,6 +61,7 @@ export {
   StockAdjustment,
   StockTransfer,
   StockRequest,
+  StaffReturn,
 
   // Purchase Management
   Supplier,
@@ -99,6 +101,7 @@ export default {
   StockAdjustment,
   StockTransfer,
   StockRequest,
+  StaffReturn,
 
   // Purchase Management
   Supplier,

@@ -33,6 +33,7 @@
     "storeInventory": "Inventory Catalog",
     "storeInward": "Stock Inward (GRV)",
     "storeOutward": "Material Issues (SIV)",
+    "storeReturns": "Staff Material Returns (SRV)",
     "storeTransfers": "Stock Transfers",
     "storeAdjustments": "Physical Adjustments",
     "storeMovements": "Movements Ledger",

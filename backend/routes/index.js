@@ -23,6 +23,7 @@ import stockMovementRoutes from './stockMovementRoutes.js';
 import stockAdjustmentRoutes from './stockAdjustmentRoutes.js';
 import stockTransferRoutes from './stockTransferRoutes.js';
 import stockRequestRoutes from './stockRequestRoutes.js';
+import staffReturnRoutes from './staffReturnRoutes.js';
 
 // Purchase Management Module Routes
 import supplierRoutes from './supplierRoutes.js';
@@ -67,6 +68,7 @@ router.use('/stock-movements', stockMovementRoutes);
 router.use('/stock-adjustments', stockAdjustmentRoutes);
 router.use('/stock-transfers', stockTransferRoutes);
 router.use('/stock-requests', stockRequestRoutes);
+router.use('/staff-returns', staffReturnRoutes);
 
 // Purchase Management Module
 router.use('/suppliers', supplierRoutes);

@@ -33,6 +33,7 @@
     "storeInventory": "የዕቃዎች ካታሎግና ክምችት",
     "storeInward": "ገቢ ዕቃዎች (GRV)",
     "storeOutward": "ወጪ ዕቃዎችና ጥያቄዎች (SIV)",
+    "storeReturns": "የሰራተኞች ዕቃ መመለሻ (SRV)",
     "storeTransfers": "የመጋዘን ዝውውር",
     "storeAdjustments": "የክምችት ማስተካከያ (ቆጠራ)",
     "storeMovements": "የእንቅስቃሴ መዝገብ (Ledger)",

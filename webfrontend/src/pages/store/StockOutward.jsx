@@ -137,7 +137,7 @@ export default function StockOutward() {
   // Open Create Request
   const handleOpenCreateModal = () => {
     setFormData({
-      department: 'Production',
+      department: user?.employee?.department || user?.department || 'Production',
       warehouse: warehouses[0]?._id || '',
       purpose: '',
       priority: 'medium',

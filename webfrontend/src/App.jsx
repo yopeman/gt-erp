@@ -27,6 +27,7 @@ import StoreDashboard from './pages/store/StoreDashboard';
 import StoreInventory from './pages/store/StoreInventory';
 import StockInward from './pages/store/StockInward';
 import StockOutward from './pages/store/StockOutward';
+import StaffReturns from './pages/store/StaffReturns';
 import StockTransfers from './pages/store/StockTransfers';
 import StockAdjustments from './pages/store/StockAdjustments';
 import StockMovements from './pages/store/StockMovements';
@@ -51,6 +52,22 @@ import PublicIdCardVerification from './pages/public/PublicIdCardVerification';
 
 // Future Modules (Sections 1, 3, 4, 5, 6 - non-blocking modular placeholders)
 import UpcomingModule from './pages/modules/UpcomingModule';
+
+function StoreRedirect() {
+  const { hasRole } = useAuth();
+  if (hasRole(['admin', 'storekeeper', 'manager'])) {
+    return <Navigate to="/store/dashboard" replace />;
+  }
+  return <Navigate to="/store/outward" replace />;
+}
+
+function PurchasingRedirect() {
+  const { hasRole } = useAuth();
+  if (hasRole(['admin', 'purchaser', 'manager', 'finance'])) {
+    return <Navigate to="/purchasing/dashboard" replace />;
+  }
+  return <Navigate to="/purchasing/requests" replace />;
+}
 
 function IndexRedirect() {
   const { user } = useAuth();
@@ -123,7 +140,7 @@ export default function App() {
           />
 
           {/* Store & Inventory Module Subroutes (Section 1) */}
-          <Route path="store" element={<Navigate to="/store/dashboard" replace />} />
+          <Route path="store" element={<StoreRedirect />} />
           <Route
             path="store/dashboard"
             element={
@@ -151,8 +168,16 @@ export default function App() {
           <Route
             path="store/outward"
             element={
-              <ProtectedRoute roles={['admin', 'storekeeper', 'manager']}>
+              <ProtectedRoute roles={['admin', 'storekeeper', 'manager', 'employee']}>
                 <StockOutward />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="store/returns"
+            element={
+              <ProtectedRoute roles={['admin', 'storekeeper', 'manager', 'employee']}>
+                <StaffReturns />
               </ProtectedRoute>
             }
           />
@@ -190,7 +215,7 @@ export default function App() {
           />
 
           {/* Purchasing & Procurement Module Subroutes (Section 4) */}
-          <Route path="purchasing" element={<Navigate to="/purchasing/dashboard" replace />} />
+          <Route path="purchasing" element={<PurchasingRedirect />} />
           <Route
             path="purchasing/dashboard"
             element={

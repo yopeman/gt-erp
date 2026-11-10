@@ -6,7 +6,7 @@ import { sendSuccess, sendError } from '../utils/apiResponse.js';
 import {
   generateCode,
   recordStockMovementWithBalance,
-  recordAudit
+  recordAudit,
 } from '../utils/inventoryHelper.js';
 
 // Create supplier return request
