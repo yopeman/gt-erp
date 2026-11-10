@@ -27,6 +27,7 @@ import StoreDashboard from './pages/store/StoreDashboard';
 import StoreInventory from './pages/store/StoreInventory';
 import StockInward from './pages/store/StockInward';
 import StockOutward from './pages/store/StockOutward';
+import StaffReturns from './pages/store/StaffReturns';
 import StockTransfers from './pages/store/StockTransfers';
 import StockAdjustments from './pages/store/StockAdjustments';
 import StockMovements from './pages/store/StockMovements';
@@ -62,6 +63,9 @@ import MachineMaintenance from './pages/production/MachineMaintenance';
 import ProductionJobs from './pages/production/ProductionJobs';
 import ProductionWastage from './pages/production/ProductionWastage';
 
+// Dedicated Reports & Analytics Center
+import ReportsCenter from './pages/reports/ReportsCenter';
+
 // Public Careers & Job Application Pages
 import PublicJobs from './pages/careers/PublicJobs';
 import PublicJobDetail from './pages/careers/PublicJobDetail';
@@ -71,6 +75,22 @@ import PublicIdCardVerification from './pages/public/PublicIdCardVerification';
 
 // Future Modules (Sections 1, 3, 4, 5, 6 - non-blocking modular placeholders)
 import UpcomingModule from './pages/modules/UpcomingModule';
+
+function StoreRedirect() {
+  const { hasRole } = useAuth();
+  if (hasRole(['admin', 'storekeeper', 'manager'])) {
+    return <Navigate to="/store/dashboard" replace />;
+  }
+  return <Navigate to="/store/outward" replace />;
+}
+
+function PurchasingRedirect() {
+  const { hasRole } = useAuth();
+  if (hasRole(['admin', 'purchaser', 'manager', 'finance'])) {
+    return <Navigate to="/purchasing/dashboard" replace />;
+  }
+  return <Navigate to="/purchasing/requests" replace />;
+}
 
 function IndexRedirect() {
   const { user } = useAuth();
@@ -85,6 +105,9 @@ function IndexRedirect() {
   }
   if ((user?.roles?.includes('production_manager') || user?.roles?.includes('operator')) && !user?.roles?.includes('admin') && !user?.roles?.includes('hr')) {
     return <Navigate to="/production/dashboard" replace />;
+  }
+  if (user?.roles?.includes('employee') && !user?.roles?.includes('admin') && !user?.roles?.includes('hr') && !user?.roles?.includes('manager')) {
+    return <Navigate to="/store/outward" replace />;
   }
   return <Navigate to="/hr/dashboard" replace />;
 }
@@ -118,16 +141,51 @@ export default function App() {
           <Route index element={<IndexRedirect />} />
 
           {/* HR Module Subroutes */}
-          <Route path="hr/dashboard" element={<HrDashboard />} />
-          <Route path="hr/employees" element={<Employees />} />
+          <Route
+            path="hr/dashboard"
+            element={
+              <ProtectedRoute roles={['admin', 'hr', 'manager']}>
+                <HrDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="hr/employees"
+            element={
+              <ProtectedRoute roles={['admin', 'hr', 'manager']}>
+                <Employees />
+              </ProtectedRoute>
+            }
+          />
           <Route path="hr/attendance" element={<Attendance />} />
           <Route path="hr/leave" element={<LeaveManagement />} />
           <Route path="hr/leave-requests" element={<LeaveManagement initialTab="requests" />} />
           <Route path="hr/leave-balances" element={<LeaveManagement initialTab="balances" />} />
           <Route path="hr/overtimes" element={<Overtime />} />
-          <Route path="hr/payrolls" element={<Payroll />} />
-          <Route path="hr/recruitment" element={<Recruitment />} />
-          <Route path="hr/internships" element={<Internships />} />
+          <Route
+            path="hr/payrolls"
+            element={
+              <ProtectedRoute roles={['admin', 'hr', 'finance', 'employee', 'storekeeper', 'purchaser', 'manager']}>
+                <Payroll />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="hr/recruitment"
+            element={
+              <ProtectedRoute roles={['admin', 'hr']}>
+                <Recruitment />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="hr/internships"
+            element={
+              <ProtectedRoute roles={['admin', 'hr', 'manager']}>
+                <Internships />
+              </ProtectedRoute>
+            }
+          />
           <Route path="hr/clearances" element={<Clearances />} />
           <Route
             path="hr/settings"
@@ -149,7 +207,7 @@ export default function App() {
           />
 
           {/* Store & Inventory Module Subroutes (Section 1) */}
-          <Route path="store" element={<Navigate to="/store/dashboard" replace />} />
+          <Route path="store" element={<StoreRedirect />} />
           <Route
             path="store/dashboard"
             element={
@@ -161,7 +219,7 @@ export default function App() {
           <Route
             path="store/inventory"
             element={
-              <ProtectedRoute roles={['admin', 'storekeeper', 'manager']}>
+              <ProtectedRoute roles={['admin', 'storekeeper', 'manager', 'purchaser']}>
                 <StoreInventory />
               </ProtectedRoute>
             }
@@ -177,8 +235,16 @@ export default function App() {
           <Route
             path="store/outward"
             element={
-              <ProtectedRoute roles={['admin', 'storekeeper', 'manager']}>
+              <ProtectedRoute roles={['admin', 'storekeeper', 'manager', 'employee']}>
                 <StockOutward />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="store/returns"
+            element={
+              <ProtectedRoute roles={['admin', 'storekeeper', 'manager', 'employee']}>
+                <StaffReturns />
               </ProtectedRoute>
             }
           />
@@ -214,9 +280,17 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="store/reports"
+            element={
+              <ProtectedRoute roles={['admin', 'storekeeper', 'manager', 'employee']}>
+                <ReportsCenter />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Purchasing & Procurement Module Subroutes (Section 4) */}
-          <Route path="purchasing" element={<Navigate to="/purchasing/dashboard" replace />} />
+          <Route path="purchasing" element={<PurchasingRedirect />} />
           <Route
             path="purchasing/dashboard"
             element={
@@ -278,6 +352,22 @@ export default function App() {
             element={
               <ProtectedRoute roles={['admin', 'purchaser', 'manager', 'storekeeper']}>
                 <SupplierReturns />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="purchasing/reports"
+            element={
+              <ProtectedRoute roles={['admin', 'purchaser', 'manager', 'storekeeper', 'finance']}>
+                <ReportsCenter />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="reports"
+            element={
+              <ProtectedRoute>
+                <ReportsCenter />
               </ProtectedRoute>
             }
           />

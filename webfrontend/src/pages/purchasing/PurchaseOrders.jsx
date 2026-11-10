@@ -62,6 +62,8 @@ export default function PurchaseOrders() {
   const [paymentTypeFilter, setPaymentTypeFilter] = useState('');
   const [paymentStatusFilter, setPaymentStatusFilter] = useState('');
   const [supplierFilter, setSupplierFilter] = useState('');
+  const [vatFilter, setVatFilter] = useState(''); // '' | 'with_vat' | 'without_vat'
+  const [includeVat, setIncludeVat] = useState(true); // Master VAT toggle for PO creation
 
   // Modals
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -177,6 +179,22 @@ export default function PurchaseOrders() {
     }));
   };
 
+  // Master VAT Mode Toggle (With VAT vs Without VAT)
+  const handleToggleVat = (enabled) => {
+    setIncludeVat(enabled);
+    setFormData((prev) => {
+      const updatedItems = prev.items.map((i) => ({
+        ...i,
+        taxPercentage: enabled ? 15 : 0
+      }));
+      return {
+        ...prev,
+        taxAmount: enabled ? prev.taxAmount : 0,
+        items: updatedItems
+      };
+    });
+  };
+
   // Add Item Line
   const handleAddItem = () => {
     setFormData((prev) => ({
@@ -190,7 +208,7 @@ export default function PurchaseOrders() {
           unitOfMeasurement: 'piece',
           unitPrice: 0,
           discount: 0,
-          taxPercentage: 15
+          taxPercentage: includeVat ? 15 : 0
         }
       ]
     }));
@@ -378,6 +396,8 @@ export default function PurchaseOrders() {
     if (paymentTypeFilter && o.paymentType !== paymentTypeFilter) return false;
     if (paymentStatusFilter && o.paymentStatus !== paymentStatusFilter) return false;
     if (supplierFilter && o.supplier?._id !== supplierFilter && o.supplier !== supplierFilter) return false;
+    if (vatFilter === 'with_vat' && (!o.taxAmount || Number(o.taxAmount) <= 0)) return false;
+    if (vatFilter === 'without_vat' && Number(o.taxAmount || 0) > 0) return false;
 
     if (search) {
       const term = search.toLowerCase();
@@ -455,6 +475,16 @@ export default function PurchaseOrders() {
             <option value="received">{t('received')}</option>
             <option value="completed">{t('completed')}</option>
             <option value="cancelled">{t('cancelled', 'Cancelled')}</option>
+          </select>
+
+          <select
+            value={vatFilter}
+            onChange={(e) => setVatFilter(e.target.value)}
+            className="px-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500"
+          >
+            <option value="">All Purchases (VAT & Non-VAT)</option>
+            <option value="with_vat">With VAT (15%)</option>
+            <option value="without_vat">Without VAT (Non-VAT / Exempt)</option>
           </select>
 
           <select
@@ -574,6 +604,15 @@ export default function PurchaseOrders() {
 
                       <td className="py-3.5 px-4 font-bold text-slate-900 dark:text-slate-100">
                         {formatCurrency(o.grandTotal)}
+                        {o.taxAmount > 0 ? (
+                          <div className="text-[10px] text-emerald-600 font-bold">
+                            With VAT (15%)
+                          </div>
+                        ) : (
+                          <div className="text-[10px] text-slate-400 font-medium">
+                            Without VAT
+                          </div>
+                        )}
                         {o.paidAmount > 0 && (
                           <div className="text-[10px] text-emerald-600 font-semibold">
                             Paid: {formatCurrency(o.paidAmount)}
@@ -812,6 +851,54 @@ export default function PurchaseOrders() {
             />
           </div>
 
+          {/* Master VAT Mode Toggle Switch */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                  Tax Calculation (VAT):
+                </span>
+                <span
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    includeVat
+                      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300'
+                      : 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                  }`}
+                >
+                  {includeVat ? 'With VAT (15% Tax Applied)' : 'Without VAT (Non-VAT / Tax Exempt)'}
+                </span>
+              </div>
+              <p className="text-[10px] text-slate-400 mt-0.5">
+                Toggle to automatically apply or remove 15% VAT across all items
+              </p>
+            </div>
+
+            <div className="inline-flex rounded-lg border border-slate-200 dark:border-slate-700 p-0.5 bg-white dark:bg-slate-800">
+              <button
+                type="button"
+                onClick={() => handleToggleVat(true)}
+                className={`px-3 py-1 text-xs font-bold rounded-md transition ${
+                  includeVat
+                    ? 'bg-primary-600 text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                }`}
+              >
+                With VAT (15%)
+              </button>
+              <button
+                type="button"
+                onClick={() => handleToggleVat(false)}
+                className={`px-3 py-1 text-xs font-bold rounded-md transition ${
+                  !includeVat
+                    ? 'bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900 shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                }`}
+              >
+                Without VAT (0%)
+              </button>
+            </div>
+          </div>
+
           {/* Line Items Section */}
           <div className="pt-2">
             <div className="flex items-center justify-between mb-2">
@@ -976,7 +1063,28 @@ export default function PurchaseOrders() {
             </div>
 
             {/* Expenses & Totals Summary */}
-            <div className="mt-3 p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 space-y-2">
+            <div className="mt-3 p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-200 dark:border-slate-700 text-xs">
+                <div className="flex items-center gap-4">
+                  <div>
+                    <span className="text-slate-400 block text-[10px] font-semibold">Subtotal:</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200">{formatCurrency(totals.subtotal)}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block text-[10px] font-semibold">VAT (Tax):</span>
+                    <span className={`font-bold ${totals.taxAmount > 0 ? 'text-emerald-600' : 'text-slate-500'}`}>
+                      {totals.taxAmount > 0 ? `${formatCurrency(totals.taxAmount)} (15%)` : 'ETB 0.00 (Non-VAT)'}
+                    </span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="text-slate-400 block text-[10px] font-semibold">Estimated Grand Total:</span>
+                  <span className="text-sm font-black text-primary-600 dark:text-primary-400">
+                    {formatCurrency(totals.grandTotal)}
+                  </span>
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                 <div>
                   <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">
@@ -1263,12 +1371,12 @@ export default function PurchaseOrders() {
                     <span className="text-slate-500">Subtotal:</span>
                     <span className="font-bold">{formatCurrency(selectedOrder.subtotal)}</span>
                   </div>
-                  {selectedOrder.taxAmount > 0 && (
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">VAT / Tax:</span>
-                      <span className="font-bold">{formatCurrency(selectedOrder.taxAmount)}</span>
-                    </div>
-                  )}
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">VAT / Tax:</span>
+                    <span className={`font-bold ${selectedOrder.taxAmount > 0 ? 'text-emerald-700' : 'text-slate-500'}`}>
+                      {selectedOrder.taxAmount > 0 ? `${formatCurrency(selectedOrder.taxAmount)} (15% VAT)` : 'ETB 0.00 (Non-VAT)'}
+                    </span>
+                  </div>
                   {selectedOrder.shippingCost > 0 && (
                     <div className="flex justify-between">
                       <span className="text-slate-500">Shipping / Freight:</span>

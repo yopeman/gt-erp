@@ -23,6 +23,7 @@ import stockMovementRoutes from './stockMovementRoutes.js';
 import stockAdjustmentRoutes from './stockAdjustmentRoutes.js';
 import stockTransferRoutes from './stockTransferRoutes.js';
 import stockRequestRoutes from './stockRequestRoutes.js';
+import staffReturnRoutes from './staffReturnRoutes.js';
 
 // Purchase Management Module Routes
 import supplierRoutes from './supplierRoutes.js';
@@ -55,6 +56,7 @@ import productionWastageRoutes from './productionWastageRoutes.js';
 import approvalHistoryRoutes from './approvalHistoryRoutes.js';
 import inventoryAuditLogRoutes from './inventoryAuditLogRoutes.js';
 import notificationRoutes from './notificationRoutes.js';
+import reportRoutes from './reportRoutes.js';
 
 const router = express.Router();
 
@@ -85,6 +87,7 @@ router.use('/stock-movements', stockMovementRoutes);
 router.use('/stock-adjustments', stockAdjustmentRoutes);
 router.use('/stock-transfers', stockTransferRoutes);
 router.use('/stock-requests', stockRequestRoutes);
+router.use('/staff-returns', staffReturnRoutes);
 
 // Purchase Management Module
 router.use('/suppliers', supplierRoutes);
@@ -121,5 +124,6 @@ router.use('/approval-history', approvalHistoryRoutes);
 router.use('/approval-histories', approvalHistoryRoutes);
 router.use('/inventory-audit-logs', inventoryAuditLogRoutes);
 router.use('/notifications', notificationRoutes);
+router.use('/reports', reportRoutes);
 
 export default router;

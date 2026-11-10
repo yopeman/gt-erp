@@ -79,6 +79,7 @@ const stockMovementSchema = new mongoose.Schema(
         'production order',
         'stock request',
         'supplier return',
+        'staff return',
         'other'
       ],
       trim: true

@@ -37,9 +37,11 @@ export const createStockRequest = async (req, res) => {
       note: i.note || ''
     }));
 
+    const requesterId = req.user?.employee?._id || req.user?.employee || req.user?._id;
+
     const stockRequest = await StockRequest.create({
       requestNumber,
-      requestedBy: req.user?._id,
+      requestedBy: requesterId,
       department,
       warehouse,
       items: formattedItems,
@@ -84,12 +86,25 @@ export const getStockRequests = async (req, res) => {
       requestedBy
     } = req.query;
 
+    const userRoles = req.user?.roles || [];
+    const canManageAll = userRoles.some((r) => ['admin', 'manager', 'storekeeper'].includes(r));
+
     const query = {};
     if (department) query.department = department;
     if (warehouse) query.warehouse = warehouse;
     if (status) query.status = status;
     if (priority) query.priority = priority;
-    if (requestedBy) query.requestedBy = requestedBy;
+
+    if (!canManageAll) {
+      // Standard employee only sees their own requests
+      const empId = req.user?.employee?._id || req.user?.employee;
+      query.$or = [
+        { requestedBy: req.user._id },
+        ...(empId ? [{ requestedBy: empId }] : [])
+      ];
+    } else if (requestedBy) {
+      query.requestedBy = requestedBy;
+    }
 
     const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
     const total = await StockRequest.countDocuments(query);
@@ -137,6 +152,11 @@ export const getStockRequestById = async (req, res) => {
 // Approve or reject stock request
 export const approveStockRequest = async (req, res) => {
   try {
+    const userRoles = req.user?.roles || [];
+    if (!userRoles.some((r) => ['admin', 'manager', 'storekeeper'].includes(r))) {
+      return sendError(res, 'Access denied: Only managers or storekeepers can approve stock requests', 403);
+    }
+
     const { status, approvedItems, comment } = req.body; // status: 'approved', 'rejected', 'partially approved'
     const request = await StockRequest.findById(req.params.id);
     if (!request) {
@@ -183,6 +203,11 @@ export const approveStockRequest = async (req, res) => {
 // Issue items for stock request (Storekeeper issues materials)
 export const issueStockRequest = async (req, res) => {
   try {
+    const userRoles = req.user?.roles || [];
+    if (!userRoles.some((r) => ['admin', 'storekeeper'].includes(r))) {
+      return sendError(res, 'Access denied: Only warehouse storekeepers can issue stock materials', 403);
+    }
+
     const { issuedItems, note } = req.body;
     const request = await StockRequest.findById(req.params.id);
     if (!request) {
