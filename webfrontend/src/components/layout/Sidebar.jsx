@@ -14,6 +14,7 @@ import {
   CreditCard,
   Briefcase,
   GraduationCap,
+  FileCheck,
   FileCheck2,
   Shield,
   ShieldCheck,
@@ -39,6 +40,11 @@ import {
   CalendarClock,
   Receipt,
   UserPlus,
+  Palette,
+  ClipboardCheck,
+  Wrench,
+  Workflow,
+  Trash2,
   ChevronDown,
   ChevronRight,
   X
@@ -56,6 +62,7 @@ const iconMap = {
   Briefcase,
   Globe,
   GraduationCap,
+  FileCheck,
   FileCheck2,
   Shield,
   ShieldCheck,
@@ -79,7 +86,12 @@ const iconMap = {
   Target,
   CalendarClock,
   Receipt,
-  UserPlus
+  UserPlus,
+  Palette,
+  ClipboardCheck,
+  Wrench,
+  Workflow,
+  Trash2
 };
 
 export default function Sidebar({ isOpen, onClose }) {

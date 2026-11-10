@@ -42,11 +42,25 @@ import CreditPurchases from './pages/purchasing/CreditPurchases';
 import PurchasePayments from './pages/purchasing/PurchasePayments';
 import SupplierReturns from './pages/purchasing/SupplierReturns';
 
-// CRM & Sales Module Pages (Phase 3A)
+// CRM & Sales Module Pages (Phases 3A, 3B & 3C)
 import CrmDashboard from './pages/crm/CrmDashboard';
 import Leads from './pages/crm/Leads';
 import Customers from './pages/crm/Customers';
 import Followups from './pages/crm/Followups';
+import Services from './pages/crm/Services';
+import Orders from './pages/crm/Orders';
+import DesignProofing from './pages/crm/DesignProofing';
+import Proformas from './pages/crm/Proformas';
+import Invoices from './pages/crm/Invoices';
+import Payments from './pages/crm/Payments';
+
+// Machine & Production Operations Module Pages (Phases 4A, 4B, 4C & 4D)
+import ProductionDashboard from './pages/production/ProductionDashboard';
+import Machines from './pages/production/Machines';
+import MachineCheckups from './pages/production/MachineCheckups';
+import MachineMaintenance from './pages/production/MachineMaintenance';
+import ProductionJobs from './pages/production/ProductionJobs';
+import ProductionWastage from './pages/production/ProductionWastage';
 
 // Public Careers & Job Application Pages
 import PublicJobs from './pages/careers/PublicJobs';
@@ -68,6 +82,9 @@ function IndexRedirect() {
   }
   if (user?.roles?.includes('sales') && !user?.roles?.includes('admin') && !user?.roles?.includes('hr')) {
     return <Navigate to="/crm/dashboard" replace />;
+  }
+  if ((user?.roles?.includes('production_manager') || user?.roles?.includes('operator')) && !user?.roles?.includes('admin') && !user?.roles?.includes('hr')) {
+    return <Navigate to="/production/dashboard" replace />;
   }
   return <Navigate to="/hr/dashboard" replace />;
 }
@@ -299,7 +316,105 @@ export default function App() {
               </ProtectedRoute>
             }
           />
-          <Route path="crm/orders" element={<UpcomingModule moduleId="crm" />} />
+          <Route
+            path="crm/services"
+            element={
+              <ProtectedRoute roles={['admin', 'sales', 'manager']}>
+                <Services />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="crm/orders"
+            element={
+              <ProtectedRoute roles={['admin', 'sales', 'manager']}>
+                <Orders />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="crm/design-proofing"
+            element={
+              <ProtectedRoute roles={['admin', 'sales', 'manager']}>
+                <DesignProofing />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="crm/proformas"
+            element={
+              <ProtectedRoute roles={['admin', 'sales', 'manager']}>
+                <Proformas />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="crm/invoices"
+            element={
+              <ProtectedRoute roles={['admin', 'sales', 'manager', 'finance']}>
+                <Invoices />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="crm/payments"
+            element={
+              <ProtectedRoute roles={['admin', 'sales', 'manager', 'finance']}>
+                <Payments />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Machine & Production Operations Module Subroutes (Phases 4A, 4B, 4C & 4D) */}
+          <Route path="production" element={<Navigate to="/production/dashboard" replace />} />
+          <Route
+            path="production/dashboard"
+            element={
+              <ProtectedRoute roles={['admin', 'production_manager', 'operator', 'manager']}>
+                <ProductionDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="production/machines"
+            element={
+              <ProtectedRoute roles={['admin', 'production_manager', 'operator', 'manager']}>
+                <Machines />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="production/checkups"
+            element={
+              <ProtectedRoute roles={['admin', 'production_manager', 'operator', 'manager']}>
+                <MachineCheckups />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="production/maintenance"
+            element={
+              <ProtectedRoute roles={['admin', 'production_manager', 'operator', 'manager']}>
+                <MachineMaintenance />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="production/jobs"
+            element={
+              <ProtectedRoute roles={['admin', 'production_manager', 'operator', 'manager']}>
+                <ProductionJobs />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="production/wastage"
+            element={
+              <ProtectedRoute roles={['admin', 'production_manager', 'operator', 'manager']}>
+                <ProductionWastage />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Non-Blocking Planned Modules */}
           <Route path="production/*" element={<UpcomingModule moduleId="production" />} />

@@ -13,6 +13,17 @@ import * as companySettingController from './companySettingController.js';
 import * as leadController from './leadController.js';
 import * as customerController from './customerController.js';
 import * as followupController from './followupController.js';
+import * as serviceController from './serviceController.js';
+import * as orderController from './orderController.js';
+import * as designController from './designController.js';
+import * as proformaController from './proformaController.js';
+import * as invoiceController from './invoiceController.js';
+import * as customerPaymentController from './customerPaymentController.js';
+import * as machineController from './machineController.js';
+import * as machineCheckupController from './machineCheckupController.js';
+import * as machineMaintenanceController from './machineMaintenanceController.js';
+import * as productionJobController from './productionJobController.js';
+import * as productionWastageController from './productionWastageController.js';
 
 export {
   userController,
@@ -29,7 +40,18 @@ export {
   companySettingController,
   leadController,
   customerController,
-  followupController
+  followupController,
+  serviceController,
+  orderController,
+  designController,
+  proformaController,
+  invoiceController,
+  customerPaymentController,
+  machineController,
+  machineCheckupController,
+  machineMaintenanceController,
+  productionJobController,
+  productionWastageController
 };
 
 export default {
@@ -47,5 +69,16 @@ export default {
   companySettingController,
   leadController,
   customerController,
-  followupController
+  followupController,
+  serviceController,
+  orderController,
+  designController,
+  proformaController,
+  invoiceController,
+  customerPaymentController,
+  machineController,
+  machineCheckupController,
+  machineMaintenanceController,
+  productionJobController,
+  productionWastageController
 };

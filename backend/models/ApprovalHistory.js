@@ -14,7 +14,12 @@ const approvalHistorySchema = new mongoose.Schema(
         'purchase order',
         'stock request',
         'stock adjustment',
-        'stock transfer'
+        'stock transfer',
+        'sales order',
+        'proforma',
+        'production job',
+        'production wastage',
+        'machine maintenance'
       ],
       required: [true, 'Reference type is required'],
       trim: true

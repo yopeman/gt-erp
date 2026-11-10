@@ -185,13 +185,13 @@ flowchart LR
 
 ## Phase Timeline & Verification Checklist
 
-| Phase | Milestone | Key Verification Metric |
-| :--- | :--- | :--- |
-| **Phase 3A** | CRM Core | Create lead $\to$ log discussions $\to$ convert to Customer $\to$ schedule follow-up. |
-| **Phase 3B** | Order & Design | Define Service $\to$ create Order with specs $\to$ upload artwork $\to$ approve proof. |
-| **Phase 3C** | Invoicing & Payments | Issue Proforma $\to$ convert to Tax Invoice $\to$ collect payment $\to$ verify customer balance updates. |
-| **Phase 4A** | Machines & Maintenance | Register machine $\to$ submit daily checkup $\to$ create breakdown ticket $\to$ resolve with spare part deduction. |
-| **Phase 4B** | Floor Job Routing | Generate Job Order $\to$ step through all production stages $\to$ QC inspection sign-off. |
-| **Phase 4C** | Material & Wastage | Issue stock from Store $\to$ record scrap with root cause $\to$ verify automated Estimated vs Actual cost rollup. |
-| **Phase 4D** | Analytics & Launch | Dashboards display live metrics $\to$ navigation is unlocked $\to$ end-to-end audit logs verified. |
+| Phase | Milestone | Key Verification Metric | Status |
+| :--- | :--- | :--- | :--- |
+| **Phase 3A** | CRM Core | Create lead $\to$ log discussions $\to$ convert to Customer $\to$ schedule follow-up. | ✅ Completed |
+| **Phase 3B** | Order & Design | Define Service $\to$ create Order with specs $\to$ upload artwork $\to$ approve proof. | ✅ Completed |
+| **Phase 3C** | Invoicing & Payments | Issue Proforma $\to$ convert to Tax Invoice $\to$ collect payment $\to$ verify customer balance updates. | ✅ Completed |
+| **Phase 4A** | Machines & Maintenance | Register machine $\to$ submit daily checkup $\to$ create breakdown ticket $\to$ resolve with spare part deduction. | ✅ Completed |
+| **Phase 4B** | Floor Job Routing | Generate Job Order $\to$ step through all production stages $\to$ QC inspection sign-off. | ✅ Completed |
+| **Phase 4C** | Material & Wastage | Issue stock from Store $\to$ record scrap with root cause $\to$ verify automated Estimated vs Actual cost rollup. | ✅ Completed |
+| **Phase 4D** | Analytics & Launch | Dashboards display live metrics $\to$ navigation is unlocked $\to$ end-to-end audit logs verified. | ✅ Completed |
 

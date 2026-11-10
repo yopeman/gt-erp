@@ -31,10 +31,23 @@ import GoodsReceipt from './GoodsReceipt.js';
 import PurchasePayment from './PurchasePayment.js';
 import SupplierReturn from './SupplierReturn.js';
 
-// CRM & Sales Module Models (Phase 3A)
+// CRM & Sales Module Models (Phases 3A, 3B & 3C)
 import Lead from './Lead.js';
 import Customer from './Customer.js';
 import Followup from './Followup.js';
+import Service from './Service.js';
+import Order from './Order.js';
+import Design from './Design.js';
+import Proforma from './Proforma.js';
+import Invoice from './Invoice.js';
+import CustomerPayment from './CustomerPayment.js';
+
+// Machine & Production Operations Models (Phase 4A, 4B & 4C)
+import Machine from './Machine.js';
+import MachineCheckup from './MachineCheckup.js';
+import MachineMaintenance from './MachineMaintenance.js';
+import ProductionJob from './ProductionJob.js';
+import ProductionWastage from './ProductionWastage.js';
 
 // System Support Models
 import ApprovalHistory from './ApprovalHistory.js';
@@ -78,6 +91,19 @@ export {
   Lead,
   Customer,
   Followup,
+  Service,
+  Order,
+  Design,
+  Proforma,
+  Invoice,
+  CustomerPayment,
+
+  // Machine & Production Operations
+  Machine,
+  MachineCheckup,
+  MachineMaintenance,
+  ProductionJob,
+  ProductionWastage,
 
   // System Support
   ApprovalHistory,
@@ -122,6 +148,19 @@ export default {
   Lead,
   Customer,
   Followup,
+  Service,
+  Order,
+  Design,
+  Proforma,
+  Invoice,
+  CustomerPayment,
+
+  // Machine & Production Operations
+  Machine,
+  MachineCheckup,
+  MachineMaintenance,
+  ProductionJob,
+  ProductionWastage,
 
   // System Support
   ApprovalHistory,

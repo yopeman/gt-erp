@@ -85,21 +85,29 @@ export const ERP_MODULES = [
       { id: 'crm-leads', path: '/crm/leads', titleKey: 'nav.crmLeads', icon: 'Target', requiredRoles: ['admin', 'sales', 'manager'], status: 'active' },
       { id: 'crm-customers', path: '/crm/customers', titleKey: 'nav.crmCustomers', icon: 'Building2', requiredRoles: ['admin', 'sales', 'manager'], status: 'active' },
       { id: 'crm-followups', path: '/crm/followups', titleKey: 'nav.crmFollowups', icon: 'CalendarClock', requiredRoles: ['admin', 'sales', 'manager'], status: 'active' },
-      { id: 'crm-orders', path: '/crm/orders', titleKey: 'Printing Orders & Proforma', icon: 'Receipt', requiredRoles: ['admin', 'sales', 'manager'], status: 'upcoming' }
+      { id: 'crm-services', path: '/crm/services', titleKey: 'nav.crmServices', icon: 'FileText', requiredRoles: ['admin', 'sales', 'manager'], status: 'active' },
+      { id: 'crm-orders', path: '/crm/orders', titleKey: 'nav.crmOrders', icon: 'Receipt', requiredRoles: ['admin', 'sales', 'manager'], status: 'active' },
+      { id: 'crm-design', path: '/crm/design-proofing', titleKey: 'nav.crmDesign', icon: 'Palette', requiredRoles: ['admin', 'sales', 'manager'], status: 'active' },
+      { id: 'crm-proformas', path: '/crm/proformas', titleKey: 'nav.crmProformas', icon: 'FileCheck', requiredRoles: ['admin', 'sales', 'manager'], status: 'active' },
+      { id: 'crm-invoices', path: '/crm/invoices', titleKey: 'nav.crmInvoices', icon: 'DollarSign', requiredRoles: ['admin', 'sales', 'manager', 'finance'], status: 'active' },
+      { id: 'crm-payments', path: '/crm/payments', titleKey: 'nav.crmPayments', icon: 'CreditCard', requiredRoles: ['admin', 'sales', 'manager', 'finance'], status: 'active' }
     ]
   },
   {
     id: 'production',
     titleKey: 'modules.production',
     icon: 'Factory',
-    requiredRoles: ['admin', 'production_manager', 'operator'],
-    status: 'upcoming',
+    requiredRoles: ['admin', 'production_manager', 'operator', 'manager'],
+    status: 'active',
     phase: 'Phase 4',
-    description: 'Machine Management, Maintenance, Raw Material Requests, Wastage Tracking',
+    description: 'Machine Management, Maintenance, Production Jobs & Wastage Tracking',
     submodules: [
-      { id: 'production-dashboard', path: '/production/dashboard', titleKey: 'nav.dashboard', icon: 'LayoutDashboard', status: 'upcoming' },
-      { id: 'production-machines', path: '/production/machines', titleKey: 'Machines & Maintenance', icon: 'Cog', status: 'upcoming' },
-      { id: 'production-jobs', path: '/production/jobs', titleKey: 'Production Jobs & Wastage', icon: 'Workflow', status: 'upcoming' }
+      { id: 'production-dashboard', path: '/production/dashboard', titleKey: 'nav.productionDashboard', icon: 'LayoutDashboard', requiredRoles: ['admin', 'production_manager', 'operator', 'manager'], status: 'active' },
+      { id: 'production-machines', path: '/production/machines', titleKey: 'nav.productionMachines', icon: 'Factory', requiredRoles: ['admin', 'production_manager', 'operator', 'manager'], status: 'active' },
+      { id: 'production-checkups', path: '/production/checkups', titleKey: 'nav.productionCheckups', icon: 'ClipboardCheck', requiredRoles: ['admin', 'production_manager', 'operator', 'manager'], status: 'active' },
+      { id: 'production-maintenance', path: '/production/maintenance', titleKey: 'nav.productionMaintenance', icon: 'Wrench', requiredRoles: ['admin', 'production_manager', 'operator', 'manager'], status: 'active' },
+      { id: 'production-jobs', path: '/production/jobs', titleKey: 'nav.productionJobs', icon: 'Workflow', requiredRoles: ['admin', 'production_manager', 'operator', 'manager'], status: 'active' },
+      { id: 'production-wastage', path: '/production/wastage', titleKey: 'nav.productionWastage', icon: 'Trash2', requiredRoles: ['admin', 'production_manager', 'operator', 'manager'], status: 'active' }
     ]
   },
   {
