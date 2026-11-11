@@ -32,7 +32,9 @@ import {
 const PRIORITY_BADGES = {
   urgent: 'bg-rose-100 dark:bg-rose-950/80 text-rose-800 dark:text-rose-300 border-rose-300 dark:border-rose-800 font-bold animate-pulse',
   high: 'bg-orange-100 dark:bg-orange-950/80 text-orange-800 dark:text-orange-300 border-orange-200 dark:border-orange-800 font-semibold',
-  normal: 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+  normal: 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700',
+  medium: 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700',
+  low: 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
 };
 
 const STATUS_BADGES = {
@@ -144,12 +146,16 @@ export default function ProductionJobs() {
   const handleOrderSelect = (orderId) => {
     const selectedOrder = orders.find((o) => o._id === orderId);
     if (selectedOrder) {
+      const orderPriority =
+        selectedOrder.priority === 'medium' || selectedOrder.priority === 'low'
+          ? 'normal'
+          : selectedOrder.priority || 'normal';
       setJobForm({
         ...jobForm,
         order: selectedOrder._id,
         customer: selectedOrder.customer?._id || selectedOrder.customer || '',
         service: selectedOrder.items?.[0]?.service?._id || selectedOrder.items?.[0]?.service || '',
-        priority: selectedOrder.priority || 'normal',
+        priority: orderPriority,
         targetQuantity: selectedOrder.items?.[0]?.quantity || 1000
       });
     } else {
@@ -165,12 +171,16 @@ export default function ProductionJobs() {
     }
     try {
       setSubmitting(true);
-      await productionService.createProductionJob(jobForm);
+      const payload = {
+        ...jobForm,
+        priority: jobForm.priority === 'medium' || jobForm.priority === 'low' ? 'normal' : jobForm.priority
+      };
+      await productionService.createProductionJob(payload);
       setIsNewJobModalOpen(false);
       resetJobForm();
       fetchData();
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to create job order');
+      alert(err.response?.data?.error || err.response?.data?.message || 'Failed to create job order');
     } finally {
       setSubmitting(false);
     }
@@ -235,7 +245,7 @@ export default function ProductionJobs() {
       setIsStageActionModalOpen(false);
       fetchData();
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to update stage');
+      alert(err.response?.data?.error || err.response?.data?.message || 'Failed to update stage');
     } finally {
       setSubmitting(false);
     }
@@ -508,7 +518,7 @@ export default function ProductionJobs() {
                 Priority
               </label>
               <select
-                value={jobForm.priority}
+                value={jobForm.priority === 'medium' || jobForm.priority === 'low' ? 'normal' : jobForm.priority}
                 onChange={(e) => setJobForm({ ...jobForm, priority: e.target.value })}
                 className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 outline-none"
               >

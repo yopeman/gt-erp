@@ -4,7 +4,8 @@ const jobStageSchema = new mongoose.Schema(
   {
     sequence: {
       type: Number,
-      required: true
+      required: true,
+      default: 1
     },
     stageName: {
       type: String,
@@ -88,8 +89,13 @@ const productionJobSchema = new mongoose.Schema(
     },
     priority: {
       type: String,
-      enum: ['normal', 'high', 'urgent'],
-      default: 'normal'
+      enum: ['low', 'normal', 'medium', 'high', 'urgent'],
+      default: 'normal',
+      set: (val) => {
+        if (!val) return 'normal';
+        const v = String(val).toLowerCase().trim();
+        return v === 'medium' || v === 'low' ? 'normal' : v;
+      }
     },
     targetQuantity: {
       type: Number,
@@ -156,6 +162,14 @@ const productionJobSchema = new mongoose.Schema(
 
 // Auto-generate jobOrderNumber if not supplied
 productionJobSchema.pre('validate', async function () {
+  // Normalize priority from Order enum (medium/low) to normal if needed
+  if (this.priority) {
+    const p = String(this.priority).toLowerCase().trim();
+    if (p === 'medium' || p === 'low') {
+      this.priority = 'normal';
+    }
+  }
+
   if (!this.jobOrderNumber) {
     const year = new Date().getFullYear();
     const count = await mongoose.model('ProductionJob').countDocuments();
@@ -168,6 +182,15 @@ productionJobSchema.pre('validate', async function () {
       increment++;
     }
     this.jobOrderNumber = code;
+  }
+
+  // Ensure every stage has a sequence
+  if (Array.isArray(this.stages)) {
+    this.stages.forEach((stg, idx) => {
+      if (stg.sequence === undefined || stg.sequence === null || isNaN(stg.sequence)) {
+        stg.sequence = idx + 1;
+      }
+    });
   }
 
   // Calculate actualMaterialsConsumed totalMaterialCost

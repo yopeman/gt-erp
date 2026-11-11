@@ -6,6 +6,14 @@ import Machine from '../models/Machine.js';
 import Employee from '../models/Employee.js';
 import { sendSuccess, sendError } from '../utils/apiResponse.js';
 
+const normalizeJobPriority = (p) => {
+  if (!p) return 'normal';
+  const val = String(p).toLowerCase().trim();
+  if (val === 'medium' || val === 'low') return 'normal';
+  if (['normal', 'high', 'urgent'].includes(val)) return val;
+  return 'normal';
+};
+
 // Get production jobs with filtering and pagination
 export const getProductionJobs = async (req, res) => {
   try {
@@ -145,9 +153,9 @@ export const createProductionJob = async (req, res) => {
     let finalStages = stages;
     if (!Array.isArray(finalStages) || finalStages.length === 0) {
       if (serviceDoc && Array.isArray(serviceDoc.workflowTemplate) && serviceDoc.workflowTemplate.length > 0) {
-        finalStages = serviceDoc.workflowTemplate.map((step) => ({
-          sequence: step.stepOrder,
-          stageName: step.stageName,
+        finalStages = serviceDoc.workflowTemplate.map((step, idx) => ({
+          sequence: typeof step.sequence === 'number' && step.sequence > 0 ? step.sequence : (idx + 1),
+          stageName: step.stageName || `Stage ${idx + 1}`,
           machine: step.preferredMachine || null,
           operators: [],
           hoursRun: 0,
@@ -165,6 +173,13 @@ export const createProductionJob = async (req, res) => {
           { sequence: 4, stageName: 'Quality Inspection & Packaging', status: 'pending' }
         ];
       }
+    } else {
+      finalStages = finalStages.map((stg, idx) => ({
+        ...stg,
+        sequence: typeof stg.sequence === 'number' && stg.sequence > 0 ? stg.sequence : (idx + 1),
+        stageName: stg.stageName || `Stage ${idx + 1}`,
+        status: stg.status || 'pending'
+      }));
     }
 
     const job = await ProductionJob.create({
@@ -172,7 +187,7 @@ export const createProductionJob = async (req, res) => {
       order: orderDoc._id,
       customer: custId,
       service: srvId,
-      priority: priority || orderDoc.priority || 'normal',
+      priority: normalizeJobPriority(priority || orderDoc.priority),
       targetQuantity: Number(targetQuantity),
       scheduledStartDate: scheduledStartDate ? new Date(scheduledStartDate) : new Date(),
       scheduledCompletionDate: scheduledCompletionDate
@@ -375,7 +390,7 @@ export const updateProductionJob = async (req, res) => {
       actualMaterialsConsumed
     } = req.body;
 
-    if (priority) job.priority = priority;
+    if (priority) job.priority = normalizeJobPriority(priority);
     if (targetQuantity !== undefined) job.targetQuantity = Number(targetQuantity);
     if (producedQuantity !== undefined) job.producedQuantity = Number(producedQuantity);
     if (defectiveQuantity !== undefined) job.defectiveQuantity = Number(defectiveQuantity);
