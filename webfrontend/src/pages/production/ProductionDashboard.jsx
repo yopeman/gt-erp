@@ -67,11 +67,11 @@ export default function ProductionDashboard() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-            <Factory className="w-7 h-7 text-indigo-600" />
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-2">
+            <Factory className="w-7 h-7 text-indigo-600 dark:text-indigo-400" />
             Production Operations Executive Dashboard
           </h1>
-          <p className="text-sm text-slate-500 mt-1">
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
             Plant throughput, real-time machine fleet utilization, scrap rates, and active print runs.
           </p>
         </div>
@@ -96,64 +96,64 @@ export default function ProductionDashboard() {
       {/* KPI Cards */}
       {metrics && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-3">
-            <div className="p-3 bg-blue-50 rounded-lg text-blue-600">
+          <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-center gap-3">
+            <div className="p-3 bg-blue-50 dark:bg-blue-950/60 rounded-lg text-blue-600 dark:text-blue-400">
               <Workflow className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-xs font-medium text-slate-500">In Production</p>
-              <p className="text-xl font-bold text-blue-600">{metrics.inProductionJobs || 0}</p>
-              <p className="text-[11px] text-slate-400 mt-0.5">{metrics.totalJobs || 0} total jobs</p>
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">In Production</p>
+              <p className="text-xl font-bold text-blue-600 dark:text-blue-400">{metrics.inProductionJobs || 0}</p>
+              <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">{metrics.totalJobs || 0} total jobs</p>
             </div>
           </div>
 
-          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-3">
-            <div className="p-3 bg-emerald-50 rounded-lg text-emerald-600">
+          <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-center gap-3">
+            <div className="p-3 bg-emerald-50 dark:bg-emerald-950/60 rounded-lg text-emerald-600 dark:text-emerald-400">
               <Gauge className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-xs font-medium text-slate-500">Fleet Utilization</p>
-              <p className="text-xl font-bold text-emerald-600">{metrics.utilizationRate || 0}%</p>
-              <p className="text-[11px] text-slate-400 mt-0.5">
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Fleet Utilization</p>
+              <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">{metrics.utilizationRate || 0}%</p>
+              <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
                 {metrics.machinesRunning || 0} of {metrics.totalMachines || 0} running
               </p>
             </div>
           </div>
 
-          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-3">
-            <div className="p-3 bg-indigo-50 rounded-lg text-indigo-600">
+          <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-center gap-3">
+            <div className="p-3 bg-indigo-50 dark:bg-indigo-950/60 rounded-lg text-indigo-600 dark:text-indigo-400">
               <TrendingUp className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-xs font-medium text-slate-500">Good Output</p>
-              <p className="text-xl font-bold text-indigo-600">
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Good Output</p>
+              <p className="text-xl font-bold text-indigo-600 dark:text-indigo-400">
                 {Number(metrics.volume?.totalProduced || 0).toLocaleString()}
               </p>
-              <p className="text-[11px] text-slate-400 mt-0.5">passed units</p>
+              <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">passed units</p>
             </div>
           </div>
 
-          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-3">
-            <div className="p-3 bg-rose-50 rounded-lg text-rose-600">
+          <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-center gap-3">
+            <div className="p-3 bg-rose-50 dark:bg-rose-950/60 rounded-lg text-rose-600 dark:text-rose-400">
               <Trash2 className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-xs font-medium text-slate-500">Defect Scrap Rate</p>
-              <p className="text-xl font-bold text-rose-600">{metrics.scrapRate || 0}%</p>
-              <p className="text-[11px] text-slate-400 mt-0.5">
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Defect Scrap Rate</p>
+              <p className="text-xl font-bold text-rose-600 dark:text-rose-400">{metrics.scrapRate || 0}%</p>
+              <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
                 {Number(metrics.volume?.totalDefective || 0).toLocaleString()} spoiled
               </p>
             </div>
           </div>
 
-          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-3">
-            <div className="p-3 bg-amber-50 rounded-lg text-amber-600">
+          <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-center gap-3">
+            <div className="p-3 bg-amber-50 dark:bg-amber-950/60 rounded-lg text-amber-600 dark:text-amber-400">
               <AlertTriangle className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-xs font-medium text-slate-500">Breakdown Alerts</p>
-              <p className="text-xl font-bold text-amber-600">{metrics.activeBreakdowns || 0}</p>
-              <p className="text-[11px] text-slate-400 mt-0.5">machines locked</p>
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Breakdown Alerts</p>
+              <p className="text-xl font-bold text-amber-600 dark:text-amber-400">{metrics.activeBreakdowns || 0}</p>
+              <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">machines locked</p>
             </div>
           </div>
         </div>
@@ -162,15 +162,15 @@ export default function ProductionDashboard() {
       {/* Main Grid: Machine Fleet Status & Floor Jobs Queue */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Plant Equipment Fleet */}
-        <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-4">
+        <div className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-5 space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="font-bold text-slate-900 text-sm flex items-center gap-2">
-              <Factory className="w-4 h-4 text-indigo-600" />
+            <h2 className="font-bold text-slate-900 dark:text-slate-100 text-sm flex items-center gap-2">
+              <Factory className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
               Machine Fleet Live Status
             </h2>
             <Link
               to="/production/machines"
-              className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
+              className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 flex items-center gap-1"
             >
               View All Equipment <ArrowRight className="w-3.5 h-3.5" />
             </Link>
@@ -188,37 +188,37 @@ export default function ProductionDashboard() {
                   key={m._id}
                   className={`p-3 rounded-lg border text-xs flex flex-col justify-between ${
                     isRunning
-                      ? 'bg-blue-50/50 border-blue-200'
+                      ? 'bg-blue-50/50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800/60'
                       : isMnt
-                      ? 'bg-amber-50/50 border-amber-200'
+                      ? 'bg-amber-50/50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800/60'
                       : isBrk
-                      ? 'bg-rose-50/50 border-rose-200'
-                      : 'bg-slate-50/60 border-slate-200'
+                      ? 'bg-rose-50/50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800/60'
+                      : 'bg-slate-50/60 dark:bg-slate-900/60 border-slate-200 dark:border-slate-700'
                   }`}
                 >
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <span className="font-bold text-indigo-600">{m.machineCode}</span>
+                      <span className="font-bold text-indigo-600 dark:text-indigo-400">{m.machineCode}</span>
                       <span
                         className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${
                           isRunning
-                            ? 'bg-blue-100 text-blue-700 animate-pulse'
+                            ? 'bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 animate-pulse'
                             : isMnt
-                            ? 'bg-amber-100 text-amber-700'
+                            ? 'bg-amber-100 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300'
                             : isBrk
-                            ? 'bg-rose-100 text-rose-700'
-                            : 'bg-emerald-100 text-emerald-700'
+                            ? 'bg-rose-100 dark:bg-rose-900/60 text-rose-700 dark:text-rose-300'
+                            : 'bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300'
                         }`}
                       >
                         {m.status}
                       </span>
                     </div>
-                    <p className="font-semibold text-slate-900 line-clamp-1">{m.name}</p>
-                    <p className="text-[11px] text-slate-500 mt-0.5">
+                    <p className="font-semibold text-slate-900 dark:text-slate-100 line-clamp-1">{m.name}</p>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                       Rate: ETB {Number(m.hourlyCostRate || 0).toFixed(0)}/hr
                     </p>
                   </div>
-                  <div className="mt-2 pt-1.5 border-t border-slate-200/60 text-[11px] text-slate-400">
+                  <div className="mt-2 pt-1.5 border-t border-slate-200/60 dark:border-slate-700/60 text-[11px] text-slate-400 dark:text-slate-500">
                     Total Hours: {m.totalOperatingHours || 0} hrs
                   </div>
                 </div>
@@ -230,31 +230,31 @@ export default function ProductionDashboard() {
         {/* Side Panel: Active Jobs & Breakdown Alerts */}
         <div className="space-y-6">
           {/* Active Print Runs */}
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-3">
+          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="font-bold text-slate-900 text-xs uppercase tracking-wide flex items-center gap-1.5">
-                <Workflow className="w-3.5 h-3.5 text-indigo-600" />
+              <h3 className="font-bold text-slate-900 dark:text-slate-100 text-xs uppercase tracking-wide flex items-center gap-1.5">
+                <Workflow className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
                 Active Floor Jobs
               </h3>
-              <Link to="/production/jobs" className="text-xs text-indigo-600 hover:underline">
+              <Link to="/production/jobs" className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">
                 View All
               </Link>
             </div>
 
             {activeJobs.length === 0 ? (
-              <p className="text-xs text-slate-400 py-3 text-center">No jobs currently on the floor.</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 py-3 text-center">No jobs currently on the floor.</p>
             ) : (
               <div className="space-y-2">
                 {activeJobs.map((j) => (
-                  <div key={j._id} className="p-2.5 bg-slate-50 rounded-lg border border-slate-100 text-xs">
+                  <div key={j._id} className="p-2.5 bg-slate-50 dark:bg-slate-900/60 rounded-lg border border-slate-100 dark:border-slate-700/60 text-xs">
                     <div className="flex justify-between items-center mb-1">
-                      <span className="font-bold text-indigo-600">{j.jobOrderNumber}</span>
-                      <span className="text-[11px] font-semibold text-slate-700">
+                      <span className="font-bold text-indigo-600 dark:text-indigo-400">{j.jobOrderNumber}</span>
+                      <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
                         {j.targetQuantity?.toLocaleString()} units
                       </span>
                     </div>
-                    <p className="font-medium text-slate-800 line-clamp-1">{j.order?.title}</p>
-                    <p className="text-[11px] text-slate-400 mt-0.5">{j.customer?.companyName}</p>
+                    <p className="font-medium text-slate-800 dark:text-slate-200 line-clamp-1">{j.order?.title}</p>
+                    <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">{j.customer?.companyName}</p>
                   </div>
                 ))}
               </div>
@@ -262,31 +262,31 @@ export default function ProductionDashboard() {
           </div>
 
           {/* Breakdown / Maintenance Alert Queue */}
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-3">
+          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="font-bold text-slate-900 text-xs uppercase tracking-wide flex items-center gap-1.5">
-                <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
+              <h3 className="font-bold text-slate-900 dark:text-slate-100 text-xs uppercase tracking-wide flex items-center gap-1.5">
+                <AlertTriangle className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
                 Reported Breakdowns ({breakdownTickets.length})
               </h3>
-              <Link to="/production/maintenance" className="text-xs text-rose-600 hover:underline">
+              <Link to="/production/maintenance" className="text-xs text-rose-600 dark:text-rose-400 hover:underline">
                 Manage
               </Link>
             </div>
 
             {breakdownTickets.length === 0 ? (
-              <p className="text-xs text-slate-400 py-3 text-center">Zero reported breakdowns. All systems go!</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 py-3 text-center">Zero reported breakdowns. All systems go!</p>
             ) : (
               <div className="space-y-2">
                 {breakdownTickets.map((t) => (
-                  <div key={t._id} className="p-2.5 bg-rose-50/40 rounded-lg border border-rose-100 text-xs">
+                  <div key={t._id} className="p-2.5 bg-rose-50/40 dark:bg-rose-950/30 rounded-lg border border-rose-100 dark:border-rose-900/40 text-xs">
                     <div className="flex justify-between items-center mb-1">
-                      <span className="font-bold text-rose-600">{t.maintenanceNumber}</span>
-                      <span className="text-[10px] font-bold uppercase text-rose-700 bg-rose-100 px-1.5 py-0.2 rounded">
+                      <span className="font-bold text-rose-600 dark:text-rose-400">{t.maintenanceNumber}</span>
+                      <span className="text-[10px] font-bold uppercase text-rose-700 dark:text-rose-300 bg-rose-100 dark:bg-rose-900/60 px-1.5 py-0.2 rounded">
                         {t.priority}
                       </span>
                     </div>
-                    <p className="font-semibold text-slate-800">{t.machine?.name}</p>
-                    <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">{t.issueDescription}</p>
+                    <p className="font-semibold text-slate-800 dark:text-slate-200">{t.machine?.name}</p>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5">{t.issueDescription}</p>
                   </div>
                 ))}
               </div>

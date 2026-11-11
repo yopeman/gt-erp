@@ -26,18 +26,18 @@ import {
 } from 'lucide-react';
 
 const PRIORITY_BADGES = {
-  critical: 'bg-rose-100 text-rose-800 border-rose-300 font-bold animate-pulse',
-  high: 'bg-orange-100 text-orange-800 border-orange-200 font-semibold',
-  medium: 'bg-amber-100 text-amber-800 border-amber-200',
-  low: 'bg-slate-100 text-slate-700 border-slate-200'
+  critical: 'bg-rose-100 dark:bg-rose-950/80 text-rose-800 dark:text-rose-300 border-rose-300 dark:border-rose-800 font-bold animate-pulse',
+  high: 'bg-orange-100 dark:bg-orange-950/80 text-orange-800 dark:text-orange-300 border-orange-200 dark:border-orange-800 font-semibold',
+  medium: 'bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800',
+  low: 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
 };
 
 const STATUS_BADGES = {
-  reported: 'bg-blue-50 text-blue-700 border-blue-200',
-  approved: 'bg-indigo-50 text-indigo-700 border-indigo-200',
-  in_progress: 'bg-purple-50 text-purple-700 border-purple-200',
-  completed: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  cancelled: 'bg-slate-50 text-slate-600 border-slate-200'
+  reported: 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800',
+  approved: 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800',
+  in_progress: 'bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-800',
+  completed: 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800',
+  cancelled: 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'
 };
 
 export default function MachineMaintenance() {
@@ -240,11 +240,11 @@ export default function MachineMaintenance() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-            <Wrench className="w-7 h-7 text-indigo-600" />
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-2">
+            <Wrench className="w-7 h-7 text-indigo-600 dark:text-indigo-400" />
             Machine Maintenance & Breakdown Tickets
           </h1>
-          <p className="text-sm text-slate-500 mt-1">
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
             Plant breakdown response, technician assignments, downtime tracking, and spare parts inventory deduction.
           </p>
         </div>
@@ -261,22 +261,22 @@ export default function MachineMaintenance() {
       </div>
 
       {/* Filter Bar */}
-      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-4 justify-between items-center">
+      <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col md:flex-row gap-4 justify-between items-center">
         <div className="relative w-full md:w-80">
-          <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
+          <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400 dark:text-slate-500" />
           <input
             type="text"
             placeholder="Search ticket #, issue description..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 border border-slate-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full pl-9 pr-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none focus:ring-2 focus:ring-indigo-500"
           />
         </div>
         <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white outline-none"
+            className="px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-indigo-500"
           >
             <option value="all">All Statuses</option>
             <option value="reported">Reported</option>
@@ -287,7 +287,7 @@ export default function MachineMaintenance() {
           <select
             value={priorityFilter}
             onChange={(e) => setPriorityFilter(e.target.value)}
-            className="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white outline-none"
+            className="px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-indigo-500"
           >
             <option value="all">All Priorities</option>
             <option value="critical">Critical</option>
@@ -301,8 +301,8 @@ export default function MachineMaintenance() {
       {/* Tickets Table */}
       {loading ? (
         <div className="text-center py-16">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-indigo-600 border-t-transparent" />
-          <p className="text-sm text-slate-500 mt-2">Loading maintenance tickets...</p>
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-indigo-600 dark:border-indigo-400 border-t-transparent" />
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">Loading maintenance tickets...</p>
         </div>
       ) : maintenances.length === 0 ? (
         <EmptyState
@@ -316,10 +316,10 @@ export default function MachineMaintenance() {
           }}
         />
       ) : (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
           <table className="w-full text-left border-collapse text-sm">
             <thead>
-              <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 uppercase tracking-wider">
+              <tr className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">
                 <th className="py-3 px-4">Ticket #</th>
                 <th className="py-3 px-4">Equipment</th>
                 <th className="py-3 px-4">Priority</th>
@@ -331,15 +331,15 @@ export default function MachineMaintenance() {
                 <th className="py-3 px-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60">
               {maintenances.map((ticket) => (
-                <tr key={ticket._id} className="hover:bg-slate-50 transition">
-                  <td className="py-3.5 px-4 font-bold text-indigo-600">
+                <tr key={ticket._id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition">
+                  <td className="py-3.5 px-4 font-bold text-indigo-600 dark:text-indigo-400">
                     {ticket.maintenanceNumber}
                   </td>
                   <td className="py-3.5 px-4">
-                    <div className="font-semibold text-slate-900">{ticket.machine?.name}</div>
-                    <div className="text-xs text-slate-400">{ticket.machine?.machineCode}</div>
+                    <div className="font-semibold text-slate-900 dark:text-slate-100">{ticket.machine?.name}</div>
+                    <div className="text-xs text-slate-400 dark:text-slate-500">{ticket.machine?.machineCode}</div>
                   </td>
                   <td className="py-3.5 px-4">
                     <span
@@ -351,14 +351,14 @@ export default function MachineMaintenance() {
                     </span>
                   </td>
                   <td className="py-3.5 px-4">
-                    <span className="capitalize text-xs text-slate-700 bg-slate-100 px-2 py-0.5 rounded font-medium">
+                    <span className="capitalize text-xs text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-700/60 px-2 py-0.5 rounded font-medium border border-slate-200 dark:border-slate-600">
                       {ticket.maintenanceType?.replace('_', ' ')}
                     </span>
                   </td>
-                  <td className="py-3.5 px-4 text-xs text-slate-600 max-w-xs truncate">
+                  <td className="py-3.5 px-4 text-xs text-slate-600 dark:text-slate-300 max-w-xs truncate">
                     {ticket.issueDescription}
                   </td>
-                  <td className="py-3.5 px-4 text-xs text-slate-700 font-medium">
+                  <td className="py-3.5 px-4 text-xs text-slate-700 dark:text-slate-300 font-medium">
                     {ticket.assignedTechnician
                       ? `${ticket.assignedTechnician.firstName} ${ticket.assignedTechnician.lastName}`
                       : ticket.externalServiceProvider || 'Unassigned'}
@@ -372,7 +372,7 @@ export default function MachineMaintenance() {
                       {ticket.status?.replace('_', ' ')}
                     </span>
                   </td>
-                  <td className="py-3.5 px-4 text-xs font-bold text-slate-800">
+                  <td className="py-3.5 px-4 text-xs font-bold text-slate-800 dark:text-slate-200">
                     {ticket.downtimeHours ? `${ticket.downtimeHours} hrs` : '-'}
                   </td>
                   <td className="py-3.5 px-4 text-right">
@@ -402,7 +402,7 @@ export default function MachineMaintenance() {
                           setSelectedTicket(ticket);
                           setIsDetailModalOpen(true);
                         }}
-                        className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 rounded transition"
+                        className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded transition"
                         title="View Details"
                       >
                         <Eye className="w-4 h-4" />
@@ -426,14 +426,14 @@ export default function MachineMaintenance() {
         <form onSubmit={handleCreateSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Equipment *
               </label>
               <select
                 required
                 value={ticketForm.machine}
                 onChange={(e) => setTicketForm({ ...ticketForm, machine: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm outline-none"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 outline-none"
               >
                 <option value="">Select Equipment...</option>
                 {machines.map((m) => (
@@ -444,13 +444,13 @@ export default function MachineMaintenance() {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Maintenance Type *
               </label>
               <select
                 value={ticketForm.maintenanceType}
                 onChange={(e) => setTicketForm({ ...ticketForm, maintenanceType: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm outline-none"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 outline-none"
               >
                 <option value="breakdown_repair">Emergency Breakdown Repair</option>
                 <option value="preventive">Scheduled Preventive Overhaul</option>
@@ -462,13 +462,13 @@ export default function MachineMaintenance() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Priority Level *
               </label>
               <select
                 value={ticketForm.priority}
                 onChange={(e) => setTicketForm({ ...ticketForm, priority: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm outline-none"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 outline-none"
               >
                 <option value="critical">Critical (Plant Stoppage)</option>
                 <option value="high">High</option>
@@ -477,14 +477,14 @@ export default function MachineMaintenance() {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Reported By *
               </label>
               <select
                 required
                 value={ticketForm.reportedBy}
                 onChange={(e) => setTicketForm({ ...ticketForm, reportedBy: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm outline-none"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 outline-none"
               >
                 <option value="">Select Reporter...</option>
                 {employees.map((emp) => {
@@ -502,13 +502,13 @@ export default function MachineMaintenance() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Assigned Technician (Internal)
               </label>
               <select
                 value={ticketForm.assignedTechnician}
                 onChange={(e) => setTicketForm({ ...ticketForm, assignedTechnician: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm outline-none"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 outline-none"
               >
                 <option value="">Select Technician...</option>
                 {employees.map((emp) => {
@@ -523,7 +523,7 @@ export default function MachineMaintenance() {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 External Service Provider (If outsourced)
               </label>
               <input
@@ -531,13 +531,13 @@ export default function MachineMaintenance() {
                 placeholder="e.g. Heidelberg Technical Services"
                 value={ticketForm.externalServiceProvider}
                 onChange={(e) => setTicketForm({ ...ticketForm, externalServiceProvider: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm outline-none"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
               Issue Description / Failure Symptom *
             </label>
             <textarea
@@ -546,15 +546,15 @@ export default function MachineMaintenance() {
               placeholder="Describe error code, abnormal vibration, hydraulic leak, paper jam sensor fault..."
               value={ticketForm.issueDescription}
               onChange={(e) => setTicketForm({ ...ticketForm, issueDescription: e.target.value })}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm outline-none"
+              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none"
             />
           </div>
 
-          <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
+          <div className="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-700/80">
             <button
               type="button"
               onClick={() => setIsNewTicketModalOpen(false)}
-              className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50"
+              className="px-4 py-2 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition"
             >
               Cancel
             </button>
@@ -578,19 +578,19 @@ export default function MachineMaintenance() {
           maxWidth="max-w-2xl"
         >
           <form onSubmit={handleCompleteSubmit} className="space-y-4">
-            <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 text-xs flex justify-between items-center">
+            <div className="bg-slate-50 dark:bg-slate-900/60 p-3 rounded-lg border border-slate-200 dark:border-slate-700 text-xs flex justify-between items-center">
               <div>
-                <span className="font-bold text-slate-800">{selectedTicket.machine?.name}</span>
-                <p className="text-slate-500">{selectedTicket.issueDescription}</p>
+                <span className="font-bold text-slate-800 dark:text-slate-200">{selectedTicket.machine?.name}</span>
+                <p className="text-slate-500 dark:text-slate-400">{selectedTicket.issueDescription}</p>
               </div>
-              <span className="text-xs px-2 py-0.5 rounded bg-purple-100 text-purple-800 font-semibold uppercase">
+              <span className="text-xs px-2 py-0.5 rounded bg-purple-100 dark:bg-purple-950/80 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-800 font-semibold uppercase">
                 {selectedTicket.priority}
               </span>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Downtime Hours *
                 </label>
                 <input
@@ -600,11 +600,11 @@ export default function MachineMaintenance() {
                   required
                   value={completionForm.downtimeHours}
                   onChange={(e) => setCompletionForm({ ...completionForm, downtimeHours: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm outline-none"
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 outline-none"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Technician Labor (ETB)
                 </label>
                 <input
@@ -613,11 +613,11 @@ export default function MachineMaintenance() {
                   min="0"
                   value={completionForm.technicianLaborCost}
                   onChange={(e) => setCompletionForm({ ...completionForm, technicianLaborCost: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm outline-none"
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 outline-none"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   External Service (ETB)
                 </label>
                 <input
@@ -626,14 +626,14 @@ export default function MachineMaintenance() {
                   min="0"
                   value={completionForm.externalServiceCost}
                   onChange={(e) => setCompletionForm({ ...completionForm, externalServiceCost: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm outline-none"
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 outline-none"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Root Cause Analysis
                 </label>
                 <textarea
@@ -641,11 +641,11 @@ export default function MachineMaintenance() {
                   placeholder="e.g. Worn gripper spring, oil seal degradation, electrical spike..."
                   value={completionForm.rootCause}
                   onChange={(e) => setCompletionForm({ ...completionForm, rootCause: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm outline-none"
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Corrective Action Taken
                 </label>
                 <textarea
@@ -653,34 +653,34 @@ export default function MachineMaintenance() {
                   placeholder="e.g. Replaced tension belt, recalibrated optical register sensor..."
                   value={completionForm.correctiveActionTaken}
                   onChange={(e) => setCompletionForm({ ...completionForm, correctiveActionTaken: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm outline-none"
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none"
                 />
               </div>
             </div>
 
             {/* Spare Parts Usage from Store */}
-            <div className="border border-slate-200 rounded-lg p-3 space-y-3">
+            <div className="border border-slate-200 dark:border-slate-700 rounded-lg p-3 space-y-3">
               <div className="flex justify-between items-center">
-                <span className="text-xs font-bold text-slate-700 uppercase tracking-wide flex items-center gap-1.5">
-                  <Package className="w-4 h-4 text-indigo-600" />
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide flex items-center gap-1.5">
+                  <Package className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                   Spare Parts Consumed From Store ({completionForm.sparePartsUsed.length})
                 </span>
                 <button
                   type="button"
                   onClick={handleAddSparePart}
-                  className="text-xs text-indigo-600 hover:text-indigo-800 font-semibold flex items-center gap-1"
+                  className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-semibold flex items-center gap-1"
                 >
                   <Plus className="w-3.5 h-3.5" /> Add Part
                 </button>
               </div>
 
               {completionForm.sparePartsUsed.map((part, index) => (
-                <div key={index} className="grid grid-cols-12 gap-2 items-center bg-slate-50 p-2 rounded">
+                <div key={index} className="grid grid-cols-12 gap-2 items-center bg-slate-50 dark:bg-slate-900/60 p-2 rounded border border-slate-100 dark:border-slate-750">
                   <div className="col-span-6">
                     <select
                       value={part.item}
                       onChange={(e) => handleSparePartChange(index, 'item', e.target.value)}
-                      className="w-full px-2 py-1 text-xs border border-slate-300 rounded bg-white"
+                      className="w-full px-2 py-1 text-xs border border-slate-300 dark:border-slate-700 rounded bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200"
                     >
                       <option value="">Select Spare Part / Item...</option>
                       {inventoryItems.map((itm) => (
@@ -697,17 +697,17 @@ export default function MachineMaintenance() {
                       placeholder="Qty"
                       value={part.quantity}
                       onChange={(e) => handleSparePartChange(index, 'quantity', e.target.value)}
-                      className="w-full px-2 py-1 text-xs border border-slate-300 rounded bg-white text-center"
+                      className="w-full px-2 py-1 text-xs border border-slate-300 dark:border-slate-700 rounded bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-center"
                     />
                   </div>
-                  <div className="col-span-3 text-xs text-right font-medium text-slate-700">
+                  <div className="col-span-3 text-xs text-right font-medium text-slate-700 dark:text-slate-300">
                     ETB {Number(part.totalCost || 0).toFixed(2)}
                   </div>
                   <div className="col-span-1 text-right">
                     <button
                       type="button"
                       onClick={() => handleRemoveSparePart(index)}
-                      className="text-slate-400 hover:text-rose-600"
+                      className="text-slate-400 dark:text-slate-500 hover:text-rose-600 dark:hover:text-rose-400"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -715,17 +715,17 @@ export default function MachineMaintenance() {
                 </div>
               ))}
 
-              <div className="pt-2 border-t border-slate-200 flex justify-between text-xs font-bold text-slate-800">
+              <div className="pt-2 border-t border-slate-200 dark:border-slate-700 flex justify-between text-xs font-bold text-slate-800 dark:text-slate-200">
                 <span>Total Maintenance Expense:</span>
-                <span className="text-indigo-600">ETB {totalCostEstimate.toFixed(2)}</span>
+                <span className="text-indigo-600 dark:text-indigo-400">ETB {totalCostEstimate.toFixed(2)}</span>
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
+            <div className="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-700/80">
               <button
                 type="button"
                 onClick={() => setIsCompleteModalOpen(false)}
-                className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50"
+                className="px-4 py-2 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition"
               >
                 Cancel
               </button>
@@ -750,13 +750,13 @@ export default function MachineMaintenance() {
           maxWidth="max-w-2xl"
         >
           <div className="space-y-4 text-sm">
-            <div className="flex justify-between items-center bg-slate-50 p-4 rounded-xl border border-slate-200">
+            <div className="flex justify-between items-center bg-slate-50 dark:bg-slate-900/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
               <div>
-                <span className="text-xs font-bold text-indigo-600 uppercase">
+                <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase">
                   {selectedTicket.machine?.machineCode}
                 </span>
-                <h4 className="font-bold text-slate-900">{selectedTicket.machine?.name}</h4>
-                <p className="text-xs text-slate-500 capitalize">
+                <h4 className="font-bold text-slate-900 dark:text-slate-100">{selectedTicket.machine?.name}</h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 capitalize">
                   {selectedTicket.maintenanceType?.replace('_', ' ')} • Priority:{' '}
                   {selectedTicket.priority}
                 </p>
@@ -770,34 +770,34 @@ export default function MachineMaintenance() {
               </span>
             </div>
 
-            <div className="bg-white p-3 border border-slate-200 rounded-lg space-y-1.5 text-xs">
-              <span className="font-semibold text-slate-700">Issue Description:</span>
-              <p className="text-slate-600">{selectedTicket.issueDescription}</p>
+            <div className="bg-white dark:bg-slate-800 p-3 border border-slate-200 dark:border-slate-700 rounded-lg space-y-1.5 text-xs">
+              <span className="font-semibold text-slate-700 dark:text-slate-300">Issue Description:</span>
+              <p className="text-slate-600 dark:text-slate-300">{selectedTicket.issueDescription}</p>
             </div>
 
             {selectedTicket.rootCause && (
-              <div className="bg-white p-3 border border-slate-200 rounded-lg space-y-1.5 text-xs">
-                <span className="font-semibold text-slate-700">Root Cause:</span>
-                <p className="text-slate-600">{selectedTicket.rootCause}</p>
+              <div className="bg-white dark:bg-slate-800 p-3 border border-slate-200 dark:border-slate-700 rounded-lg space-y-1.5 text-xs">
+                <span className="font-semibold text-slate-700 dark:text-slate-300">Root Cause:</span>
+                <p className="text-slate-600 dark:text-slate-300">{selectedTicket.rootCause}</p>
               </div>
             )}
 
             {selectedTicket.correctiveActionTaken && (
-              <div className="bg-white p-3 border border-slate-200 rounded-lg space-y-1.5 text-xs">
-                <span className="font-semibold text-slate-700">Corrective Action Taken:</span>
-                <p className="text-slate-600">{selectedTicket.correctiveActionTaken}</p>
+              <div className="bg-white dark:bg-slate-800 p-3 border border-slate-200 dark:border-slate-700 rounded-lg space-y-1.5 text-xs">
+                <span className="font-semibold text-slate-700 dark:text-slate-300">Corrective Action Taken:</span>
+                <p className="text-slate-600 dark:text-slate-300">{selectedTicket.correctiveActionTaken}</p>
               </div>
             )}
 
             {/* Spare Parts */}
             {selectedTicket.sparePartsUsed && selectedTicket.sparePartsUsed.length > 0 && (
               <div className="space-y-2 text-xs">
-                <h5 className="font-bold text-slate-700 uppercase">Spare Parts Consumed</h5>
-                <div className="border border-slate-200 rounded-lg divide-y divide-slate-100">
+                <h5 className="font-bold text-slate-700 dark:text-slate-300 uppercase">Spare Parts Consumed</h5>
+                <div className="border border-slate-200 dark:border-slate-700 rounded-lg divide-y divide-slate-100 dark:divide-slate-700/60">
                   {selectedTicket.sparePartsUsed.map((part, i) => (
                     <div key={i} className="p-2.5 flex justify-between items-center">
-                      <span>{part.item?.itemName || 'Item'} (Qty: {part.quantity})</span>
-                      <span className="font-semibold text-slate-800">
+                      <span className="text-slate-700 dark:text-slate-300">{part.item?.itemName || 'Item'} (Qty: {part.quantity})</span>
+                      <span className="font-semibold text-slate-800 dark:text-slate-200">
                         ETB {Number(part.totalCost || 0).toFixed(2)}
                       </span>
                     </div>
@@ -806,16 +806,16 @@ export default function MachineMaintenance() {
               </div>
             )}
 
-            <div className="flex justify-between items-center bg-slate-50 p-3 rounded-lg border border-slate-200 text-xs font-bold text-slate-800">
+            <div className="flex justify-between items-center bg-slate-50 dark:bg-slate-900/60 p-3 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-800 dark:text-slate-200">
               <span>Total Maintenance Cost:</span>
-              <span className="text-indigo-600">ETB {Number(selectedTicket.totalMaintenanceCost || 0).toFixed(2)}</span>
+              <span className="text-indigo-600 dark:text-indigo-400">ETB {Number(selectedTicket.totalMaintenanceCost || 0).toFixed(2)}</span>
             </div>
 
-            <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
+            <div className="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-700/80">
               <button
                 type="button"
                 onClick={() => setIsDetailModalOpen(false)}
-                className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50"
+                className="px-4 py-2 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition"
               >
                 Close
               </button>

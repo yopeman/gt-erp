@@ -30,19 +30,19 @@ import {
 } from 'lucide-react';
 
 const PRIORITY_BADGES = {
-  urgent: 'bg-rose-100 text-rose-800 border-rose-300 font-bold animate-pulse',
-  high: 'bg-orange-100 text-orange-800 border-orange-200 font-semibold',
-  normal: 'bg-slate-100 text-slate-700 border-slate-200'
+  urgent: 'bg-rose-100 dark:bg-rose-950/80 text-rose-800 dark:text-rose-300 border-rose-300 dark:border-rose-800 font-bold animate-pulse',
+  high: 'bg-orange-100 dark:bg-orange-950/80 text-orange-800 dark:text-orange-300 border-orange-200 dark:border-orange-800 font-semibold',
+  normal: 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
 };
 
 const STATUS_BADGES = {
-  scheduled: 'bg-slate-100 text-slate-700 border-slate-200',
-  prepress: 'bg-indigo-50 text-indigo-700 border-indigo-200',
-  in_production: 'bg-blue-50 text-blue-700 border-blue-200 animate-pulse',
-  finishing: 'bg-purple-50 text-purple-700 border-purple-200',
-  qc_check: 'bg-amber-50 text-amber-700 border-amber-200',
-  completed: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  cancelled: 'bg-rose-50 text-rose-600 border-rose-200'
+  scheduled: 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700',
+  prepress: 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800',
+  in_production: 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800 animate-pulse',
+  finishing: 'bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-800',
+  qc_check: 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800',
+  completed: 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800',
+  cancelled: 'bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-800'
 };
 
 export default function ProductionJobs() {
@@ -246,11 +246,11 @@ export default function ProductionJobs() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-            <Workflow className="w-7 h-7 text-indigo-600" />
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-2">
+            <Workflow className="w-7 h-7 text-indigo-600 dark:text-indigo-400" />
             Production Floor & Job Orders
           </h1>
-          <p className="text-sm text-slate-500 mt-1">
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
             Plant floor routing, sequential stage execution, machine runtime, and final QC sign-off.
           </p>
         </div>
@@ -267,22 +267,22 @@ export default function ProductionJobs() {
       </div>
 
       {/* Filter Bar */}
-      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-4 justify-between items-center">
+      <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col md:flex-row gap-4 justify-between items-center">
         <div className="relative w-full md:w-80">
-          <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
+          <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400 dark:text-slate-500" />
           <input
             type="text"
             placeholder="Search Job Order # (e.g. JO-2026-0001)..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 border border-slate-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full pl-9 pr-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none focus:ring-2 focus:ring-indigo-500"
           />
         </div>
         <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white outline-none"
+            className="px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-indigo-500"
           >
             <option value="all">All Production Statuses</option>
             <option value="scheduled">Scheduled</option>
@@ -294,7 +294,7 @@ export default function ProductionJobs() {
           <select
             value={priorityFilter}
             onChange={(e) => setPriorityFilter(e.target.value)}
-            className="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white outline-none"
+            className="px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-indigo-500"
           >
             <option value="all">All Priorities</option>
             <option value="urgent">Urgent</option>
@@ -307,8 +307,8 @@ export default function ProductionJobs() {
       {/* Jobs Floor Cards */}
       {loading ? (
         <div className="text-center py-16">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-indigo-600 border-t-transparent" />
-          <p className="text-sm text-slate-500 mt-2">Loading production floor jobs...</p>
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-indigo-600 dark:border-indigo-400 border-t-transparent" />
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">Loading production floor jobs...</p>
         </div>
       ) : jobs.length === 0 ? (
         <EmptyState
@@ -331,13 +331,13 @@ export default function ProductionJobs() {
             return (
               <div
                 key={job._id}
-                className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 hover:shadow-md transition space-y-4"
+                className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-5 hover:shadow-md transition space-y-4"
               >
                 {/* Header Information */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-700/60 pb-3">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded border border-indigo-100">
+                      <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 px-2.5 py-0.5 rounded border border-indigo-100 dark:border-indigo-900/60">
                         {job.jobOrderNumber}
                       </span>
                       <span
@@ -355,24 +355,24 @@ export default function ProductionJobs() {
                         {job.status?.replace('_', ' ')}
                       </span>
                     </div>
-                    <div className="flex items-center gap-4 text-xs text-slate-500 mt-1">
-                      <span>Order: <strong className="text-slate-700">{job.order?.orderNumber || 'N/A'}</strong></span>
-                      <span>Customer: <strong className="text-slate-700">{job.customer?.name || job.customer?.companyName || 'Walk-in'}</strong></span>
-                      <span>Target: <strong className="text-slate-700">{job.targetQuantity?.toLocaleString()} units</strong></span>
+                    <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400 mt-1">
+                      <span>Order: <strong className="text-slate-700 dark:text-slate-200">{job.order?.orderNumber || 'N/A'}</strong></span>
+                      <span>Customer: <strong className="text-slate-700 dark:text-slate-200">{job.customer?.name || job.customer?.companyName || 'Walk-in'}</strong></span>
+                      <span>Target: <strong className="text-slate-700 dark:text-slate-200">{job.targetQuantity?.toLocaleString()} units</strong></span>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-3">
                     <div className="text-right">
-                      <span className="text-xs text-slate-400 block">Overall Floor Progress</span>
-                      <span className="text-sm font-bold text-slate-800">{progressPercent}%</span>
+                      <span className="text-xs text-slate-400 dark:text-slate-500 block">Overall Floor Progress</span>
+                      <span className="text-sm font-bold text-slate-800 dark:text-slate-200">{progressPercent}%</span>
                     </div>
                     <button
                       onClick={() => {
                         setSelectedJob(job);
                         setIsDetailModalOpen(true);
                       }}
-                      className="inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 font-semibold px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition"
+                      className="inline-flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-semibold px-3 py-1.5 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 rounded-lg transition"
                     >
                       <Eye className="w-3.5 h-3.5" />
                       Costing & Details
@@ -381,7 +381,7 @@ export default function ProductionJobs() {
                 </div>
 
                 {/* Progress Bar */}
-                <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                <div className="w-full bg-slate-100 dark:bg-slate-700 h-2 rounded-full overflow-hidden">
                   <div
                     className={`h-full transition-all duration-500 ${
                       progressPercent === 100 ? 'bg-emerald-500' : 'bg-indigo-600'
@@ -402,40 +402,40 @@ export default function ProductionJobs() {
                         key={stage._id || sIdx}
                         className={`p-3 rounded-xl border text-xs flex flex-col justify-between transition ${
                           isInProgress
-                            ? 'bg-blue-50/60 border-blue-300 ring-2 ring-blue-500/20'
+                            ? 'bg-blue-50/60 dark:bg-blue-950/40 border-blue-300 dark:border-blue-700/80 ring-2 ring-blue-500/20'
                             : isCompleted
-                            ? 'bg-emerald-50/40 border-emerald-200'
-                            : 'bg-slate-50/70 border-slate-200 opacity-80'
+                            ? 'bg-emerald-50/40 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/60'
+                            : 'bg-slate-50/70 dark:bg-slate-900/60 border-slate-200 dark:border-slate-700/80 opacity-80'
                         }`}
                       >
                         <div>
                           <div className="flex items-center justify-between mb-1.5">
-                            <span className="font-bold text-slate-500">Stage {stage.sequence}</span>
+                            <span className="font-bold text-slate-500 dark:text-slate-400">Stage {stage.sequence}</span>
                             {isCompleted ? (
-                              <span className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-emerald-700 bg-emerald-100 px-1.5 py-0.2 rounded">
+                              <span className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/60 px-1.5 py-0.2 rounded">
                                 <Check className="w-3 h-3" /> Done
                               </span>
                             ) : isInProgress ? (
-                              <span className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-blue-700 bg-blue-100 px-1.5 py-0.2 rounded animate-pulse">
+                              <span className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-900/60 px-1.5 py-0.2 rounded animate-pulse">
                                 Running
                               </span>
                             ) : (
-                              <span className="text-[11px] text-slate-400">Pending</span>
+                              <span className="text-[11px] text-slate-400 dark:text-slate-500">Pending</span>
                             )}
                           </div>
-                          <h4 className="font-semibold text-slate-900 text-sm">{stage.stageName}</h4>
-                          <p className="text-[11px] text-slate-500 mt-1">
+                          <h4 className="font-semibold text-slate-900 dark:text-slate-100 text-sm">{stage.stageName}</h4>
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
                             Machine: {stage.machine?.name || 'Manual Bench'}
                           </p>
                           {stage.hoursRun > 0 && (
-                            <p className="text-[11px] text-slate-500">
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400">
                               Hours: {stage.hoursRun} hrs (ETB {stage.machineCost || 0})
                             </p>
                           )}
                         </div>
 
                         {/* Stage Controls */}
-                        <div className="pt-2 mt-2 border-t border-slate-200/60 flex items-center justify-end gap-1.5">
+                        <div className="pt-2 mt-2 border-t border-slate-200/60 dark:border-slate-700/60 flex items-center justify-end gap-1.5">
                           {isPending && (
                             <button
                               onClick={() => openStageAction(job, stage, 'start')}
@@ -461,7 +461,7 @@ export default function ProductionJobs() {
                             </button>
                           )}
                           {stage.qcPassed && (
-                            <span className="text-[11px] text-emerald-700 font-bold flex items-center gap-1">
+                            <span className="text-[11px] text-emerald-700 dark:text-emerald-400 font-bold flex items-center gap-1">
                               <ShieldCheck className="w-3.5 h-3.5" /> QC Passed
                             </span>
                           )}
@@ -486,14 +486,14 @@ export default function ProductionJobs() {
         <form onSubmit={handleCreateJobSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Select Sales Order *
               </label>
               <select
                 required
                 value={jobForm.order}
                 onChange={(e) => handleOrderSelect(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm outline-none"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 outline-none"
               >
                 <option value="">Select Order...</option>
                 {orders.map((o) => (
@@ -504,13 +504,13 @@ export default function ProductionJobs() {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Priority
               </label>
               <select
                 value={jobForm.priority}
                 onChange={(e) => setJobForm({ ...jobForm, priority: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm outline-none"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 outline-none"
               >
                 <option value="normal">Normal</option>
                 <option value="high">High</option>
@@ -521,7 +521,7 @@ export default function ProductionJobs() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Target Print Quantity *
               </label>
               <input
@@ -530,11 +530,11 @@ export default function ProductionJobs() {
                 required
                 value={jobForm.targetQuantity}
                 onChange={(e) => setJobForm({ ...jobForm, targetQuantity: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm outline-none"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 outline-none"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Scheduled Start Date *
               </label>
               <input
@@ -542,11 +542,11 @@ export default function ProductionJobs() {
                 required
                 value={jobForm.scheduledStartDate}
                 onChange={(e) => setJobForm({ ...jobForm, scheduledStartDate: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm outline-none"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 outline-none"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Scheduled Completion *
               </label>
               <input
@@ -554,13 +554,13 @@ export default function ProductionJobs() {
                 required
                 value={jobForm.scheduledCompletionDate}
                 onChange={(e) => setJobForm({ ...jobForm, scheduledCompletionDate: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm outline-none"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 outline-none"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
               Production Floor Notes / Special Specifications
             </label>
             <textarea
@@ -568,15 +568,15 @@ export default function ProductionJobs() {
               placeholder="Paper stock GSM, ink color Pantone numbers, lamination finish, packaging cartons..."
               value={jobForm.remarks}
               onChange={(e) => setJobForm({ ...jobForm, remarks: e.target.value })}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm outline-none"
+              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none"
             />
           </div>
 
-          <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
+          <div className="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-700/80">
             <button
               type="button"
               onClick={() => setIsNewJobModalOpen(false)}
-              className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50"
+              className="px-4 py-2 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition"
             >
               Cancel
             </button>
@@ -609,13 +609,13 @@ export default function ProductionJobs() {
             {stageActionType === 'start' && (
               <>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     Assign Machine / Station
                   </label>
                   <select
                     value={stageForm.machine}
                     onChange={(e) => setStageForm({ ...stageForm, machine: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm outline-none"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 outline-none"
                   >
                     <option value="">Manual Bench / No Machine</option>
                     {machines
@@ -628,7 +628,7 @@ export default function ProductionJobs() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     Assigned Floor Operators
                   </label>
                   <select
@@ -638,7 +638,7 @@ export default function ProductionJobs() {
                       const vals = Array.from(e.target.selectedOptions, (o) => o.value);
                       setStageForm({ ...stageForm, operators: vals });
                     }}
-                    className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-sm outline-none h-24"
+                    className="w-full px-3 py-1.5 border border-slate-300 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 outline-none h-24"
                   >
                     {employees.map((emp) => {
                       const name = emp.fullName || `${emp.firstName || ''} ${emp.lastName || ''}`.trim() || emp.name || 'Staff';
@@ -650,7 +650,7 @@ export default function ProductionJobs() {
                       );
                     })}
                   </select>
-                  <p className="text-[11px] text-slate-400 mt-1">Hold Ctrl/Cmd to select multiple operators</p>
+                  <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">Hold Ctrl/Cmd to select multiple operators</p>
                 </div>
               </>
             )}
@@ -659,7 +659,7 @@ export default function ProductionJobs() {
               <>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                       Machine Runtime (Hours) *
                     </label>
                     <input
@@ -669,11 +669,11 @@ export default function ProductionJobs() {
                       required
                       value={stageForm.hoursRun}
                       onChange={(e) => setStageForm({ ...stageForm, hoursRun: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm outline-none"
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 outline-none"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                       Output Quantity Passed
                     </label>
                     <input
@@ -681,12 +681,12 @@ export default function ProductionJobs() {
                       min="0"
                       value={stageForm.completedQuantity}
                       onChange={(e) => setStageForm({ ...stageForm, completedQuantity: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm outline-none"
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 outline-none"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     Operator Run Notes
                   </label>
                   <textarea
@@ -694,7 +694,7 @@ export default function ProductionJobs() {
                     placeholder="Ink adjustments, paper feeder alignment notes..."
                     value={stageForm.notes}
                     onChange={(e) => setStageForm({ ...stageForm, notes: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm outline-none"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none"
                   />
                 </div>
               </>
@@ -704,7 +704,7 @@ export default function ProductionJobs() {
               <>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                       Total Good Units Passed *
                     </label>
                     <input
@@ -713,11 +713,11 @@ export default function ProductionJobs() {
                       required
                       value={stageForm.producedQuantity}
                       onChange={(e) => setStageForm({ ...stageForm, producedQuantity: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm outline-none font-bold text-emerald-600"
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-900 outline-none font-bold text-emerald-600 dark:text-emerald-400"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                       Defective / Spoiled Units
                     </label>
                     <input
@@ -725,12 +725,12 @@ export default function ProductionJobs() {
                       min="0"
                       value={stageForm.defectiveQuantity}
                       onChange={(e) => setStageForm({ ...stageForm, defectiveQuantity: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm outline-none font-bold text-rose-600"
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-900 outline-none font-bold text-rose-600 dark:text-rose-400"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     Quality Inspection Verdict
                   </label>
                   <div className="flex gap-4">
@@ -739,29 +739,29 @@ export default function ProductionJobs() {
                         type="radio"
                         checked={stageForm.passed === true}
                         onChange={() => setStageForm({ ...stageForm, passed: true })}
-                        className="text-emerald-600"
+                        className="text-emerald-600 dark:text-emerald-500"
                       />
-                      <span className="text-emerald-700 font-semibold">Passed & Released</span>
+                      <span className="text-emerald-700 dark:text-emerald-400 font-semibold">Passed & Released</span>
                     </label>
                     <label className="flex items-center gap-2 cursor-pointer text-sm">
                       <input
                         type="radio"
                         checked={stageForm.passed === false}
                         onChange={() => setStageForm({ ...stageForm, passed: false })}
-                        className="text-rose-600"
+                        className="text-rose-600 dark:text-rose-500"
                       />
-                      <span className="text-rose-700 font-semibold">Rejected</span>
+                      <span className="text-rose-700 dark:text-rose-400 font-semibold">Rejected</span>
                     </label>
                   </div>
                 </div>
               </>
             )}
 
-            <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
+            <div className="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-700/80">
               <button
                 type="button"
                 onClick={() => setIsStageActionModalOpen(false)}
-                className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50"
+                className="px-4 py-2 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition"
               >
                 Cancel
               </button>
@@ -786,13 +786,13 @@ export default function ProductionJobs() {
           maxWidth="max-w-2xl"
         >
           <div className="space-y-4 text-sm">
-            <div className="flex justify-between items-start bg-slate-50 p-4 rounded-xl border border-slate-200">
+            <div className="flex justify-between items-start bg-slate-50 dark:bg-slate-900/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
               <div>
-                <span className="text-xs font-bold text-indigo-600 uppercase">
+                <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase">
                   {selectedJob.jobOrderNumber}
                 </span>
-                <h4 className="font-bold text-slate-900 text-base">{selectedJob.order?.title}</h4>
-                <p className="text-xs text-slate-500">
+                <h4 className="font-bold text-slate-900 dark:text-slate-100 text-base">{selectedJob.order?.title}</h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
                   Customer: {selectedJob.customer?.name || selectedJob.customer?.companyName || 'Walk-in'} • Target: {selectedJob.targetQuantity?.toLocaleString() || 0} units
                 </p>
               </div>
@@ -807,42 +807,42 @@ export default function ProductionJobs() {
 
             {/* Actual Cost Rollup vs Profitability */}
             <div className="space-y-2">
-              <h5 className="text-xs font-bold text-slate-700 uppercase tracking-wide">
+              <h5 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
                 Production Actual Cost Rollup Engine
               </h5>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                <div className="p-3 bg-white border border-slate-200 rounded-lg">
-                  <span className="text-slate-400 block">Machine Runtime Cost</span>
-                  <span className="font-bold text-slate-800">
+                <div className="p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg">
+                  <span className="text-slate-400 dark:text-slate-500 block">Machine Runtime Cost</span>
+                  <span className="font-bold text-slate-800 dark:text-slate-200">
                     ETB {Number(selectedJob.costRollup?.totalMachineCost || 0).toFixed(2)}
                   </span>
                 </div>
-                <div className="p-3 bg-white border border-slate-200 rounded-lg">
-                  <span className="text-slate-400 block">Raw Materials Drawn</span>
-                  <span className="font-bold text-slate-800">
+                <div className="p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg">
+                  <span className="text-slate-400 dark:text-slate-500 block">Raw Materials Drawn</span>
+                  <span className="font-bold text-slate-800 dark:text-slate-200">
                     ETB {Number(selectedJob.costRollup?.totalMaterialCost || 0).toFixed(2)}
                   </span>
                 </div>
-                <div className="p-3 bg-white border border-slate-200 rounded-lg">
-                  <span className="text-slate-400 block">Scrap / Wastage Cost</span>
-                  <span className="font-bold text-rose-600">
+                <div className="p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg">
+                  <span className="text-slate-400 dark:text-slate-500 block">Scrap / Wastage Cost</span>
+                  <span className="font-bold text-rose-600 dark:text-rose-400">
                     ETB {Number(selectedJob.costRollup?.totalWastageCost || 0).toFixed(2)}
                   </span>
                 </div>
-                <div className="p-3 bg-slate-50 border border-indigo-200 rounded-lg">
-                  <span className="text-indigo-600 font-semibold block">Total Actual Cost</span>
-                  <span className="font-bold text-indigo-700 text-sm">
+                <div className="p-3 bg-indigo-50/50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 rounded-lg">
+                  <span className="text-indigo-600 dark:text-indigo-400 font-semibold block">Total Actual Cost</span>
+                  <span className="font-bold text-indigo-700 dark:text-indigo-300 text-sm">
                     ETB {Number(selectedJob.costRollup?.totalActualCost || 0).toFixed(2)}
                   </span>
                 </div>
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
+            <div className="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-700/80">
               <button
                 type="button"
                 onClick={() => setIsDetailModalOpen(false)}
-                className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50"
+                className="px-4 py-2 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition"
               >
                 Close
               </button>

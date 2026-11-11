@@ -42,11 +42,11 @@ const CATEGORIES = [
 ];
 
 const STATUS_CONFIG = {
-  available: { label: 'Available', color: 'green', bg: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  running: { label: 'Running', color: 'blue', bg: 'bg-blue-50 text-blue-700 border-blue-200' },
-  maintenance: { label: 'In Maintenance', color: 'amber', bg: 'bg-amber-50 text-amber-700 border-amber-200' },
-  breakdown: { label: 'Breakdown', color: 'red', bg: 'bg-rose-50 text-rose-700 border-rose-200' },
-  decommissioned: { label: 'Decommissioned', color: 'slate', bg: 'bg-slate-50 text-slate-700 border-slate-200' }
+  available: { label: 'Available', color: 'green', bg: 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800' },
+  running: { label: 'Running', color: 'blue', bg: 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800' },
+  maintenance: { label: 'In Maintenance', color: 'amber', bg: 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800' },
+  breakdown: { label: 'Breakdown', color: 'red', bg: 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-800' },
+  decommissioned: { label: 'Decommissioned', color: 'slate', bg: 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700' }
 };
 
 export default function Machines() {
@@ -192,11 +192,11 @@ export default function Machines() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-            <Factory className="w-7 h-7 text-indigo-600" />
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-2">
+            <Factory className="w-7 h-7 text-indigo-600 dark:text-indigo-400" />
             Machine & Equipment Registry
           </h1>
-          <p className="text-sm text-slate-500 mt-1">
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
             Plant machinery assets, specifications, operational cost rates, and real-time statuses.
           </p>
         </div>
@@ -217,71 +217,71 @@ export default function Machines() {
       {/* KPI Stats */}
       {stats && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-3">
-            <div className="p-3 bg-slate-100 rounded-lg text-slate-700">
+          <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-center gap-3">
+            <div className="p-3 bg-slate-100 dark:bg-slate-700/60 rounded-lg text-slate-700 dark:text-slate-300">
               <Factory className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-xs font-medium text-slate-500">Total Machinery</p>
-              <p className="text-xl font-bold text-slate-900">{stats.total || 0}</p>
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Total Machinery</p>
+              <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{stats.total || 0}</p>
             </div>
           </div>
-          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-3">
-            <div className="p-3 bg-emerald-50 rounded-lg text-emerald-600">
+          <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-center gap-3">
+            <div className="p-3 bg-emerald-50 dark:bg-emerald-950/60 rounded-lg text-emerald-600 dark:text-emerald-400">
               <CheckCircle2 className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-xs font-medium text-slate-500">Available</p>
-              <p className="text-xl font-bold text-emerald-600">{stats.available || 0}</p>
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Available</p>
+              <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">{stats.available || 0}</p>
             </div>
           </div>
-          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-3">
-            <div className="p-3 bg-blue-50 rounded-lg text-blue-600">
+          <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-center gap-3">
+            <div className="p-3 bg-blue-50 dark:bg-blue-950/60 rounded-lg text-blue-600 dark:text-blue-400">
               <Power className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-xs font-medium text-slate-500">Running</p>
-              <p className="text-xl font-bold text-blue-600">{stats.running || 0}</p>
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Running</p>
+              <p className="text-xl font-bold text-blue-600 dark:text-blue-400">{stats.running || 0}</p>
             </div>
           </div>
-          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-3">
-            <div className="p-3 bg-amber-50 rounded-lg text-amber-600">
+          <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-center gap-3">
+            <div className="p-3 bg-amber-50 dark:bg-amber-950/60 rounded-lg text-amber-600 dark:text-amber-400">
               <Wrench className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-xs font-medium text-slate-500">Maintenance</p>
-              <p className="text-xl font-bold text-amber-600">{stats.maintenance || 0}</p>
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Maintenance</p>
+              <p className="text-xl font-bold text-amber-600 dark:text-amber-400">{stats.maintenance || 0}</p>
             </div>
           </div>
-          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-3">
-            <div className="p-3 bg-rose-50 rounded-lg text-rose-600">
+          <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-center gap-3">
+            <div className="p-3 bg-rose-50 dark:bg-rose-950/60 rounded-lg text-rose-600 dark:text-rose-400">
               <AlertTriangle className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-xs font-medium text-slate-500">Breakdown</p>
-              <p className="text-xl font-bold text-rose-600">{stats.breakdown || 0}</p>
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Breakdown</p>
+              <p className="text-xl font-bold text-rose-600 dark:text-rose-400">{stats.breakdown || 0}</p>
             </div>
           </div>
         </div>
       )}
 
       {/* Filter Bar */}
-      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-4 justify-between items-center">
+      <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col md:flex-row gap-4 justify-between items-center">
         <div className="relative w-full md:w-80">
-          <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
+          <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400 dark:text-slate-500" />
           <input
             type="text"
             placeholder="Search code, model, manufacturer..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+            className="w-full pl-9 pr-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
           />
         </div>
         <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
           <select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
-            className="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
+            className="px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none"
           >
             {CATEGORIES.map((c) => (
               <option key={c.value} value={c.value}>
@@ -292,7 +292,7 @@ export default function Machines() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
+            className="px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none"
           >
             <option value="all">All Statuses</option>
             <option value="available">Available</option>
@@ -307,8 +307,8 @@ export default function Machines() {
       {/* Machine Cards Grid */}
       {loading ? (
         <div className="text-center py-16">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-indigo-600 border-t-transparent" />
-          <p className="text-sm text-slate-500 mt-2">Loading equipment registry...</p>
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-indigo-600 dark:border-indigo-400 border-t-transparent" />
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">Loading equipment registry...</p>
         </div>
       ) : machines.length === 0 ? (
         <EmptyState
@@ -328,16 +328,16 @@ export default function Machines() {
             return (
               <div
                 key={machine._id}
-                className="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition p-5 flex flex-col justify-between"
+                className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition p-5 flex flex-col justify-between"
               >
                 <div>
                   <div className="flex items-start justify-between gap-2 mb-3">
                     <div>
-                      <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100 uppercase tracking-wide">
+                      <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 px-2 py-0.5 rounded border border-indigo-100 dark:border-indigo-900/60 uppercase tracking-wide">
                         {machine.machineCode}
                       </span>
-                      <h3 className="font-semibold text-slate-900 mt-1 line-clamp-1">{machine.name}</h3>
-                      <p className="text-xs text-slate-500">
+                      <h3 className="font-semibold text-slate-900 dark:text-slate-100 mt-1 line-clamp-1">{machine.name}</h3>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
                         {machine.manufacturer} {machine.model} {machine.yearOfManufacture ? `(${machine.yearOfManufacture})` : ''}
                       </p>
                     </div>
@@ -349,48 +349,48 @@ export default function Machines() {
                   </div>
 
                   {/* Machine Specifications */}
-                  <div className="bg-slate-50 rounded-lg p-3 text-xs space-y-1.5 mb-4 text-slate-600">
+                  <div className="bg-slate-50 dark:bg-slate-900/60 rounded-lg p-3 text-xs space-y-1.5 mb-4 text-slate-600 dark:text-slate-300 border border-slate-100 dark:border-slate-800">
                     <div className="flex justify-between items-center">
-                      <span className="flex items-center gap-1 text-slate-500">
+                      <span className="flex items-center gap-1 text-slate-500 dark:text-slate-400">
                         <Gauge className="w-3.5 h-3.5" /> Max Speed:
                       </span>
-                      <span className="font-semibold text-slate-800">
+                      <span className="font-semibold text-slate-800 dark:text-slate-200">
                         {machine.specifications?.maxSpeedPerHour
                           ? `${machine.specifications.maxSpeedPerHour.toLocaleString()} imp/hr`
                           : 'N/A'}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="flex items-center gap-1 text-slate-500">
+                      <span className="flex items-center gap-1 text-slate-500 dark:text-slate-400">
                         <Sliders className="w-3.5 h-3.5" /> Max Sheet:
                       </span>
-                      <span className="font-semibold text-slate-800">
+                      <span className="font-semibold text-slate-800 dark:text-slate-200">
                         {machine.specifications?.maxSheetWidthMm && machine.specifications?.maxSheetLengthMm
                           ? `${machine.specifications.maxSheetWidthMm} × ${machine.specifications.maxSheetLengthMm} mm`
                           : 'Standard'}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="flex items-center gap-1 text-slate-500">
+                      <span className="flex items-center gap-1 text-slate-500 dark:text-slate-400">
                         <DollarSign className="w-3.5 h-3.5" /> Hourly Cost:
                       </span>
-                      <span className="font-bold text-indigo-600">
+                      <span className="font-bold text-indigo-600 dark:text-indigo-400">
                         ETB {Number(machine.hourlyCostRate || 0).toFixed(2)}/hr
                       </span>
                     </div>
                   </div>
 
                   {/* Location & Operators */}
-                  <div className="text-xs text-slate-500 space-y-1 mb-4">
+                  <div className="text-xs text-slate-500 dark:text-slate-400 space-y-1 mb-4">
                     {machine.warehouse && (
                       <p className="flex items-center gap-1">
-                        <Building2 className="w-3.5 h-3.5 text-slate-400" />
+                        <Building2 className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
                         <span>Location: {machine.warehouse.warehouseName}</span>
                       </p>
                     )}
                     {machine.assignedOperators && machine.assignedOperators.length > 0 && (
                       <p className="flex items-center gap-1">
-                        <UserCheck className="w-3.5 h-3.5 text-slate-400" />
+                        <UserCheck className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
                         <span>
                           Operators: {machine.assignedOperators.map((o) => `${o.firstName} ${o.lastName}`).join(', ')}
                         </span>
@@ -400,13 +400,13 @@ export default function Machines() {
                 </div>
 
                 {/* Footer Controls */}
-                <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                <div className="pt-3 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between gap-2">
                   <div className="flex items-center gap-1">
-                    <span className="text-[11px] text-slate-400 mr-1">Status:</span>
+                    <span className="text-[11px] text-slate-400 dark:text-slate-500 mr-1">Status:</span>
                     <select
                       value={machine.status}
                       onChange={(e) => handleStatusChange(machine._id, e.target.value)}
-                      className="text-xs bg-slate-100 border border-slate-200 rounded px-2 py-1 outline-none text-slate-700 font-medium"
+                      className="text-xs bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded px-2 py-1 outline-none text-slate-700 dark:text-slate-200 font-medium"
                     >
                       <option value="available">Available</option>
                       <option value="running">Running</option>
@@ -417,7 +417,7 @@ export default function Machines() {
                   </div>
                   <button
                     onClick={() => openDetails(machine)}
-                    className="inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 font-semibold px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 rounded transition"
+                    className="inline-flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-semibold px-2.5 py-1 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 rounded transition"
                   >
                     <Eye className="w-3.5 h-3.5" />
                     Details
@@ -439,7 +439,7 @@ export default function Machines() {
         <form onSubmit={handleCreateSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Equipment Name *
               </label>
               <input
@@ -448,11 +448,11 @@ export default function Machines() {
                 placeholder="e.g. Heidelberg Speedmaster SM 74"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:ring-2 focus:ring-indigo-500 outline-none"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Equipment Code (Optional)
               </label>
               <input
@@ -460,20 +460,20 @@ export default function Machines() {
                 placeholder="Auto-generated if empty (MCH-2026-XXXX)"
                 value={formData.machineCode}
                 onChange={(e) => setFormData({ ...formData, machineCode: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm uppercase focus:ring-2 focus:ring-indigo-500 outline-none"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 uppercase focus:ring-2 focus:ring-indigo-500 outline-none"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Equipment Category *
               </label>
               <select
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none"
               >
                 {CATEGORIES.filter((c) => c.value !== 'all').map((c) => (
                   <option key={c.value} value={c.value}>
@@ -483,7 +483,7 @@ export default function Machines() {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Hourly Operational Cost Rate (ETB/hr) *
               </label>
               <input
@@ -494,40 +494,40 @@ export default function Machines() {
                 placeholder="0.00"
                 value={formData.hourlyCostRate}
                 onChange={(e) => setFormData({ ...formData, hourlyCostRate: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:ring-2 focus:ring-indigo-500 outline-none"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Manufacturer</label>
+              <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Manufacturer</label>
               <input
                 type="text"
                 placeholder="e.g. Heidelberg / Polar / Komori"
                 value={formData.manufacturer}
                 onChange={(e) => setFormData({ ...formData, manufacturer: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm outline-none"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Model</label>
+              <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Model</label>
               <input
                 type="text"
                 placeholder="e.g. SM 74-4-H"
                 value={formData.model}
                 onChange={(e) => setFormData({ ...formData, model: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm outline-none"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Serial Number</label>
+              <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Serial Number</label>
               <input
                 type="text"
                 placeholder="Unique serial"
                 value={formData.serialNumber}
                 onChange={(e) => setFormData({ ...formData, serialNumber: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm outline-none"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none"
               />
             </div>
           </div>
@@ -535,11 +535,11 @@ export default function Machines() {
           {/* Plant Location & Operators */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Plant Location / Warehouse</label>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Plant Location / Warehouse</label>
               <select
                 value={formData.warehouse}
                 onChange={(e) => setFormData({ ...formData, warehouse: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm outline-none"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 outline-none"
               >
                 <option value="">Select Warehouse/Floor</option>
                 {warehouses.map((w) => (
@@ -550,7 +550,7 @@ export default function Machines() {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Assigned Operators</label>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Assigned Operators</label>
               <select
                 multiple
                 value={formData.assignedOperators}
@@ -558,7 +558,7 @@ export default function Machines() {
                   const values = Array.from(e.target.selectedOptions, (option) => option.value);
                   setFormData({ ...formData, assignedOperators: values });
                 }}
-                className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-sm outline-none h-20"
+                className="w-full px-3 py-1.5 border border-slate-300 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 outline-none h-20"
               >
                 {employees.map((emp) => {
                   const name = emp.fullName || `${emp.firstName || ''} ${emp.lastName || ''}`.trim() || emp.name || 'Staff';
@@ -570,18 +570,18 @@ export default function Machines() {
                   );
                 })}
               </select>
-              <p className="text-[11px] text-slate-400 mt-0.5">Hold Ctrl / Cmd to select multiple operators</p>
+              <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">Hold Ctrl / Cmd to select multiple operators</p>
             </div>
           </div>
 
           {/* Technical Specs */}
-          <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-3">
-            <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">
+          <div className="bg-slate-50 dark:bg-slate-900/60 p-3 rounded-lg border border-slate-200 dark:border-slate-700 space-y-3">
+            <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
               Technical Specifications
             </h4>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div>
-                <label className="block text-[11px] text-slate-500 mb-1">Max Width (mm)</label>
+                <label className="block text-[11px] text-slate-500 dark:text-slate-400 mb-1">Max Width (mm)</label>
                 <input
                   type="number"
                   placeholder="e.g. 740"
@@ -592,11 +592,11 @@ export default function Machines() {
                       specifications: { ...formData.specifications, maxSheetWidthMm: e.target.value }
                     })
                   }
-                  className="w-full px-2.5 py-1.5 border border-slate-300 rounded text-xs bg-white"
+                  className="w-full px-2.5 py-1.5 border border-slate-300 dark:border-slate-700 rounded text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
                 />
               </div>
               <div>
-                <label className="block text-[11px] text-slate-500 mb-1">Max Length (mm)</label>
+                <label className="block text-[11px] text-slate-500 dark:text-slate-400 mb-1">Max Length (mm)</label>
                 <input
                   type="number"
                   placeholder="e.g. 1020"
@@ -607,11 +607,11 @@ export default function Machines() {
                       specifications: { ...formData.specifications, maxSheetLengthMm: e.target.value }
                     })
                   }
-                  className="w-full px-2.5 py-1.5 border border-slate-300 rounded text-xs bg-white"
+                  className="w-full px-2.5 py-1.5 border border-slate-300 dark:border-slate-700 rounded text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
                 />
               </div>
               <div>
-                <label className="block text-[11px] text-slate-500 mb-1">Max Speed (imp/hr)</label>
+                <label className="block text-[11px] text-slate-500 dark:text-slate-400 mb-1">Max Speed (imp/hr)</label>
                 <input
                   type="number"
                   placeholder="e.g. 15000"
@@ -622,11 +622,11 @@ export default function Machines() {
                       specifications: { ...formData.specifications, maxSpeedPerHour: e.target.value }
                     })
                   }
-                  className="w-full px-2.5 py-1.5 border border-slate-300 rounded text-xs bg-white"
+                  className="w-full px-2.5 py-1.5 border border-slate-300 dark:border-slate-700 rounded text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
                 />
               </div>
               <div>
-                <label className="block text-[11px] text-slate-500 mb-1">Power (kW)</label>
+                <label className="block text-[11px] text-slate-500 dark:text-slate-400 mb-1">Power (kW)</label>
                 <input
                   type="number"
                   placeholder="e.g. 45"
@@ -637,28 +637,28 @@ export default function Machines() {
                       specifications: { ...formData.specifications, powerRatingKw: e.target.value }
                     })
                   }
-                  className="w-full px-2.5 py-1.5 border border-slate-300 rounded text-xs bg-white"
+                  className="w-full px-2.5 py-1.5 border border-slate-300 dark:border-slate-700 rounded text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
                 />
               </div>
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Notes / Operating Remarks</label>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Notes / Operating Remarks</label>
             <textarea
               rows={2}
               placeholder="Maintenance schedules, manufacturer dealer contacts, special handling..."
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm outline-none"
+              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none"
             />
           </div>
 
-          <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
+          <div className="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-700/80">
             <button
               type="button"
               onClick={() => setIsCreateModalOpen(false)}
-              className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50"
+              className="px-4 py-2 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition"
             >
               Cancel
             </button>
@@ -682,13 +682,13 @@ export default function Machines() {
           maxWidth="max-w-2xl"
         >
           <div className="space-y-5 text-sm">
-            <div className="flex justify-between items-start bg-slate-50 p-4 rounded-xl border border-slate-200">
+            <div className="flex justify-between items-start bg-slate-50 dark:bg-slate-900/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
               <div>
-                <span className="text-xs font-bold text-indigo-600 uppercase bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">
+                <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase bg-indigo-50 dark:bg-indigo-950/60 px-2 py-0.5 rounded border border-indigo-100 dark:border-indigo-900/60">
                   {selectedMachine.machineCode}
                 </span>
-                <h3 className="text-lg font-bold text-slate-900 mt-1">{selectedMachine.name}</h3>
-                <p className="text-xs text-slate-500">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mt-1">{selectedMachine.name}</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
                   Category: {CATEGORIES.find((c) => c.value === selectedMachine.category)?.label || selectedMachine.category}
                 </p>
               </div>
@@ -702,32 +702,32 @@ export default function Machines() {
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-              <div className="p-3 bg-white border border-slate-200 rounded-lg">
-                <span className="text-slate-400 block">Manufacturer</span>
-                <span className="font-semibold text-slate-800">{selectedMachine.manufacturer || 'N/A'}</span>
+              <div className="p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg">
+                <span className="text-slate-400 dark:text-slate-500 block">Manufacturer</span>
+                <span className="font-semibold text-slate-800 dark:text-slate-200">{selectedMachine.manufacturer || 'N/A'}</span>
               </div>
-              <div className="p-3 bg-white border border-slate-200 rounded-lg">
-                <span className="text-slate-400 block">Model</span>
-                <span className="font-semibold text-slate-800">{selectedMachine.model || 'N/A'}</span>
+              <div className="p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg">
+                <span className="text-slate-400 dark:text-slate-500 block">Model</span>
+                <span className="font-semibold text-slate-800 dark:text-slate-200">{selectedMachine.model || 'N/A'}</span>
               </div>
-              <div className="p-3 bg-white border border-slate-200 rounded-lg">
-                <span className="text-slate-400 block">Serial Number</span>
-                <span className="font-semibold text-slate-800">{selectedMachine.serialNumber || 'N/A'}</span>
+              <div className="p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg">
+                <span className="text-slate-400 dark:text-slate-500 block">Serial Number</span>
+                <span className="font-semibold text-slate-800 dark:text-slate-200">{selectedMachine.serialNumber || 'N/A'}</span>
               </div>
-              <div className="p-3 bg-white border border-slate-200 rounded-lg">
-                <span className="text-slate-400 block">Hourly Cost Rate</span>
-                <span className="font-bold text-indigo-600">ETB {Number(selectedMachine.hourlyCostRate || 0).toFixed(2)}</span>
+              <div className="p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg">
+                <span className="text-slate-400 dark:text-slate-500 block">Hourly Cost Rate</span>
+                <span className="font-bold text-indigo-600 dark:text-indigo-400">ETB {Number(selectedMachine.hourlyCostRate || 0).toFixed(2)}</span>
               </div>
             </div>
 
             {/* Checklist items configured */}
             <div className="space-y-2">
-              <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">
+              <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
                 Standard Preventive Checklist Tasks
               </h4>
-              <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 text-xs space-y-1">
-                <p className="font-semibold text-slate-700">Daily Checklist:</p>
-                <ul className="list-disc list-inside text-slate-600 pl-2">
+              <div className="bg-slate-50 dark:bg-slate-900/60 p-3 rounded-lg border border-slate-200 dark:border-slate-700 text-xs space-y-1">
+                <p className="font-semibold text-slate-700 dark:text-slate-300">Daily Checklist:</p>
+                <ul className="list-disc list-inside text-slate-600 dark:text-slate-400 pl-2">
                   {selectedMachine.checklists?.daily?.map((task, i) => (
                     <li key={i}>{task}</li>
                   )) || <li>Standard lubrication & safety guard inspection</li>}
@@ -735,11 +735,11 @@ export default function Machines() {
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
+            <div className="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-700/80">
               <button
                 type="button"
                 onClick={() => setIsDetailModalOpen(false)}
-                className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50"
+                className="px-4 py-2 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition"
               >
                 Close
               </button>
