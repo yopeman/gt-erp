@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../../i18n';
 import crmService from '../../services/crmService';
+import { extractArray, extractData } from '../../services/api';
 import Modal from '../../components/common/Modal';
 import Badge from '../../components/common/Badge';
 import EmptyState from '../../components/common/EmptyState';
@@ -78,7 +79,7 @@ export default function Proformas() {
       if (statusFilter !== 'all') params.status = statusFilter;
 
       const res = await crmService.getProformas(params);
-      setProformas(res.data?.proformas || res.proformas || []);
+      setProformas(extractArray(res, 'proformas'));
     } catch (err) {
       setError(err?.message || 'Failed to fetch proformas');
     } finally {
@@ -88,12 +89,12 @@ export default function Proformas() {
 
   const fetchLookups = async () => {
     try {
-      const [custsRes, ordersRes] = await Promise.all([
+      const [custsRes, ordersRes] = await Promise.allSettled([
         crmService.getCustomers({ limit: 100 }),
         crmService.getOrders({ limit: 100 })
       ]);
-      setCustomers(custsRes.data?.customers || custsRes.customers || []);
-      setOrders(ordersRes.data?.orders || ordersRes.orders || []);
+      if (custsRes.status === 'fulfilled') setCustomers(extractArray(custsRes.value, 'customers'));
+      if (ordersRes.status === 'fulfilled') setOrders(extractArray(ordersRes.value, 'orders'));
     } catch {
       // Non-blocking lookup
     }
@@ -330,7 +331,7 @@ export default function Proformas() {
                       {prf.proformaNumber}
                     </td>
                     <td className="py-3.5 px-4">
-                      <div className="font-bold text-slate-900 dark:text-white">{prf.customer?.name}</div>
+                      <div className="font-bold text-slate-900 dark:text-white">{prf.customer?.name || prf.customer?.companyName || 'Customer'}</div>
                       {prf.customer?.tinNumber && (
                         <div className="text-[10px] text-slate-400">TIN: {prf.customer.tinNumber}</div>
                       )}
@@ -427,7 +428,7 @@ export default function Proformas() {
               >
                 <option value="">-- Choose Customer --</option>
                 {customers.map((c) => (
-                  <option key={c._id} value={c._id}>{c.name} [{c.customerNumber}]</option>
+                  <option key={c._id} value={c._id}>{c.name || c.companyName || 'Customer'} [{c.customerNumber || ''}]</option>
                 ))}
               </select>
             </div>
@@ -610,7 +611,7 @@ export default function Proformas() {
             <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 grid grid-cols-2 gap-4">
               <div>
                 <span className="text-[10px] font-bold text-slate-400 uppercase">Quotation Prepared For:</span>
-                <div className="font-bold text-sm text-slate-900 dark:text-white">{viewingProforma.customer?.name}</div>
+                <div className="font-bold text-sm text-slate-900 dark:text-white">{viewingProforma.customer?.name || viewingProforma.customer?.companyName || 'Customer'}</div>
                 {viewingProforma.customer?.tinNumber && (
                   <div className="text-slate-500">TIN: {viewingProforma.customer.tinNumber}</div>
                 )}

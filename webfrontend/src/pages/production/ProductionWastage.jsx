@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../../i18n';
 import productionService from '../../services/productionService';
+import { extractArray, extractData } from '../../services/api';
 import Modal from '../../components/common/Modal';
 import Badge from '../../components/common/Badge';
 import EmptyState from '../../components/common/EmptyState';
@@ -84,7 +85,7 @@ export default function ProductionWastage() {
     try {
       setLoading(true);
       setError('');
-      const [wstRes, jobsRes, mchRes, empRes, itemsRes] = await Promise.all([
+      const [wstRes, jobsRes, mchRes, empRes, itemsRes] = await Promise.allSettled([
         productionService.getWastages({
           search,
           status: statusFilter,
@@ -96,11 +97,25 @@ export default function ProductionWastage() {
         productionService.getInventoryItems({ limit: 100 })
       ]);
 
-      setWastages(wstRes.data.data.wastages || []);
-      setJobs(jobsRes.data.data.jobs || []);
-      setMachines(mchRes.data.data.machines || []);
-      setEmployees(empRes.data.data?.employees || empRes.data.data || []);
-      setInventoryItems(itemsRes.data.data?.items || itemsRes.data.data || []);
+      if (wstRes.status === 'fulfilled') {
+        setWastages(extractArray(wstRes.value, 'wastages'));
+      } else {
+        console.error('Failed to fetch wastages:', wstRes.reason);
+        setError(wstRes.reason?.message || 'Failed to load wastage records.');
+      }
+
+      if (jobsRes.status === 'fulfilled') {
+        setJobs(extractArray(jobsRes.value, 'jobs'));
+      }
+      if (mchRes.status === 'fulfilled') {
+        setMachines(extractArray(mchRes.value, 'machines'));
+      }
+      if (empRes.status === 'fulfilled') {
+        setEmployees(extractArray(empRes.value, 'employees'));
+      }
+      if (itemsRes.status === 'fulfilled') {
+        setInventoryItems(extractArray(itemsRes.value, 'items'));
+      }
     } catch (err) {
       console.error('Failed to fetch wastages:', err);
       setError('Failed to load wastage records.');
@@ -483,11 +498,15 @@ export default function ProductionWastage() {
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm outline-none"
               >
                 <option value="">Select Operator...</option>
-                {employees.map((emp) => (
-                  <option key={emp._id} value={emp._id}>
-                    {emp.firstName} {emp.lastName} ({emp.employeeId})
-                  </option>
-                ))}
+                {employees.map((emp) => {
+                  const name = emp.fullName || `${emp.firstName || ''} ${emp.lastName || ''}`.trim() || emp.name || 'Staff';
+                  const code = emp.employeeCode || emp.employeeId || '';
+                  return (
+                    <option key={emp._id} value={emp._id}>
+                      {name} {code ? `(${code})` : ''}
+                    </option>
+                  );
+                })}
               </select>
             </div>
           </div>

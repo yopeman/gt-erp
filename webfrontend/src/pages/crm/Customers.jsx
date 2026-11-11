@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../../i18n';
 import crmService from '../../services/crmService';
+import { extractArray, extractData } from '../../services/api';
 import Modal from '../../components/common/Modal';
 import Badge from '../../components/common/Badge';
 import EmptyState from '../../components/common/EmptyState';
@@ -89,7 +90,7 @@ export default function Customers() {
       if (creditFilter !== 'all') params.allowedCredit = creditFilter;
 
       const res = await crmService.getCustomers(params);
-      setCustomers(res.data?.customers || res.customers || []);
+      setCustomers(extractArray(res, 'customers'));
     } catch (err) {
       setError(err?.message || 'Failed to fetch customers');
     } finally {
@@ -100,7 +101,7 @@ export default function Customers() {
   const fetchEmployees = async () => {
     try {
       const res = await crmService.getEmployees({ limit: 100 });
-      setEmployees(res.data?.employees || res.employees || []);
+      setEmployees(extractArray(res, 'employees'));
     } catch {
       // Non-blocking lookup
     }
@@ -240,7 +241,7 @@ export default function Customers() {
   const handleViewCustomer = async (id) => {
     try {
       const res = await crmService.getCustomerById(id);
-      setViewingCustomer(res.data || res);
+      setViewingCustomer(extractData(res));
     } catch (err) {
       alert(err?.message || 'Failed to load customer details');
     }
@@ -361,7 +362,10 @@ export default function Customers() {
                         {c.customerNumber}
                       </td>
                       <td className="py-3.5 px-4">
-                        <div className="font-bold text-slate-900 dark:text-white">{c.name}</div>
+                        <div className="font-bold text-slate-900 dark:text-white">{c.name || c.companyName || 'Unnamed Customer'}</div>
+                        {c.companyName && c.companyName !== c.name && (
+                          <div className="text-[11px] text-slate-500 font-medium">{c.companyName}</div>
+                        )}
                         <div className="text-[11px] text-slate-400 capitalize">{c.category}</div>
                       </td>
                       <td className="py-3.5 px-4">
@@ -618,11 +622,15 @@ export default function Customers() {
               className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
             >
               <option value="">-- Unassigned --</option>
-              {employees.map((emp) => (
-                <option key={emp._id} value={emp._id}>
-                  {emp.firstName} {emp.lastName} ({emp.employeeId})
-                </option>
-              ))}
+              {employees.map((emp) => {
+                const name = emp.fullName || `${emp.firstName || ''} ${emp.lastName || ''}`.trim() || emp.name || 'Sales Rep';
+                const code = emp.employeeCode || emp.employeeId || '';
+                return (
+                  <option key={emp._id} value={emp._id}>
+                    {name} {code ? `(${code})` : ''}
+                  </option>
+                );
+              })}
             </select>
           </div>
 
@@ -720,13 +728,13 @@ export default function Customers() {
         <Modal
           isOpen={Boolean(viewingCustomer)}
           onClose={() => setViewingCustomer(null)}
-          title={`Customer Profile: ${viewingCustomer.name} (${viewingCustomer.customerNumber})`}
+          title={`Customer Profile: ${viewingCustomer.name || viewingCustomer.companyName} (${viewingCustomer.customerNumber || ''})`}
         >
           <div className="space-y-4 max-h-[75vh] overflow-y-auto pr-1 text-xs">
             {/* Top overview banner */}
             <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 flex items-center justify-between">
               <div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-white">{viewingCustomer.name}</h3>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">{viewingCustomer.name || viewingCustomer.companyName}</h3>
                 <span className="text-slate-400 capitalize">{viewingCustomer.category} • TIN: {viewingCustomer.tinNumber || 'N/A'}</span>
               </div>
               <Badge variant={viewingCustomer.status === 'active' ? 'success' : 'danger'}>
@@ -792,7 +800,7 @@ export default function Customers() {
                         <Badge variant={flw.status === 'completed' ? 'success' : 'warning'}>{flw.status}</Badge>
                       </div>
                       <div className="text-slate-400 text-[10px] mt-1">
-                        {new Date(flw.scheduledTime).toLocaleDateString()} by {flw.assignedTo?.firstName} {flw.assignedTo?.lastName}
+                        {new Date(flw.scheduledTime).toLocaleDateString()} by {flw.assignedTo?.fullName || `${flw.assignedTo?.firstName || ''} ${flw.assignedTo?.lastName || ''}`.trim() || 'Staff'}
                       </div>
                       {flw.result && <p className="text-slate-700 dark:text-slate-300 mt-1">{flw.result}</p>}
                     </div>

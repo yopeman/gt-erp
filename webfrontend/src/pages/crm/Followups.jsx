@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../../i18n';
 import crmService from '../../services/crmService';
+import { extractArray, extractData } from '../../services/api';
 import Modal from '../../components/common/Modal';
 import Badge from '../../components/common/Badge';
 import EmptyState from '../../components/common/EmptyState';
@@ -83,7 +84,7 @@ export default function Followups() {
       if (search) params.search = search;
 
       const res = await crmService.getFollowups(params);
-      setFollowups(res.data?.followups || res.followups || []);
+      setFollowups(extractArray(res, 'followups'));
     } catch (err) {
       setError(err?.message || 'Failed to fetch follow-ups');
     } finally {
@@ -93,14 +94,14 @@ export default function Followups() {
 
   const fetchLookups = async () => {
     try {
-      const [leadsRes, custsRes, empsRes] = await Promise.all([
+      const [leadsRes, custsRes, empsRes] = await Promise.allSettled([
         crmService.getLeads({ limit: 100 }),
         crmService.getCustomers({ limit: 100 }),
         crmService.getEmployees({ limit: 100 })
       ]);
-      setLeads(leadsRes.data?.leads || leadsRes.leads || []);
-      setCustomers(custsRes.data?.customers || custsRes.customers || []);
-      setEmployees(empsRes.data?.employees || empsRes.employees || []);
+      if (leadsRes.status === 'fulfilled') setLeads(extractArray(leadsRes.value, 'leads'));
+      if (custsRes.status === 'fulfilled') setCustomers(extractArray(custsRes.value, 'customers'));
+      if (empsRes.status === 'fulfilled') setEmployees(extractArray(empsRes.value, 'employees'));
     } catch {
       // Non-blocking lookup
     }
@@ -509,11 +510,15 @@ export default function Followups() {
                 className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
               >
                 <option value="">-- Choose Sales Rep --</option>
-                {employees.map((emp) => (
-                  <option key={emp._id} value={emp._id}>
-                    {emp.firstName} {emp.lastName} ({emp.employeeId})
-                  </option>
-                ))}
+                {employees.map((emp) => {
+                  const name = emp.fullName || `${emp.firstName || ''} ${emp.lastName || ''}`.trim() || emp.name || 'Sales Rep';
+                  const code = emp.employeeCode || emp.employeeId || '';
+                  return (
+                    <option key={emp._id} value={emp._id}>
+                      {name} {code ? `(${code})` : ''}
+                    </option>
+                  );
+                })}
               </select>
             </div>
           </div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../../i18n';
 import productionService from '../../services/productionService';
+import { extractArray } from '../../services/api';
 import Modal from '../../components/common/Modal';
 import Badge from '../../components/common/Badge';
 import EmptyState from '../../components/common/EmptyState';
@@ -97,7 +98,7 @@ export default function ProductionJobs() {
     try {
       setLoading(true);
       setError('');
-      const [jobsRes, ordersRes, machinesRes, employeesRes] = await Promise.all([
+      const [jobsRes, ordersRes, machinesRes, employeesRes, customersRes] = await Promise.allSettled([
         productionService.getProductionJobs({
           search,
           status: statusFilter,
@@ -105,13 +106,29 @@ export default function ProductionJobs() {
         }),
         productionService.getOrders({ limit: 100 }),
         productionService.getMachines({ limit: 100 }),
-        productionService.getEmployees({ limit: 200, status: 'active' })
+        productionService.getEmployees({ limit: 200, status: 'active' }),
+        productionService.getCustomers({ limit: 100 })
       ]);
 
-      setJobs(jobsRes.data.data.jobs || []);
-      setOrders(ordersRes.data.data.orders || ordersRes.data.data || []);
-      setMachines(machinesRes.data.data.machines || []);
-      setEmployees(employeesRes.data.data?.employees || employeesRes.data.data || []);
+      if (jobsRes.status === 'fulfilled') {
+        setJobs(extractArray(jobsRes.value, 'jobs'));
+      } else {
+        console.error('Failed to fetch production jobs:', jobsRes.reason);
+        setError(jobsRes.reason?.message || 'Failed to load production floor jobs.');
+      }
+
+      if (ordersRes.status === 'fulfilled') {
+        setOrders(extractArray(ordersRes.value, 'orders'));
+      }
+      if (machinesRes.status === 'fulfilled') {
+        setMachines(extractArray(machinesRes.value, 'machines'));
+      }
+      if (employeesRes.status === 'fulfilled') {
+        setEmployees(extractArray(employeesRes.value, 'employees'));
+      }
+      if (customersRes.status === 'fulfilled') {
+        setCustomers(extractArray(customersRes.value, 'customers'));
+      }
     } catch (err) {
       console.error('Failed to fetch production jobs:', err);
       setError('Failed to load production floor jobs.');
@@ -340,7 +357,7 @@ export default function ProductionJobs() {
                     </div>
                     <div className="flex items-center gap-4 text-xs text-slate-500 mt-1">
                       <span>Order: <strong className="text-slate-700">{job.order?.orderNumber || 'N/A'}</strong></span>
-                      <span>Customer: <strong className="text-slate-700">{job.customer?.companyName || 'Walk-in'}</strong></span>
+                      <span>Customer: <strong className="text-slate-700">{job.customer?.name || job.customer?.companyName || 'Walk-in'}</strong></span>
                       <span>Target: <strong className="text-slate-700">{job.targetQuantity?.toLocaleString()} units</strong></span>
                     </div>
                   </div>
@@ -623,11 +640,15 @@ export default function ProductionJobs() {
                     }}
                     className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-sm outline-none h-24"
                   >
-                    {employees.map((emp) => (
-                      <option key={emp._id} value={emp._id}>
-                        {emp.firstName} {emp.lastName} ({emp.employeeId})
-                      </option>
-                    ))}
+                    {employees.map((emp) => {
+                      const name = emp.fullName || `${emp.firstName || ''} ${emp.lastName || ''}`.trim() || emp.name || 'Staff';
+                      const code = emp.employeeCode || emp.employeeId || emp._id?.slice(-4);
+                      return (
+                        <option key={emp._id} value={emp._id}>
+                          {name} {code ? `(${code})` : ''}
+                        </option>
+                      );
+                    })}
                   </select>
                   <p className="text-[11px] text-slate-400 mt-1">Hold Ctrl/Cmd to select multiple operators</p>
                 </div>
@@ -772,7 +793,7 @@ export default function ProductionJobs() {
                 </span>
                 <h4 className="font-bold text-slate-900 text-base">{selectedJob.order?.title}</h4>
                 <p className="text-xs text-slate-500">
-                  Customer: {selectedJob.customer?.companyName} • Target: {selectedJob.targetQuantity?.toLocaleString()} units
+                  Customer: {selectedJob.customer?.name || selectedJob.customer?.companyName || 'Walk-in'} • Target: {selectedJob.targetQuantity?.toLocaleString() || 0} units
                 </p>
               </div>
               <span

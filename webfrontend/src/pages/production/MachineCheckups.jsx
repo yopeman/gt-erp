@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../../i18n';
 import productionService from '../../services/productionService';
+import { extractArray, extractData } from '../../services/api';
 import Modal from '../../components/common/Modal';
 import Badge from '../../components/common/Badge';
 import EmptyState from '../../components/common/EmptyState';
@@ -78,7 +79,7 @@ export default function MachineCheckups() {
     try {
       setLoading(true);
       setError('');
-      const [checkupsRes, machinesRes, employeesRes] = await Promise.all([
+      const [checkupsRes, machinesRes, employeesRes] = await Promise.allSettled([
         productionService.getCheckups({
           machine: machineFilter,
           type: typeFilter,
@@ -88,9 +89,19 @@ export default function MachineCheckups() {
         productionService.getEmployees({ limit: 200, status: 'active' })
       ]);
 
-      setCheckups(checkupsRes.data.data.checkups || []);
-      setMachines(machinesRes.data.data.machines || []);
-      setEmployees(employeesRes.data.data?.employees || employeesRes.data.data || []);
+      if (checkupsRes.status === 'fulfilled') {
+        setCheckups(extractArray(checkupsRes.value, 'checkups'));
+      } else {
+        console.error('Failed to fetch checkups:', checkupsRes.reason);
+        setError(checkupsRes.reason?.message || 'Failed to load checkups list.');
+      }
+
+      if (machinesRes.status === 'fulfilled') {
+        setMachines(extractArray(machinesRes.value, 'machines'));
+      }
+      if (employeesRes.status === 'fulfilled') {
+        setEmployees(extractArray(employeesRes.value, 'employees'));
+      }
     } catch (err) {
       console.error('Failed to fetch checkups:', err);
       setError('Failed to load checkups list.');
@@ -402,11 +413,15 @@ export default function MachineCheckups() {
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm outline-none"
               >
                 <option value="">Select Operator...</option>
-                {employees.map((emp) => (
-                  <option key={emp._id} value={emp._id}>
-                    {emp.firstName} {emp.lastName} ({emp.employeeId})
-                  </option>
-                ))}
+                {employees.map((emp) => {
+                  const name = emp.fullName || `${emp.firstName || ''} ${emp.lastName || ''}`.trim() || emp.name || 'Staff';
+                  const code = emp.employeeCode || emp.employeeId || '';
+                  return (
+                    <option key={emp._id} value={emp._id}>
+                      {name} {code ? `(${code})` : ''}
+                    </option>
+                  );
+                })}
               </select>
             </div>
           </div>

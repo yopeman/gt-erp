@@ -24,11 +24,14 @@ import {
 
 const AVAILABLE_ROLES = [
   { id: 'admin', label: 'Admin (Full Access)', desc: 'Full system management and configuration' },
+  { id: 'sales', label: 'Sales Officer (CRM & Orders)', desc: 'Leads, customer directory, follow-ups, quotations, orders & proformas' },
+  { id: 'production_manager', label: 'Production Manager', desc: 'Job dispatching, floor stage routing, machine oversight & wastage approval' },
+  { id: 'operator', label: 'Machine Operator', desc: 'Floor stage execution, pre-run checkups, run logging & breakdown reporting' },
   { id: 'purchaser', label: 'Purchaser (Procurement)', desc: 'Purchase requests, POs, suppliers, credit & GRV' },
   { id: 'storekeeper', label: 'Storekeeper (Store & Inventory)', desc: 'Warehouse, stock in/out, clearances & SIV' },
   { id: 'hr', label: 'HR Officer', desc: 'Employee records, attendance, leave & payroll' },
   { id: 'manager', label: 'Department Manager', desc: 'Departmental approvals and team oversight' },
-  { id: 'finance', label: 'Finance Officer', desc: 'Accounts, budgets, vouchers and settlements' },
+  { id: 'finance', label: 'Finance Officer', desc: 'Invoices, payments, credit limits, settlements & accounts' },
   { id: 'employee', label: 'Staff / Employee', desc: 'Self-service portal, clock-in, requests' }
 ];
 
@@ -36,6 +39,12 @@ const getRoleBadgeStyle = (role) => {
   switch (role) {
     case 'admin':
       return 'bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border-purple-500/30';
+    case 'sales':
+      return 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-500/30 font-bold';
+    case 'production_manager':
+      return 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-blue-500/30 font-bold';
+    case 'operator':
+      return 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-500/30 font-bold';
     case 'purchaser':
       return 'bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border-teal-500/30 font-bold';
     case 'storekeeper':

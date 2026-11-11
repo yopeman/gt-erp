@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../../i18n';
 import crmService from '../../services/crmService';
+import { extractArray, extractData } from '../../services/api';
 import Modal from '../../components/common/Modal';
 import Badge from '../../components/common/Badge';
 import EmptyState from '../../components/common/EmptyState';
@@ -106,7 +107,7 @@ export default function Leads() {
       if (sourceFilter !== 'all') params.source = sourceFilter;
 
       const res = await crmService.getLeads(params);
-      setLeads(res.data?.leads || res.leads || []);
+      setLeads(extractArray(res, 'leads'));
     } catch (err) {
       setError(err?.message || 'Failed to fetch leads');
     } finally {
@@ -117,7 +118,7 @@ export default function Leads() {
   const fetchEmployees = async () => {
     try {
       const res = await crmService.getEmployees({ limit: 100 });
-      setEmployees(res.data?.employees || res.employees || []);
+      setEmployees(extractArray(res, 'employees'));
     } catch {
       // Non-blocking lookup
     }
@@ -214,7 +215,7 @@ export default function Leads() {
     try {
       setSubmitting(true);
       const res = await crmService.addDiscussion(activeDiscussionLead._id, discussionForm);
-      setActiveDiscussionLead(res.data || res);
+      setActiveDiscussionLead(extractData(res));
       setDiscussionForm({ agenda: '', summary: '', nextFollowupDate: '', newStatus: '' });
       fetchLeads();
     } catch (err) {
@@ -389,7 +390,7 @@ export default function Leads() {
                     <td className="py-3.5 px-4">
                       {lead.assignedTo ? (
                         <span className="font-medium text-slate-800 dark:text-slate-200">
-                          {lead.assignedTo.firstName} {lead.assignedTo.lastName}
+                          {lead.assignedTo.fullName || `${lead.assignedTo.firstName || ''} ${lead.assignedTo.lastName || ''}`.trim() || 'Assigned'}
                         </span>
                       ) : (
                         <span className="text-slate-400 italic">Unassigned</span>
@@ -567,11 +568,15 @@ export default function Leads() {
                 className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary-500"
               >
                 <option value="">-- Select Sales Rep --</option>
-                {employees.map((emp) => (
-                  <option key={emp._id} value={emp._id}>
-                    {emp.firstName} {emp.lastName} ({emp.employeeId})
-                  </option>
-                ))}
+                {employees.map((emp) => {
+                  const name = emp.fullName || `${emp.firstName || ''} ${emp.lastName || ''}`.trim() || emp.name || 'Sales Rep';
+                  const code = emp.employeeCode || emp.employeeId || '';
+                  return (
+                    <option key={emp._id} value={emp._id}>
+                      {name} {code ? `(${code})` : ''}
+                    </option>
+                  );
+                })}
               </select>
             </div>
           </div>

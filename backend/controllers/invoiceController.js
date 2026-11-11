@@ -221,7 +221,7 @@ export const getInvoices = async (req, res) => {
       Invoice.find(query)
         .populate('customer', 'customerNumber name companyName tinNumber')
         .populate('order', 'orderNumber status deliveryDeadline')
-        .populate('preparedBy', 'firstName lastName employeeId')
+        .populate('preparedBy', 'fullName employeeCode firstName lastName employeeId')
         .sort(sortOptions)
         .skip(skip)
         .limit(limitNum),
@@ -250,7 +250,7 @@ export const getInvoiceById = async (req, res) => {
     const invoice = await Invoice.findById(id)
       .populate('customer', 'customerNumber name companyName tinNumber vatNumber billingAddress creditTerms')
       .populate('order', 'orderNumber priority status deliveryDeadline items')
-      .populate('preparedBy', 'firstName lastName employeeId position email phone');
+      .populate('preparedBy', 'fullName employeeCode firstName lastName employeeId position email phone');
 
     if (!invoice) {
       return sendError(res, 'Invoice not found', 404);
@@ -258,7 +258,7 @@ export const getInvoiceById = async (req, res) => {
 
     // Fetch payment receipt history for this invoice
     const payments = await CustomerPayment.find({ invoice: id })
-      .populate('receivedBy', 'firstName lastName employeeId')
+      .populate('receivedBy', 'fullName employeeCode firstName lastName employeeId')
       .sort({ paymentDate: -1 });
 
     return sendSuccess(res, 'Invoice retrieved successfully', {

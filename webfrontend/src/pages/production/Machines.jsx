@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../../i18n';
 import productionService from '../../services/productionService';
+import { extractArray, extractData } from '../../services/api';
 import Modal from '../../components/common/Modal';
 import Badge from '../../components/common/Badge';
 import EmptyState from '../../components/common/EmptyState';
@@ -95,7 +96,7 @@ export default function Machines() {
     try {
       setLoading(true);
       setError('');
-      const [machinesRes, statsRes, warehousesRes, employeesRes] = await Promise.all([
+      const [machinesRes, statsRes, warehousesRes, employeesRes] = await Promise.allSettled([
         productionService.getMachines({
           search,
           category: categoryFilter,
@@ -106,10 +107,22 @@ export default function Machines() {
         productionService.getEmployees({ limit: 200, status: 'active' })
       ]);
 
-      setMachines(machinesRes.data.data.machines || []);
-      setStats(statsRes.data.data);
-      setWarehouses(warehousesRes.data.data?.warehouses || warehousesRes.data.data || []);
-      setEmployees(employeesRes.data.data?.employees || employeesRes.data.data || []);
+      if (machinesRes.status === 'fulfilled') {
+        setMachines(extractArray(machinesRes.value, 'machines'));
+      } else {
+        console.error('Failed to fetch machines:', machinesRes.reason);
+        setError(machinesRes.reason?.message || 'Failed to load equipment list.');
+      }
+
+      if (statsRes.status === 'fulfilled') {
+        setStats(extractData(statsRes.value));
+      }
+      if (warehousesRes.status === 'fulfilled') {
+        setWarehouses(extractArray(warehousesRes.value, 'warehouses'));
+      }
+      if (employeesRes.status === 'fulfilled') {
+        setEmployees(extractArray(employeesRes.value, 'employees'));
+      }
     } catch (err) {
       console.error('Failed to fetch machines:', err);
       setError('Failed to load equipment list. Please refresh.');
@@ -547,11 +560,15 @@ export default function Machines() {
                 }}
                 className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-sm outline-none h-20"
               >
-                {employees.map((emp) => (
-                  <option key={emp._id} value={emp._id}>
-                    {emp.firstName} {emp.lastName} ({emp.employeeId})
-                  </option>
-                ))}
+                {employees.map((emp) => {
+                  const name = emp.fullName || `${emp.firstName || ''} ${emp.lastName || ''}`.trim() || emp.name || 'Staff';
+                  const code = emp.employeeCode || emp.employeeId || '';
+                  return (
+                    <option key={emp._id} value={emp._id}>
+                      {name} {code ? `(${code})` : ''}
+                    </option>
+                  );
+                })}
               </select>
               <p className="text-[11px] text-slate-400 mt-0.5">Hold Ctrl / Cmd to select multiple operators</p>
             </div>

@@ -316,8 +316,23 @@ employeeSchema.post('findOneAndDelete', async function (doc) {
   }
 });
 
-employeeSchema.index({ email: 1 });
-employeeSchema.index({ user: 1 });
+// Virtuals for backwards-compatibility with components expecting firstName, lastName, or employeeId
+employeeSchema.virtual('firstName').get(function () {
+  return this.fullName ? this.fullName.split(' ')[0] : '';
+});
+
+employeeSchema.virtual('lastName').get(function () {
+  if (!this.fullName) return '';
+  const parts = this.fullName.split(' ');
+  return parts.slice(1).join(' ');
+});
+
+employeeSchema.virtual('employeeId').get(function () {
+  return this.employeeCode || String(this._id);
+});
+
+employeeSchema.set('toJSON', { virtuals: true });
+employeeSchema.set('toObject', { virtuals: true });
 
 const Employee = mongoose.model('Employee', employeeSchema);
 

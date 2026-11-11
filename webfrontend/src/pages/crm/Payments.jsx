@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../../i18n';
 import crmService from '../../services/crmService';
+import { extractArray, extractData } from '../../services/api';
 import Modal from '../../components/common/Modal';
 import Badge from '../../components/common/Badge';
 import EmptyState from '../../components/common/EmptyState';
@@ -52,7 +53,7 @@ export default function Payments() {
       if (methodFilter !== 'all') params.paymentMethod = methodFilter;
 
       const res = await crmService.getCustomerPayments(params);
-      setPayments(res.data?.payments || res.payments || []);
+      setPayments(extractArray(res, 'payments'));
     } catch (err) {
       setError(err?.message || 'Failed to fetch customer payment vouchers');
     } finally {
@@ -67,7 +68,7 @@ export default function Payments() {
   const handleViewPayment = async (id) => {
     try {
       const res = await crmService.getCustomerPaymentById(id);
-      setViewingPayment(res.data || res);
+      setViewingPayment(extractData(res));
     } catch (err) {
       alert(err?.message || 'Failed to load receipt details');
     }
@@ -169,7 +170,7 @@ export default function Payments() {
                       {p.receiptNumber}
                     </td>
                     <td className="py-3.5 px-4">
-                      <div className="font-bold text-slate-900 dark:text-white">{p.customer?.name}</div>
+                      <div className="font-bold text-slate-900 dark:text-white">{p.customer?.name || p.customer?.companyName || 'Customer'}</div>
                       {p.customer?.tinNumber && (
                         <div className="text-[10px] text-slate-400">TIN: {p.customer.tinNumber}</div>
                       )}
@@ -232,7 +233,7 @@ export default function Payments() {
             <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 grid grid-cols-2 gap-4">
               <div>
                 <span className="text-[10px] font-bold text-slate-400 uppercase">Received From:</span>
-                <div className="font-bold text-sm text-slate-900 dark:text-white">{viewingPayment.customer?.name}</div>
+                <div className="font-bold text-sm text-slate-900 dark:text-white">{viewingPayment.customer?.name || viewingPayment.customer?.companyName || 'Customer'}</div>
                 <div className="text-slate-500">TIN: {viewingPayment.customer?.tinNumber || 'N/A'}</div>
               </div>
               <div className="text-right">

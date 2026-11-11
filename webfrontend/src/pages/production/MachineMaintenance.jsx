@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../../i18n';
 import productionService from '../../services/productionService';
+import { extractArray, extractData } from '../../services/api';
 import Modal from '../../components/common/Modal';
 import Badge from '../../components/common/Badge';
 import EmptyState from '../../components/common/EmptyState';
@@ -87,7 +88,7 @@ export default function MachineMaintenance() {
     try {
       setLoading(true);
       setError('');
-      const [mntRes, mchRes, empRes, itemsRes] = await Promise.all([
+      const [mntRes, mchRes, empRes, itemsRes] = await Promise.allSettled([
         productionService.getMaintenances({
           search,
           status: statusFilter,
@@ -99,10 +100,22 @@ export default function MachineMaintenance() {
         productionService.getInventoryItems({ limit: 100 })
       ]);
 
-      setMaintenances(mntRes.data.data.maintenances || []);
-      setMachines(mchRes.data.data.machines || []);
-      setEmployees(empRes.data.data?.employees || empRes.data.data || []);
-      setInventoryItems(itemsRes.data.data?.items || itemsRes.data.data || []);
+      if (mntRes.status === 'fulfilled') {
+        setMaintenances(extractArray(mntRes.value, 'maintenances'));
+      } else {
+        console.error('Failed to fetch maintenance tickets:', mntRes.reason);
+        setError(mntRes.reason?.message || 'Failed to load maintenance records.');
+      }
+
+      if (mchRes.status === 'fulfilled') {
+        setMachines(extractArray(mchRes.value, 'machines'));
+      }
+      if (empRes.status === 'fulfilled') {
+        setEmployees(extractArray(empRes.value, 'employees'));
+      }
+      if (itemsRes.status === 'fulfilled') {
+        setInventoryItems(extractArray(itemsRes.value, 'items'));
+      }
     } catch (err) {
       console.error('Failed to fetch maintenance tickets:', err);
       setError('Failed to load maintenance records.');
@@ -474,11 +487,15 @@ export default function MachineMaintenance() {
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm outline-none"
               >
                 <option value="">Select Reporter...</option>
-                {employees.map((emp) => (
-                  <option key={emp._id} value={emp._id}>
-                    {emp.firstName} {emp.lastName} ({emp.employeeId})
-                  </option>
-                ))}
+                {employees.map((emp) => {
+                  const name = emp.fullName || `${emp.firstName || ''} ${emp.lastName || ''}`.trim() || emp.name || 'Staff';
+                  const code = emp.employeeCode || emp.employeeId || '';
+                  return (
+                    <option key={emp._id} value={emp._id}>
+                      {name} {code ? `(${code})` : ''}
+                    </option>
+                  );
+                })}
               </select>
             </div>
           </div>
@@ -494,11 +511,15 @@ export default function MachineMaintenance() {
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm outline-none"
               >
                 <option value="">Select Technician...</option>
-                {employees.map((emp) => (
-                  <option key={emp._id} value={emp._id}>
-                    {emp.firstName} {emp.lastName} ({emp.position || 'Technician'})
-                  </option>
-                ))}
+                {employees.map((emp) => {
+                  const name = emp.fullName || `${emp.firstName || ''} ${emp.lastName || ''}`.trim() || emp.name || 'Technician';
+                  const pos = emp.position || 'Technician';
+                  return (
+                    <option key={emp._id} value={emp._id}>
+                      {name} ({pos})
+                    </option>
+                  );
+                })}
               </select>
             </div>
             <div>

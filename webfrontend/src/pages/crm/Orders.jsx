@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from '../../i18n';
 import crmService from '../../services/crmService';
+import { extractArray, extractData } from '../../services/api';
 import Modal from '../../components/common/Modal';
 import Badge from '../../components/common/Badge';
 import EmptyState from '../../components/common/EmptyState';
@@ -102,13 +103,21 @@ export default function Orders() {
       if (statusFilter !== 'all') params.status = statusFilter;
       if (priorityFilter !== 'all') params.priority = priorityFilter;
 
-      const [ordersRes, statsRes] = await Promise.all([
+      const [ordersRes, statsRes] = await Promise.allSettled([
         crmService.getOrders(params),
         crmService.getOrderStatistics()
       ]);
 
-      setOrders(ordersRes.data?.orders || ordersRes.orders || []);
-      setStats(statsRes.data || statsRes);
+      if (ordersRes.status === 'fulfilled') {
+        setOrders(extractArray(ordersRes.value, 'orders'));
+      } else {
+        console.error('Failed to fetch sales orders:', ordersRes.reason);
+        setError(ordersRes.reason?.message || 'Failed to fetch sales orders');
+      }
+
+      if (statsRes.status === 'fulfilled') {
+        setStats(extractData(statsRes.value));
+      }
     } catch (err) {
       setError(err?.message || 'Failed to fetch sales orders');
     } finally {
@@ -118,14 +127,14 @@ export default function Orders() {
 
   const fetchLookups = async () => {
     try {
-      const [custsRes, empsRes, srvsRes] = await Promise.all([
+      const [custsRes, empsRes, srvsRes] = await Promise.allSettled([
         crmService.getCustomers({ limit: 100 }),
         crmService.getEmployees({ limit: 100 }),
         crmService.getServices({ limit: 100 })
       ]);
-      setCustomers(custsRes.data?.customers || custsRes.customers || []);
-      setEmployees(empsRes.data?.employees || empsRes.employees || []);
-      setServices(srvsRes.data?.services || srvsRes.services || []);
+      if (custsRes.status === 'fulfilled') setCustomers(extractArray(custsRes.value, 'customers'));
+      if (empsRes.status === 'fulfilled') setEmployees(extractArray(empsRes.value, 'employees'));
+      if (srvsRes.status === 'fulfilled') setServices(extractArray(srvsRes.value, 'services'));
     } catch {
       // Non-blocking lookup
     }
@@ -456,7 +465,7 @@ export default function Orders() {
                         {ord.orderNumber}
                       </td>
                       <td className="py-3.5 px-4">
-                        <div className="font-bold text-slate-900 dark:text-white">{ord.customer?.name}</div>
+                        <div className="font-bold text-slate-900 dark:text-white">{ord.customer?.name || ord.customer?.companyName || 'Customer'}</div>
                         <div className="text-[11px] text-slate-400">Rep: {ord.salesRepresentative?.firstName} {ord.salesRepresentative?.lastName}</div>
                       </td>
                       <td className="py-3.5 px-4">
@@ -530,7 +539,7 @@ export default function Orders() {
                 <option value="">-- Choose Customer --</option>
                 {customers.map((c) => (
                   <option key={c._id} value={c._id}>
-                    {c.name} [{c.customerNumber}]
+                    {c.name || c.companyName || 'Customer'} [{c.customerNumber || ''}]
                   </option>
                 ))}
               </select>
@@ -545,11 +554,14 @@ export default function Orders() {
                 className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
               >
                 <option value="">-- Choose Rep --</option>
-                {employees.map((e) => (
-                  <option key={e._id} value={e._id}>
-                    {e.firstName} {e.lastName}
-                  </option>
-                ))}
+                {employees.map((e) => {
+                  const name = e.fullName || `${e.firstName || ''} ${e.lastName || ''}`.trim() || e.name || 'Sales Rep';
+                  return (
+                    <option key={e._id} value={e._id}>
+                      {name}
+                    </option>
+                  );
+                })}
               </select>
             </div>
 
@@ -718,11 +730,14 @@ export default function Orders() {
                 className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
               >
                 <option value="">-- No Designer (Skip to Production) --</option>
-                {employees.map((e) => (
-                  <option key={e._id} value={e._id}>
-                    {e.firstName} {e.lastName} ({e.position || 'Designer'})
-                  </option>
-                ))}
+                {employees.map((e) => {
+                  const name = e.fullName || `${e.firstName || ''} ${e.lastName || ''}`.trim() || e.name || 'Designer';
+                  return (
+                    <option key={e._id} value={e._id}>
+                      {name} ({e.position || 'Designer'})
+                    </option>
+                  );
+                })}
               </select>
             </div>
 
@@ -845,7 +860,7 @@ export default function Orders() {
             {/* Header overview */}
             <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 flex items-center justify-between">
               <div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-white">{viewingOrder.customer?.name}</h3>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">{viewingOrder.customer?.name || viewingOrder.customer?.companyName || 'Customer'}</h3>
                 <span className="text-slate-400">Deadline: {new Date(viewingOrder.deliveryDeadline).toLocaleDateString()}</span>
               </div>
               <Badge variant={getOrderStatusVariant(viewingOrder.status)}>

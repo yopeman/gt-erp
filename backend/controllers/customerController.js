@@ -59,7 +59,7 @@ export const createCustomer = async (req, res) => {
     });
 
     const populated = await Customer.findById(customer._id)
-      .populate('assignedSalesRepresentative', 'firstName lastName employeeId position department');
+      .populate('assignedSalesRepresentative', 'fullName employeeCode firstName lastName employeeId position department');
 
     return sendSuccess(res, 'Customer created successfully', populated, 201);
   } catch (error) {
@@ -120,7 +120,7 @@ export const getCustomers = async (req, res) => {
 
     const [customers, total] = await Promise.all([
       Customer.find(query)
-        .populate('assignedSalesRepresentative', 'firstName lastName employeeId position department email phone')
+        .populate('assignedSalesRepresentative', 'fullName employeeCode firstName lastName employeeId position department email phone')
         .sort(sortOptions)
         .skip(skip)
         .limit(limitNum),
@@ -147,7 +147,7 @@ export const getCustomerById = async (req, res) => {
     const { id } = req.params;
 
     const customer = await Customer.findById(id)
-      .populate('assignedSalesRepresentative', 'firstName lastName employeeId position department email phone')
+      .populate('assignedSalesRepresentative', 'fullName employeeCode firstName lastName employeeId position department email phone')
       .populate('createdBy', 'fullName email');
 
     if (!customer) {
@@ -218,7 +218,7 @@ export const updateCustomer = async (req, res) => {
     await customer.save();
 
     const populated = await Customer.findById(customer._id)
-      .populate('assignedSalesRepresentative', 'firstName lastName employeeId position department');
+      .populate('assignedSalesRepresentative', 'fullName employeeCode firstName lastName employeeId position department');
 
     return sendSuccess(res, 'Customer updated successfully', populated);
   } catch (error) {

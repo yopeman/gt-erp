@@ -50,7 +50,7 @@ export const createLead = async (req, res) => {
       createdBy: req.user?._id || null
     });
 
-    const populated = await Lead.findById(lead._id).populate('assignedTo', 'firstName lastName employeeId position');
+    const populated = await Lead.findById(lead._id).populate('assignedTo', 'fullName employeeCode firstName lastName employeeId position');
 
     return sendSuccess(res, 'Lead created successfully', populated, 201);
   } catch (error) {
@@ -115,7 +115,7 @@ export const getLeads = async (req, res) => {
 
     const [leads, total] = await Promise.all([
       Lead.find(query)
-        .populate('assignedTo', 'firstName lastName employeeId position department')
+        .populate('assignedTo', 'fullName employeeCode firstName lastName employeeId position department')
         .populate('convertedCustomerId', 'customerNumber name companyName')
         .sort(sortOptions)
         .skip(skip)
@@ -143,9 +143,9 @@ export const getLeadById = async (req, res) => {
     const { id } = req.params;
 
     const lead = await Lead.findById(id)
-      .populate('assignedTo', 'firstName lastName employeeId position department email phone')
+      .populate('assignedTo', 'fullName employeeCode firstName lastName employeeId position department email phone')
       .populate('convertedCustomerId', 'customerNumber name companyName creditTerms tinNumber')
-      .populate('discussions.recordedBy', 'firstName lastName employeeId')
+      .populate('discussions.recordedBy', 'fullName employeeCode firstName lastName employeeId')
       .populate('createdBy', 'fullName email');
 
     if (!lead) {
@@ -205,7 +205,7 @@ export const updateLead = async (req, res) => {
     await lead.save();
 
     const populated = await Lead.findById(lead._id)
-      .populate('assignedTo', 'firstName lastName employeeId position department')
+      .populate('assignedTo', 'fullName employeeCode firstName lastName employeeId position department')
       .populate('convertedCustomerId', 'customerNumber name companyName');
 
     return sendSuccess(res, 'Lead updated successfully', populated);
@@ -248,8 +248,8 @@ export const addDiscussion = async (req, res) => {
     await lead.save();
 
     const populated = await Lead.findById(lead._id)
-      .populate('assignedTo', 'firstName lastName employeeId position department')
-      .populate('discussions.recordedBy', 'firstName lastName employeeId');
+      .populate('assignedTo', 'fullName employeeCode firstName lastName employeeId position department')
+      .populate('discussions.recordedBy', 'fullName employeeCode firstName lastName employeeId');
 
     return sendSuccess(res, 'Discussion added successfully', populated);
   } catch (error) {

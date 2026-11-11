@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../../i18n';
 import crmService from '../../services/crmService';
+import { extractArray, extractData } from '../../services/api';
 import Modal from '../../components/common/Modal';
 import Badge from '../../components/common/Badge';
 import EmptyState from '../../components/common/EmptyState';
@@ -65,13 +66,21 @@ export default function Invoices() {
       if (search) params.search = search;
       if (statusFilter !== 'all') params.paymentStatus = statusFilter;
 
-      const [invRes, metricsRes] = await Promise.all([
+      const [invRes, metricsRes] = await Promise.allSettled([
         crmService.getInvoices(params),
         crmService.getInvoiceMetrics()
       ]);
 
-      setInvoices(invRes.data?.invoices || invRes.invoices || []);
-      setMetrics(metricsRes.data || metricsRes);
+      if (invRes.status === 'fulfilled') {
+        setInvoices(extractArray(invRes.value, 'invoices'));
+      } else {
+        console.error('Failed to fetch tax invoices:', invRes.reason);
+        setError(invRes.reason?.message || 'Failed to fetch tax invoices');
+      }
+
+      if (metricsRes.status === 'fulfilled') {
+        setMetrics(extractData(metricsRes.value));
+      }
     } catch (err) {
       setError(err?.message || 'Failed to fetch tax invoices');
     } finally {
@@ -82,8 +91,9 @@ export default function Invoices() {
   const fetchOrdersForInvoicing = async () => {
     try {
       const res = await crmService.getOrders({ limit: 100 });
+      const ordersList = extractArray(res, 'orders');
       // Orders that do not yet have an invoice assigned
-      const unInvoiced = (res.data?.orders || res.orders || []).filter((o) => !o.invoice);
+      const unInvoiced = ordersList.filter((o) => !o.invoice);
       setOrders(unInvoiced);
       if (unInvoiced.length > 0) {
         setSelectedOrderId(unInvoiced[0]._id);
@@ -155,7 +165,7 @@ export default function Invoices() {
   const handleViewInvoice = async (id) => {
     try {
       const res = await crmService.getInvoiceById(id);
-      setViewingInvoice(res.data || res);
+      setViewingInvoice(extractData(res));
     } catch (err) {
       alert(err?.message || 'Failed to load invoice details');
     }
@@ -295,7 +305,7 @@ export default function Invoices() {
                       {inv.invoiceNumber}
                     </td>
                     <td className="py-3.5 px-4">
-                      <div className="font-bold text-slate-900 dark:text-white">{inv.customer?.name}</div>
+                      <div className="font-bold text-slate-900 dark:text-white">{inv.customer?.name || inv.customer?.companyName || 'Customer'}</div>
                       {inv.customerTin && (
                         <div className="text-[10px] text-slate-400">TIN: {inv.customerTin}</div>
                       )}
@@ -375,7 +385,7 @@ export default function Invoices() {
               ) : (
                 orders.map((o) => (
                   <option key={o._id} value={o._id}>
-                    {o.orderNumber} - {o.customer?.name} ({formatCurrency(o.financials?.grandTotal)})
+                    {o.orderNumber} - {o.customer?.name || o.customer?.companyName || 'Customer'} ({formatCurrency(o.financials?.grandTotal)})
                   </option>
                 ))
               )}
@@ -413,7 +423,7 @@ export default function Invoices() {
               <div>
                 <span className="text-slate-400 block font-bold uppercase text-[10px]">Client</span>
                 <span className="font-bold text-slate-800 dark:text-slate-200 text-sm">
-                  {paymentModalInvoice.customer?.name}
+                  {paymentModalInvoice.customer?.name || paymentModalInvoice.customer?.companyName || 'Client'}
                 </span>
               </div>
               <div className="text-right">
@@ -541,7 +551,7 @@ export default function Invoices() {
             <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 grid grid-cols-2 gap-4">
               <div>
                 <span className="text-[10px] font-bold text-slate-400 uppercase">Billed To:</span>
-                <div className="font-bold text-sm text-slate-900 dark:text-white">{viewingInvoice.customer?.name}</div>
+                <div className="font-bold text-sm text-slate-900 dark:text-white">{viewingInvoice.customer?.name || viewingInvoice.customer?.companyName || 'Client'}</div>
                 <div className="text-slate-500">TIN: {viewingInvoice.customerTin || 'N/A'}</div>
                 {viewingInvoice.customerVat && (
                   <div className="text-slate-500">VAT: {viewingInvoice.customerVat}</div>

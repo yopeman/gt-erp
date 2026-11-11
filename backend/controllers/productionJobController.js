@@ -46,11 +46,11 @@ export const getProductionJobs = async (req, res) => {
 
     const jobs = await ProductionJob.find(query)
       .populate('order', 'orderNumber title orderStatus priority deliveryDate')
-      .populate('customer', 'companyName contactPerson phone email')
+      .populate('customer', 'name companyName contactPerson phone email')
       .populate('service', 'name serviceCode category')
       .populate('stages.machine', 'machineCode name hourlyCostRate status')
-      .populate('stages.operators', 'firstName lastName employeeId position')
-      .populate('stages.qcInspector', 'firstName lastName employeeId')
+      .populate('stages.operators', 'fullName employeeCode firstName lastName employeeId position')
+      .populate('stages.qcInspector', 'fullName employeeCode firstName lastName employeeId')
       .sort({ scheduledStartDate: 1, createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit, 10));
@@ -78,14 +78,14 @@ export const getProductionJobById = async (req, res) => {
       .populate('customer')
       .populate('service')
       .populate('stages.machine', 'machineCode name hourlyCostRate status category')
-      .populate('stages.operators', 'firstName lastName employeeId phone position')
-      .populate('stages.qcInspector', 'firstName lastName employeeId phone')
+      .populate('stages.operators', 'fullName employeeCode firstName lastName employeeId phone position')
+      .populate('stages.qcInspector', 'fullName employeeCode firstName lastName employeeId phone')
       .populate('actualMaterialsConsumed.item', 'itemCode itemName unit costPrice currentStock')
       .populate({
         path: 'wastageRecords',
         populate: [
           { path: 'items.materialItem', select: 'itemCode itemName unit' },
-          { path: 'operator', select: 'firstName lastName employeeId' },
+          { path: 'operator', select: 'fullName employeeCode firstName lastName employeeId' },
           { path: 'machine', select: 'machineCode name' }
         ]
       })
@@ -242,7 +242,7 @@ export const startStage = async (req, res) => {
 
     const populated = await ProductionJob.findById(job._id)
       .populate('stages.machine', 'machineCode name hourlyCostRate status')
-      .populate('stages.operators', 'firstName lastName employeeId position');
+      .populate('stages.operators', 'fullName employeeCode firstName lastName employeeId position');
 
     return sendSuccess(res, `Stage "${stage.stageName}" started`, populated);
   } catch (error) {
@@ -294,7 +294,7 @@ export const completeStage = async (req, res) => {
 
     const populated = await ProductionJob.findById(job._id)
       .populate('stages.machine', 'machineCode name hourlyCostRate status')
-      .populate('stages.operators', 'firstName lastName employeeId position');
+      .populate('stages.operators', 'fullName employeeCode firstName lastName employeeId position');
 
     return sendSuccess(res, `Stage "${stage.stageName}" marked as completed`, populated);
   } catch (error) {
@@ -345,7 +345,7 @@ export const signoffQC = async (req, res) => {
     await job.save();
 
     const populated = await ProductionJob.findById(job._id)
-      .populate('stages.qcInspector', 'firstName lastName employeeId');
+      .populate('stages.qcInspector', 'fullName employeeCode firstName lastName employeeId');
 
     return sendSuccess(res, 'Quality inspection sign-off saved', populated);
   } catch (error) {

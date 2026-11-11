@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from '../../i18n';
 import productionService from '../../services/productionService';
+import { extractArray, extractData } from '../../services/api';
 import {
   Factory,
   Workflow,
@@ -32,17 +33,25 @@ export default function ProductionDashboard() {
     const fetchDashboard = async () => {
       try {
         setLoading(true);
-        const [metricRes, mchRes, jobsRes, mntRes] = await Promise.all([
+        const [metricRes, mchRes, jobsRes, mntRes] = await Promise.allSettled([
           productionService.getProductionDashboardMetrics(),
           productionService.getMachines({ limit: 12 }),
           productionService.getProductionJobs({ status: 'in_production', limit: 5 }),
           productionService.getMaintenances({ status: 'reported', limit: 5 })
         ]);
 
-        setMetrics(metricRes.data.data);
-        setMachines(mchRes.data.data.machines || []);
-        setActiveJobs(jobsRes.data.data.jobs || []);
-        setBreakdownTickets(mntRes.data.data.maintenances || []);
+        if (metricRes.status === 'fulfilled') {
+          setMetrics(extractData(metricRes.value));
+        }
+        if (mchRes.status === 'fulfilled') {
+          setMachines(extractArray(mchRes.value, 'machines'));
+        }
+        if (jobsRes.status === 'fulfilled') {
+          setActiveJobs(extractArray(jobsRes.value, 'jobs'));
+        }
+        if (mntRes.status === 'fulfilled') {
+          setBreakdownTickets(extractArray(mntRes.value, 'maintenances'));
+        }
       } catch (err) {
         console.error('Failed to load production dashboard:', err);
       } finally {
