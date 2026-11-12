@@ -6,12 +6,49 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 /**
- * Save base64 image string to disk in uploads directory
- * @param {string} base64String 
- * @param {string} subfolder Default 'selfies'
- * @returns {string} URL path to access the saved image
+ * Resolve file extension from a MIME type or original filename.
+ * @param {string} mime
+ * @param {string} originalFilename
+ * @returns {string}
  */
-export const saveBase64Image = (base64String, subfolder = 'selfies') => {
+const resolveExtension = (mime = '', originalFilename = '') => {
+  const normalizedMime = mime.toLowerCase();
+  if (normalizedMime.includes('pdf')) return 'pdf';
+  if (normalizedMime.includes('jpeg') || normalizedMime.includes('jpg')) return 'jpg';
+  if (normalizedMime.includes('png')) return 'png';
+  if (normalizedMime.includes('webp')) return 'webp';
+  if (normalizedMime.includes('svg')) return 'svg';
+  if (normalizedMime.includes('gif')) return 'gif';
+  if (normalizedMime.includes('tiff') || normalizedMime.includes('tif')) return 'tiff';
+  if (normalizedMime.includes('postscript') || normalizedMime.includes('eps')) return 'eps';
+  if (normalizedMime.includes('illustrator')) return 'ai';
+  if (normalizedMime.includes('photoshop') || normalizedMime.includes('psd')) return 'psd';
+  if (normalizedMime.includes('word') || normalizedMime.includes('docx') || normalizedMime.includes('msword')) return 'docx';
+  if (normalizedMime.includes('excel') || normalizedMime.includes('xlsx') || normalizedMime.includes('sheet')) return 'xlsx';
+  if (normalizedMime.includes('text') || normalizedMime.includes('plain')) return 'txt';
+
+  if (originalFilename) {
+    const ext = path.extname(originalFilename).replace('.', '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (ext) return ext;
+  }
+
+  if (normalizedMime && !normalizedMime.includes('octet-stream')) {
+    const parts = normalizedMime.split('/');
+    const sub = parts[1] ? parts[1].split('+')[0].replace(/[^a-z0-9]/g, '') : '';
+    if (sub) return sub;
+  }
+
+  return 'bin';
+};
+
+/**
+ * Save base64 file string to disk in uploads directory
+ * @param {string} base64String
+ * @param {string} subfolder Default 'selfies'
+ * @param {string} originalFilename Optional original filename for extension fallback
+ * @returns {string} URL path to access the saved file
+ */
+export const saveBase64Image = (base64String, subfolder = 'selfies', originalFilename = '') => {
   if (!base64String || typeof base64String !== 'string') {
     return null;
   }
@@ -30,30 +67,12 @@ export const saveBase64Image = (base64String, subfolder = 'selfies') => {
     let extension = 'bin';
     let base64Data = base64String;
 
-    const dataUriMatches = base64String.match(/^data:([A-Za-z0-9-+\/]+);base64,(.+)$/);
+    const dataUriMatches = base64String.match(/^data:([^;,]*);base64,(.+)$/);
     if (dataUriMatches) {
-      const mime = dataUriMatches[1].toLowerCase();
+      extension = resolveExtension(dataUriMatches[1], originalFilename);
       base64Data = dataUriMatches[2];
-
-      if (mime.includes('pdf')) extension = 'pdf';
-      else if (mime.includes('jpeg') || mime.includes('jpg')) extension = 'jpg';
-      else if (mime.includes('png')) extension = 'png';
-      else if (mime.includes('webp')) extension = 'webp';
-      else if (mime.includes('svg')) extension = 'svg';
-      else if (mime.includes('gif')) extension = 'gif';
-      else if (mime.includes('word') || mime.includes('docx') || mime.includes('msword')) extension = 'docx';
-      else if (mime.includes('excel') || mime.includes('xlsx') || mime.includes('sheet')) extension = 'xlsx';
-      else if (mime.includes('text') || mime.includes('plain')) extension = 'txt';
-      else {
-        const parts = mime.split('/');
-        extension = parts[1] ? parts[1].replace(/[^a-z0-9]/g, '') : 'bin';
-      }
-    } else {
-      const imgMatches = base64String.match(/^data:image\/([A-Za-z-+\/]+);base64,(.+)$/);
-      if (imgMatches && imgMatches.length === 3) {
-        extension = imgMatches[1] === 'jpeg' ? 'jpg' : imgMatches[1];
-        base64Data = imgMatches[2];
-      }
+    } else if (originalFilename) {
+      extension = resolveExtension('', originalFilename);
     }
 
     const filename = `${subfolder}_${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${extension}`;

@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from '../../i18n';
+import { SERVER_BASE_URL } from '../../services/api';
 import crmService from '../../services/crmService';
 import Modal from '../../components/common/Modal';
 import Badge from '../../components/common/Badge';
@@ -20,8 +21,37 @@ import {
   Building2,
   Calendar,
   Layers,
-  ArrowRight
+  ArrowRight,
+  X
 } from 'lucide-react';
+
+const MAX_PROOF_FILE_SIZE_BYTES = 15 * 1024 * 1024; // 15 MB keeps base64 payload within 25 MB server limit
+const ACCEPTED_PROOF_TYPES = '.pdf,.png,.jpg,.jpeg,.webp,.svg,.tif,.tiff,.eps,.ai,.psd,application/pdf,image/*';
+const ALLOWED_PROOF_EXTENSIONS = new Set(['pdf', 'png', 'jpg', 'jpeg', 'webp', 'svg', 'tif', 'tiff', 'eps', 'ai', 'psd']);
+const PREVIEWABLE_IMAGE_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/svg+xml']);
+
+const EMPTY_UPLOAD_FORM = {
+  fileData: '',
+  fileName: '',
+  fileSize: 0,
+  fileType: '',
+  remarks: ''
+};
+
+const formatFileSize = (bytes) => {
+  if (!bytes) return '0 B';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+};
+
+const resolveFileUrl = (url) => {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
+    return url;
+  }
+  return `${SERVER_BASE_URL}${url.startsWith('/') ? url : `/${url}`}`;
+};
 
 const DESIGN_STATUSES = [
   { value: 'all', label: 'All Statuses' },
@@ -49,10 +79,10 @@ export default function DesignProofing() {
   const [historyModalDesign, setHistoryModalDesign] = useState(null);
 
   // Form States
-  const [uploadForm, setUploadForm] = useState({
-    fileUrl: '',
-    remarks: ''
-  });
+  const [uploadForm, setUploadForm] = useState(EMPTY_UPLOAD_FORM);
+  const [uploadError, setUploadError] = useState('');
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef(null);
 
   const [reviewForm, setReviewForm] = useState({
     versionId: '',
@@ -83,26 +113,100 @@ export default function DesignProofing() {
 
   const handleOpenUploadModal = (design) => {
     setUploadModalDesign(design);
-    setUploadForm({
-      fileUrl: '',
-      remarks: ''
-    });
+    setUploadForm(EMPTY_UPLOAD_FORM);
+    setUploadError('');
+    setIsDragging(false);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleCloseUploadModal = () => {
+    setUploadModalDesign(null);
+    setUploadForm(EMPTY_UPLOAD_FORM);
+    setUploadError('');
+    setIsDragging(false);
+  };
+
+  const processSelectedFile = (file) => {
+    if (!file) return;
+
+    const ext = file.name.split('.').pop()?.toLowerCase() || '';
+    const isAllowedType = file.type.startsWith('image/') || file.type === 'application/pdf' || ALLOWED_PROOF_EXTENSIONS.has(ext);
+    if (!isAllowedType) {
+      setUploadError('Unsupported file format. Please upload a PDF, PNG, JPG, SVG, TIFF, EPS, AI, or PSD file.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    if (file.size > MAX_PROOF_FILE_SIZE_BYTES) {
+      setUploadError('File size exceeds the 15 MB limit. Please upload a smaller proof file.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setUploadForm((prev) => ({
+        ...prev,
+        fileData: event.target?.result || '',
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: file.type || ''
+      }));
+      setUploadError('');
+    };
+    reader.onerror = () => {
+      setUploadError('Failed to read the selected file. Please try again.');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleProofFileChange = (e) => {
+    processSelectedFile(e.target.files?.[0]);
+  };
+
+  const handleProofDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    processSelectedFile(e.dataTransfer.files?.[0]);
+  };
+
+  const handleClearSelectedFile = () => {
+    setUploadForm((prev) => ({
+      ...prev,
+      fileData: '',
+      fileName: '',
+      fileSize: 0,
+      fileType: ''
+    }));
+    setUploadError('');
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const handleSaveVersion = async (e) => {
     e.preventDefault();
     if (!uploadModalDesign) return;
+    if (!uploadForm.fileData) {
+      setUploadError('Please select a print-ready artwork file to upload.');
+      return;
+    }
     try {
       setSubmitting(true);
+      setUploadError('');
       await crmService.addDesignVersion(uploadModalDesign._id, {
-        fileUrl: uploadForm.fileUrl,
+        fileData: uploadForm.fileData,
+        fileName: uploadForm.fileName,
         remarks: uploadForm.remarks
       });
-      setUploadModalDesign(null);
+      handleCloseUploadModal();
       fetchDesigns();
       alert('New artwork proof version uploaded successfully!');
     } catch (err) {
-      alert(err?.message || 'Failed to upload version');
+      setUploadError(err?.message || 'Failed to upload version');
     } finally {
       setSubmitting(false);
     }
@@ -262,7 +366,7 @@ export default function DesignProofing() {
                       </span>
                       {latestVersion && (
                         <a
-                          href={latestVersion.fileUrl}
+                          href={resolveFileUrl(latestVersion.fileUrl)}
                           target="_blank"
                           rel="noreferrer"
                           className="text-primary-600 hover:text-primary-700 flex items-center gap-1 font-semibold text-[11px]"
@@ -319,25 +423,98 @@ export default function DesignProofing() {
       {uploadModalDesign && (
         <Modal
           isOpen={Boolean(uploadModalDesign)}
-          onClose={() => setUploadModalDesign(null)}
+          onClose={handleCloseUploadModal}
           title={`Upload New Proof Version: ${uploadModalDesign.designNumber}`}
         >
           <form onSubmit={handleSaveVersion} className="space-y-4">
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Print-ready Artwork File URL / Cloudinary Link *
-              </label>
+              <span className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Print-ready Artwork File *
+              </span>
+
+              {!uploadForm.fileData ? (
+                <label
+                  htmlFor="design-proof-file-input"
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setIsDragging(true);
+                  }}
+                  onDragLeave={(e) => {
+                    e.preventDefault();
+                    setIsDragging(false);
+                  }}
+                  onDrop={handleProofDrop}
+                  className={`flex flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed p-5 text-center cursor-pointer transition focus-within:ring-2 focus-within:ring-primary-500 ${
+                    isDragging
+                      ? 'border-primary-500 bg-primary-50/70 dark:bg-primary-950/30'
+                      : 'border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/50 hover:border-primary-400'
+                  }`}
+                >
+                  <Upload className="w-6 h-6 text-primary-500" />
+                  <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">
+                    Click to select file or drag and drop
+                  </span>
+                  <span className="text-[11px] text-slate-400">
+                    PDF, PNG, JPG, SVG, TIFF, EPS, AI, or PSD (Max 15 MB)
+                  </span>
+                </label>
+              ) : (
+                <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/70 p-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    {PREVIEWABLE_IMAGE_TYPES.has(uploadForm.fileType) ? (
+                      <img
+                        src={uploadForm.fileData}
+                        alt={uploadForm.fileName}
+                        className="w-11 h-11 rounded-lg object-cover border border-slate-200 dark:border-slate-700 shrink-0 bg-white"
+                      />
+                    ) : (
+                      <div className="w-11 h-11 rounded-lg bg-primary-50 dark:bg-primary-950/60 text-primary-600 dark:text-primary-400 flex items-center justify-center shrink-0">
+                        <FileText className="w-5 h-5" />
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
+                        {uploadForm.fileName}
+                      </p>
+                      <p className="text-[11px] text-slate-400">
+                        {formatFileSize(uploadForm.fileSize)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <label
+                      htmlFor="design-proof-file-input"
+                      className="cursor-pointer px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition"
+                    >
+                      Replace
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleClearSelectedFile}
+                      aria-label="Remove selected file"
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <input
-                type="url"
-                required
-                placeholder="https://res.cloudinary.com/.../proof_v2.pdf"
-                value={uploadForm.fileUrl}
-                onChange={(e) => setUploadForm({ ...uploadForm, fileUrl: e.target.value })}
-                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                id="design-proof-file-input"
+                ref={fileInputRef}
+                type="file"
+                accept={ACCEPTED_PROOF_TYPES}
+                onChange={handleProofFileChange}
+                className="sr-only"
               />
-              <p className="text-[11px] text-slate-400 mt-1">
-                Link to high-resolution print PDF, EPS, or TIFF file for client proofing.
-              </p>
+
+              {uploadError && (
+                <p className="mt-1.5 text-xs text-rose-600 dark:text-rose-400 flex items-center gap-1.5">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  <span>{uploadError}</span>
+                </p>
+              )}
             </div>
 
             <div>
@@ -356,14 +533,14 @@ export default function DesignProofing() {
             <div className="flex justify-end gap-2.5 pt-3 border-t border-slate-200 dark:border-slate-800">
               <button
                 type="button"
-                onClick={() => setUploadModalDesign(null)}
+                onClick={handleCloseUploadModal}
                 className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                disabled={submitting}
+                disabled={submitting || !uploadForm.fileData}
                 className="px-5 py-2 rounded-xl text-xs font-bold bg-primary-600 hover:bg-primary-700 text-white disabled:opacity-50"
               >
                 {submitting ? 'Uploading...' : 'Submit Proof Version'}
@@ -487,7 +664,7 @@ export default function DesignProofing() {
 
                   <div className="pt-1">
                     <a
-                      href={ver.fileUrl}
+                      href={resolveFileUrl(ver.fileUrl)}
                       target="_blank"
                       rel="noreferrer"
                       className="inline-flex items-center gap-1.5 text-xs font-bold text-primary-600 hover:text-primary-700"

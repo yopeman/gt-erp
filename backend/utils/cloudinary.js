@@ -22,12 +22,12 @@ export const uploadToCloudinary = async (file, options = {}) => {
     throw new Error('File data is required for upload');
   }
 
-  const { folder = 'gt_erp', resourceType = 'auto', publicId } = options;
+  const { folder = 'gt_erp', resourceType = 'auto', publicId, fileName = '' } = options;
 
   // If Cloudinary is not yet configured, fall back to safe local storage
   if (!isCloudinaryConfigured()) {
     console.warn('Cloudinary credentials missing in .env. Falling back to local storage.');
-    const localUrl = saveBase64Image(file, folder.replace(/[^a-zA-Z0-9]/g, '_'));
+    const localUrl = saveBase64Image(file, folder.replace(/[^a-zA-Z0-9]/g, '_'), fileName);
     return {
       url: localUrl,
       secureUrl: localUrl,
@@ -83,7 +83,7 @@ export const uploadToCloudinary = async (file, options = {}) => {
   } catch (error) {
     console.error('Cloudinary upload error:', error.message);
     // Graceful fallback to local image handler so system remains functional
-    const localUrl = saveBase64Image(file, 'fallback');
+    const localUrl = saveBase64Image(file, 'fallback', fileName);
     return {
       url: localUrl,
       secureUrl: localUrl,

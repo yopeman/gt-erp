@@ -127,7 +127,7 @@ export const createDesign = async (req, res) => {
 export const addDesignVersion = async (req, res) => {
   try {
     const { id } = req.params;
-    const { fileData, fileUrl, thumbnailUrl, remarks } = req.body;
+    const { fileData, fileName, fileUrl, thumbnailUrl, remarks } = req.body;
 
     if (!fileData && !fileUrl) {
       return sendError(res, 'Artwork file data (base64 or URL) is required', 400);
@@ -145,7 +145,8 @@ export const addDesignVersion = async (req, res) => {
     if (fileData) {
       const uploadRes = await uploadToCloudinary(fileData, {
         folder: 'gt_erp_designs',
-        resourceType: 'auto'
+        resourceType: 'auto',
+        fileName: fileName || ''
       });
       finalFileUrl = uploadRes.secureUrl || uploadRes.url;
     }
