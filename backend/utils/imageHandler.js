@@ -26,6 +26,12 @@ const resolveExtension = (mime = '', originalFilename = '') => {
   if (normalizedMime.includes('word') || normalizedMime.includes('docx') || normalizedMime.includes('msword')) return 'docx';
   if (normalizedMime.includes('excel') || normalizedMime.includes('xlsx') || normalizedMime.includes('sheet')) return 'xlsx';
   if (normalizedMime.includes('text') || normalizedMime.includes('plain')) return 'txt';
+  if (normalizedMime.includes('webm')) return 'webm';
+  if (normalizedMime.includes('audio/mp3') || normalizedMime.includes('audio/mpeg') || normalizedMime.includes('mp3')) return 'mp3';
+  if (normalizedMime.includes('audio/ogg') || normalizedMime.includes('ogg')) return 'ogg';
+  if (normalizedMime.includes('audio/wav') || normalizedMime.includes('audio/wave') || normalizedMime.includes('wav')) return 'wav';
+  if (normalizedMime.includes('audio/m4a') || normalizedMime.includes('m4a') || normalizedMime.includes('audio/aac')) return 'm4a';
+  if (normalizedMime.includes('audio/mp4')) return 'mp4';
 
   if (originalFilename) {
     const ext = path.extname(originalFilename).replace('.', '').toLowerCase().replace(/[^a-z0-9]/g, '');

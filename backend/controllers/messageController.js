@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import Message from '../models/Message.js';
 import User from '../models/User.js';
 import Employee from '../models/Employee.js'; // Ensure Employee model is registered for populate
+import { saveBase64Image } from '../utils/imageHandler.js';
 import {
   registerMessageStream,
   broadcastMessage,
@@ -100,6 +101,8 @@ export const getConversations = async (req, res) => {
           lastMessage: {
             _id: item.lastMessage._id,
             content: item.lastMessage.content,
+            attachments: item.lastMessage.attachments || [],
+            audio: item.lastMessage.audio || null,
             sender: item.lastMessage.sender,
             recipient: item.lastMessage.recipient,
             isRead: item.lastMessage.isRead,
@@ -209,7 +212,7 @@ export const getMessagesWithUser = async (req, res) => {
 export const sendMessage = async (req, res) => {
   try {
     const senderId = req.user._id;
-    const { recipientId, content } = req.body;
+    const { recipientId, content, attachments = [], audio = null } = req.body;
 
     if (!recipientId || !mongoose.Types.ObjectId.isValid(recipientId)) {
       return res.status(400).json({
@@ -225,11 +228,14 @@ export const sendMessage = async (req, res) => {
       });
     }
 
-    const trimmedContent = content?.trim();
-    if (!trimmedContent) {
+    const trimmedContent = content?.trim() || '';
+    const hasAttachments = Array.isArray(attachments) && attachments.length > 0;
+    const hasAudio = audio && typeof audio === 'object' && audio.url;
+
+    if (!trimmedContent && !hasAttachments && !hasAudio) {
       return res.status(400).json({
         success: false,
-        message: 'Message content cannot be empty'
+        message: 'Message must contain text, an attachment, or an audio voice note'
       });
     }
 
@@ -241,10 +247,48 @@ export const sendMessage = async (req, res) => {
       });
     }
 
+    // Process audio if provided
+    let processedAudio = null;
+    if (hasAudio) {
+      const audioUrl = saveBase64Image(audio.url, 'message_audio');
+      processedAudio = {
+        url: audioUrl,
+        duration: Math.round(Number(audio.duration)) || 0,
+        mimeType: audio.mimeType || 'audio/webm'
+      };
+    }
+
+    // Process attachments if provided
+    let processedAttachments = [];
+    if (hasAttachments) {
+      processedAttachments = attachments
+        .filter((att) => att && att.url)
+        .map((att) => {
+          const fileUrl = saveBase64Image(att.url, 'message_attachments', att.name);
+          let type = att.type || 'file';
+          if (!att.type || att.type === 'file') {
+            const m = (att.mimeType || '').toLowerCase();
+            if (m.startsWith('image/')) type = 'image';
+            else if (m.startsWith('audio/')) type = 'audio';
+            else if (m.startsWith('video/')) type = 'video';
+            else type = 'document';
+          }
+          return {
+            name: att.name || 'Attachment',
+            url: fileUrl,
+            type,
+            mimeType: att.mimeType || '',
+            size: Number(att.size) || 0
+          };
+        });
+    }
+
     const message = await Message.create({
       sender: senderId,
       recipient: recipientId,
-      content: trimmedContent
+      content: trimmedContent,
+      attachments: processedAttachments,
+      audio: processedAudio
     });
 
     const populatedMessage = await Message.findById(message._id)
@@ -259,7 +303,7 @@ export const sendMessage = async (req, res) => {
         populate: { path: 'employee', select: 'profileImage department position' }
       });
 
-    // 1. Live SSE push to recipient
+    // 1. Live SSE push to recipient and sender
     try {
       broadcastMessage(recipientId, populatedMessage);
       broadcastMessageSent(senderId, populatedMessage);
@@ -267,12 +311,25 @@ export const sendMessage = async (req, res) => {
       // Non-blocking
     }
 
-    // 2. Also send in-app notification to recipient
+    // 2. Notification snippet
+    let notificationBody = trimmedContent;
+    if (!notificationBody) {
+      if (processedAudio) {
+        notificationBody = `🎤 Voice note (${processedAudio.duration}s)`;
+      } else if (processedAttachments.length > 0) {
+        notificationBody = `📎 ${processedAttachments[0].name || 'Attachment'}`;
+      } else {
+        notificationBody = 'Sent you a message';
+      }
+    } else if (notificationBody.length > 80) {
+      notificationBody = notificationBody.substring(0, 77) + '...';
+    }
+
     try {
       await sendNotificationToUser({
         userId: recipientId,
         title: `Message from ${req.user.fullName}`,
-        body: trimmedContent.length > 80 ? trimmedContent.substring(0, 77) + '...' : trimmedContent,
+        body: notificationBody,
         type: 'general',
         data: {
           type: 'message',
