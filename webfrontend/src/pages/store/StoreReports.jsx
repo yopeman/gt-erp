@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import reportService from '../../services/reportService';
 import storeService from '../../services/storeService';
 import { exportReportToPdf } from '../../utils/reportPdfExport';
+import { analyzeReportWithChatGPT } from '../../utils/reportAiAnalysis';
 import StatCard from '../../components/common/StatCard';
 import Badge from '../../components/common/Badge';
 import {
@@ -34,7 +35,8 @@ import {
   AlertTriangle,
   Search,
   ArrowRight,
-  ShieldAlert
+  ShieldAlert,
+  Sparkles
 } from 'lucide-react';
 
 const DEPARTMENTS = [
@@ -284,6 +286,82 @@ export default function StoreReports() {
     { name: 'Damaged Scrap', value: analytics.movementsByType.damaged || 0 }
   ].filter(m => m.value > 0) : [];
 
+  const handleAnalyzeWithChatGPT = () => {
+    const logsToExport = filteredLogs.length > 0 ? filteredLogs : (storeLogs.length > 0 ? storeLogs : (reportData?.unifiedLog || []));
+    if (!reportData || logsToExport.length === 0) {
+      alert('No data available to analyze.');
+      return;
+    }
+
+    const timeframeLabel = timeframe === 'custom'
+      ? `Custom (${customStartDate} to ${customEndDate})`
+      : timeframe.toUpperCase();
+
+    const selectedWh = warehouses.find((w) => w._id === warehouseFilter)?.name || warehouseFilter;
+    const filterDetails = [
+      `Warehouse: ${selectedWh || 'All'}`,
+      `Department: ${departmentFilter || 'All'}`,
+      searchTable ? `Search: "${searchTable}"` : null
+    ].filter(Boolean).join(' | ');
+
+    const summaryCards = [
+      {
+        label: 'Total Inventory Valuation',
+        value: formatCurrency(summary.totalStockValuation),
+        subtitle: `${summary.totalStockItemsCount || 0} trackable SKUs`
+      },
+      {
+        label: 'Active Stock SKUs',
+        value: `${summary.activeStockItemsCount || 0}`,
+        subtitle: `${summary.zeroStockCount || 0} out of stock`
+      },
+      {
+        label: 'Material Issues (SIV)',
+        value: `${summary.totalSivIssuesCount || 0}`,
+        subtitle: `Valued: ${formatCurrency(summary.totalSivValue)}`
+      },
+      {
+        label: 'Goods Received (GRV)',
+        value: `${summary.totalGrvCount || 0}`,
+        subtitle: `${summary.totalReceivedQty || 0} units accepted`
+      },
+      {
+        label: 'Low Stock Alerts',
+        value: `${summary.lowStockAlertsCount || 0} items`,
+        subtitle: 'At or below reorder threshold'
+      },
+      {
+        label: 'Total Movements Ledger',
+        value: `${summary.totalMovementsCount || 0}`,
+        subtitle: 'Audit ledger entries'
+      }
+    ];
+
+    const tableHeaders = ['Type', 'Reference #', 'Date', 'Party / Requestor', 'Department', 'Warehouse', 'Details / Movement', 'Status'];
+    const tableRows = logsToExport.map((r) => [
+      r.type || 'N/A',
+      r.referenceNumber || '—',
+      r.date ? new Date(r.date).toLocaleDateString() : '—',
+      r.actor || '—',
+      r.department || '—',
+      r.warehouse || '—',
+      r.details || '—',
+      r.status || '—'
+    ]);
+
+    analyzeReportWithChatGPT({
+      reportTitle: 'Store & Stock Inventory Reports',
+      reportSubtitle: 'Real-time inventory valuation, stock movements ledger, material issues (SIV) and returns (SRV)',
+      moduleName: 'Store & Warehouse Operations',
+      timeframeLabel,
+      filterDetails: filterDetails || 'All Inventory Records',
+      summaryCards,
+      tableHeaders,
+      tableRows,
+      analytics: reportData?.analytics
+    });
+  };
+
   return (
     <div className="space-y-6">
       {/* Header & Main Actions */}
@@ -324,6 +402,15 @@ export default function StoreReports() {
           >
             <FileText className="w-3.5 h-3.5" />
             <span>Export PDF</span>
+          </button>
+
+          <button
+            onClick={handleAnalyzeWithChatGPT}
+            className="px-3 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition flex items-center gap-1.5"
+            title="Analyze report with ChatGPT"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>AI Analysis</span>
           </button>
         </div>
       </div>

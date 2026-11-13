@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import reportService from '../../services/reportService';
 import storeService from '../../services/storeService';
 import { exportReportToPdf } from '../../utils/reportPdfExport';
+import { analyzeReportWithChatGPT } from '../../utils/reportAiAnalysis';
 import StatCard from '../../components/common/StatCard';
 import Badge from '../../components/common/Badge';
 import {
@@ -34,7 +35,8 @@ import {
   AlertTriangle,
   Search,
   ArrowDownToLine,
-  ArrowRight
+  ArrowRight,
+  Sparkles
 } from 'lucide-react';
 
 const PIE_COLORS = ['#da1f26', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6'];
@@ -274,6 +276,79 @@ export default function PurchaseReports() {
     { name: 'Cash Purchases', value: summary.totalCashSpend || 0 }
   ].filter(p => p.value > 0);
 
+  const handleAnalyzeWithChatGPT = () => {
+    const logsToExport = filteredLogs.length > 0 ? filteredLogs : (purchasingLogs.length > 0 ? purchasingLogs : (reportData?.unifiedLog || []));
+    if (!reportData || logsToExport.length === 0) {
+      alert('No data available to analyze.');
+      return;
+    }
+
+    const timeframeLabel = timeframe === 'custom'
+      ? `Custom (${customStartDate} to ${customEndDate})`
+      : timeframe.toUpperCase();
+
+    const selectedWh = warehouses.find((w) => w._id === warehouseFilter)?.name || warehouseFilter;
+    const filterDetails = [
+      `Warehouse: ${selectedWh || 'All'}`,
+      `VAT: ${vatFilter ? (vatFilter === 'with_vat' ? 'With VAT' : 'No VAT') : 'All'}`,
+      searchTable ? `Search: "${searchTable}"` : null
+    ].filter(Boolean).join(' | ');
+
+    const summaryCards = [
+      {
+        label: 'Procurement Spend',
+        value: formatCurrency(summary.totalSpend),
+        subtitle: `${summary.totalPOs || 0} purchase orders placed`
+      },
+      {
+        label: 'VAT Recoverable',
+        value: formatCurrency(summary.totalVatAmount),
+        subtitle: `${summary.withVatCount || 0} POs with 15% VAT`
+      },
+      {
+        label: 'Credit Purchases',
+        value: formatCurrency(summary.totalCreditSpend),
+        subtitle: 'Accounts Payable commitments'
+      },
+      {
+        label: 'Cash Purchases',
+        value: formatCurrency(summary.totalCashSpend),
+        subtitle: 'Immediate cash outflow'
+      },
+      {
+        label: 'Goods Received (GRN)',
+        value: `${summary.totalGrnCount || 0} GRNs`,
+        subtitle: `${summary.totalAcceptedItemsQty || 0} items accepted`
+      }
+    ];
+
+    const tableHeaders = ['Type', 'PO Number', 'Date', 'Supplier / Vendor', 'Department', 'Warehouse', 'Details', 'Amount (ETB)', 'VAT Status', 'Status'];
+    const tableRows = logsToExport.map((r) => [
+      r.type || 'N/A',
+      r.referenceNumber || '—',
+      r.date ? new Date(r.date).toLocaleDateString() : '—',
+      r.actor || '—',
+      r.department || '—',
+      r.warehouse || '—',
+      r.details || '—',
+      Number(r.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      r.vatStatus || '—',
+      r.status || '—'
+    ]);
+
+    analyzeReportWithChatGPT({
+      reportTitle: 'Procurement & Spend Analytics Reports',
+      reportSubtitle: 'Vendor procurement spend, purchase order commitments, goods receipts and VAT performance',
+      moduleName: 'Purchasing & Supply Chain',
+      timeframeLabel,
+      filterDetails: filterDetails || 'All Purchasing Records',
+      summaryCards,
+      tableHeaders,
+      tableRows,
+      analytics: reportData?.analytics
+    });
+  };
+
   return (
     <div className="space-y-6">
       {/* Header & Main Actions */}
@@ -314,6 +389,15 @@ export default function PurchaseReports() {
           >
             <FileText className="w-3.5 h-3.5" />
             <span>Export PDF</span>
+          </button>
+
+          <button
+            onClick={handleAnalyzeWithChatGPT}
+            className="px-3 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition flex items-center gap-1.5"
+            title="Analyze report with ChatGPT"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>AI Analysis</span>
           </button>
         </div>
       </div>

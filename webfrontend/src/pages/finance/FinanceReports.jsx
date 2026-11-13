@@ -3,6 +3,7 @@ import { useTranslation } from '../../i18n';
 import { useAuth } from '../../context/AuthContext';
 import reportService from '../../services/reportService';
 import { exportReportToPdf } from '../../utils/reportPdfExport';
+import { analyzeReportWithChatGPT } from '../../utils/reportAiAnalysis';
 import StatCard from '../../components/common/StatCard';
 import Badge from '../../components/common/Badge';
 import {
@@ -34,7 +35,8 @@ import {
   AlertTriangle,
   Search,
   CheckCircle2,
-  FileCheck2
+  FileCheck2,
+  Sparkles
 } from 'lucide-react';
 
 const PIE_COLORS = ['#10b981', '#f59e0b', '#da1f26', '#3b82f6', '#8b5cf6'];
@@ -237,6 +239,75 @@ export default function FinanceReports() {
     );
   });
 
+  const handleAnalyzeWithChatGPT = () => {
+    const logsToExport = filteredLogs.length > 0 ? filteredLogs : (reportData?.unifiedLog || []);
+    if (!reportData || logsToExport.length === 0) {
+      alert('No data available to analyze.');
+      return;
+    }
+
+    const timeframeLabel = timeframe === 'custom'
+      ? `Custom (${customStartDate} to ${customEndDate})`
+      : timeframe.toUpperCase();
+
+    const filterDetails = [
+      `View: ${activeTab.toUpperCase()}`,
+      searchTable ? `Search: "${searchTable}"` : null
+    ].filter(Boolean).join(' | ');
+
+    const summaryCards = [
+      {
+        label: 'Gross Invoiced Revenue',
+        value: formatCurrency(summary.totalGrossRevenue),
+        subtitle: `Collected: ${formatCurrency(summary.totalPaymentsReceived)}`
+      },
+      {
+        label: 'Accounts Payable Billed',
+        value: formatCurrency(summary.totalBillsAmount),
+        subtitle: `Due: ${formatCurrency(summary.totalBillsOutstanding)}`
+      },
+      {
+        label: 'Operating Expenses',
+        value: formatCurrency(summary.totalOperatingExpenses),
+        subtitle: 'Overhead & administration'
+      },
+      {
+        label: 'Net Operating Profit',
+        value: formatCurrency(summary.netOperatingProfit),
+        subtitle: `Gross Margin: ${formatCurrency(summary.grossProfit)}`
+      },
+      {
+        label: 'Treasury Reserves',
+        value: formatCurrency(summary.totalBankReserves),
+        subtitle: 'Available liquid funds'
+      }
+    ];
+
+    const tableHeaders = ['Type', 'Reference #', 'Date', 'Party / Vendor', 'Category / Cost Center', 'Amount (ETB)', 'VAT / Tax (ETB)', 'Status'];
+    const tableRows = logsToExport.map((r) => [
+      r.type || 'N/A',
+      r.referenceNumber || '—',
+      r.date ? new Date(r.date).toLocaleDateString() : '—',
+      r.party || '—',
+      r.category || '—',
+      Number(r.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      Number(r.vat || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      r.status || '—'
+    ]);
+
+    analyzeReportWithChatGPT({
+      reportTitle: 'Financial Statements & General Ledger Reports',
+      reportSubtitle: 'General ledger summaries, profit & loss statement, AP aging, treasury reserves & tax compliance',
+      moduleName: 'Finance & Corporate Treasury',
+      timeframeLabel,
+      filterDetails: filterDetails || 'All Financial Records',
+      summaryCards,
+      tableHeaders,
+      tableRows,
+      analytics: reportData?.analytics
+    });
+  };
+
   return (
     <div className="space-y-6">
       {/* Header & Actions */}
@@ -277,6 +348,15 @@ export default function FinanceReports() {
           >
             <FileText className="w-3.5 h-3.5" />
             <span>Export PDF</span>
+          </button>
+
+          <button
+            onClick={handleAnalyzeWithChatGPT}
+            className="px-3 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition flex items-center gap-1.5"
+            title="Analyze report with ChatGPT"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>AI Analysis</span>
           </button>
         </div>
       </div>

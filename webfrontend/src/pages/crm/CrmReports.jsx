@@ -3,6 +3,7 @@ import { useTranslation } from '../../i18n';
 import { useAuth } from '../../context/AuthContext';
 import reportService from '../../services/reportService';
 import { exportReportToPdf } from '../../utils/reportPdfExport';
+import { analyzeReportWithChatGPT } from '../../utils/reportAiAnalysis';
 import StatCard from '../../components/common/StatCard';
 import Badge from '../../components/common/Badge';
 import {
@@ -33,7 +34,8 @@ import {
   AlertTriangle,
   Search,
   CheckCircle2,
-  Percent
+  Percent,
+  Sparkles
 } from 'lucide-react';
 
 const PIE_COLORS = ['#da1f26', '#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899', '#64748b'];
@@ -232,6 +234,75 @@ export default function CrmReports() {
     );
   });
 
+  const handleAnalyzeWithChatGPT = () => {
+    const logsToExport = filteredLogs.length > 0 ? filteredLogs : (reportData?.unifiedLog || []);
+    if (!reportData || logsToExport.length === 0) {
+      alert('No data available to analyze.');
+      return;
+    }
+
+    const timeframeLabel = timeframe === 'custom'
+      ? `Custom (${customStartDate} to ${customEndDate})`
+      : timeframe.toUpperCase();
+
+    const filterDetails = [
+      `Status: ${statusFilter || 'All'}`,
+      searchTable ? `Search: "${searchTable}"` : null
+    ].filter(Boolean).join(' | ');
+
+    const summaryCards = [
+      {
+        label: 'Total Sales Value',
+        value: formatCurrency(summary.totalSalesRevenue),
+        subtitle: `${summary.totalOrdersCount || 0} orders booked`
+      },
+      {
+        label: 'Orders Completed',
+        value: `${summary.completedOrdersCount || 0}`,
+        subtitle: `${summary.inProductionOrdersCount || 0} in production`
+      },
+      {
+        label: 'Lead Conversion',
+        value: `${summary.conversionRate || 0}%`,
+        subtitle: `${summary.convertedLeadsCount || 0} of ${summary.totalLeads || 0} leads`
+      },
+      {
+        label: 'Unpaid Receivables',
+        value: formatCurrency(summary.totalUnpaidReceivables),
+        subtitle: `Invoiced: ${formatCurrency(summary.totalInvoicedAmount)}`
+      },
+      {
+        label: 'Estimated Margin',
+        value: `${summary.estimatedProfitMargin || 0}%`,
+        subtitle: `Cost: ${formatCurrency(summary.totalEstimatedCost)}`
+      }
+    ];
+
+    const tableHeaders = ['Type', 'Reference / Order', 'Date', 'Customer / Party', 'Department', 'Details', 'Amount (ETB)', 'Status'];
+    const tableRows = logsToExport.map((r) => [
+      r.type || 'N/A',
+      r.referenceNumber || '—',
+      r.date ? new Date(r.date).toLocaleDateString() : '—',
+      r.actor || '—',
+      r.department || '—',
+      r.details || '—',
+      Number(r.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      r.status || '—'
+    ]);
+
+    analyzeReportWithChatGPT({
+      reportTitle: 'CRM & Sales Performance Reports',
+      reportSubtitle: 'Printing orders throughput, revenue by service, customer receivables & lead pipeline analytics',
+      moduleName: 'CRM & Sales Operations',
+      timeframeLabel,
+      filterDetails: filterDetails || 'All Records',
+      summaryCards,
+      tableHeaders,
+      tableRows,
+      analytics: reportData?.analytics
+    });
+  };
+
   return (
     <div className="space-y-6">
       {/* Header & Actions */}
@@ -272,6 +343,15 @@ export default function CrmReports() {
           >
             <FileText className="w-3.5 h-3.5" />
             <span>Export PDF</span>
+          </button>
+
+          <button
+            onClick={handleAnalyzeWithChatGPT}
+            className="px-3 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition flex items-center gap-1.5"
+            title="Analyze report with ChatGPT"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>AI Analysis</span>
           </button>
         </div>
       </div>

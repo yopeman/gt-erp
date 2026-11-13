@@ -3,6 +3,7 @@ import { useTranslation } from '../../i18n';
 import { useAuth } from '../../context/AuthContext';
 import reportService from '../../services/reportService';
 import { exportReportToPdf } from '../../utils/reportPdfExport';
+import { analyzeReportWithChatGPT } from '../../utils/reportAiAnalysis';
 import StatCard from '../../components/common/StatCard';
 import Badge from '../../components/common/Badge';
 import EmptyState from '../../components/common/EmptyState';
@@ -34,7 +35,8 @@ import {
   CheckCircle2,
   AlertTriangle,
   Search,
-  ArrowRight
+  ArrowRight,
+  Sparkles
 } from 'lucide-react';
 
 const DEPARTMENTS = [
@@ -241,6 +243,74 @@ export default function HrReports() {
     );
   });
 
+  const handleAnalyzeWithChatGPT = () => {
+    const logsToExport = filteredLogs.length > 0 ? filteredLogs : (reportData?.unifiedLog || []);
+    if (!reportData || logsToExport.length === 0) {
+      alert('No data available to analyze.');
+      return;
+    }
+
+    const timeframeLabel = timeframe === 'custom'
+      ? `Custom (${customStartDate} to ${customEndDate})`
+      : timeframe.toUpperCase();
+
+    const filterDetails = [
+      `Department: ${departmentFilter || 'All Departments'}`,
+      searchTable ? `Search: "${searchTable}"` : null
+    ].filter(Boolean).join(' | ');
+
+    const summaryCards = [
+      {
+        label: 'Total Workforce',
+        value: `${summary.totalHeadcount || 0}`,
+        subtitle: `${summary.activeHeadcount || 0} active employees`
+      },
+      {
+        label: 'Attendance Rate',
+        value: `${summary.attendanceRate || 100}%`,
+        subtitle: `${summary.presentCount || 0} on-time • ${summary.lateCount || 0} late`
+      },
+      {
+        label: 'Approved Overtime',
+        value: `${summary.totalApprovedOtHours || 0} hrs`,
+        subtitle: `Cost: ${formatCurrency(summary.totalOtCost)}`
+      },
+      {
+        label: 'Leave Days Taken',
+        value: `${summary.totalLeaveDays || 0} days`,
+        subtitle: `${summary.approvedLeavesCount || 0} approved`
+      },
+      {
+        label: 'Total Net Payroll',
+        value: formatCurrency(summary.totalNetPayroll),
+        subtitle: `Gross: ${formatCurrency(summary.totalGrossPayroll)}`
+      }
+    ];
+
+    const tableHeaders = ['Type', 'Employee / Reference', 'Date', 'Department', 'Details / Description', 'Metric / Value', 'Status'];
+    const tableRows = logsToExport.map((r) => [
+      r.type || 'N/A',
+      r.referenceNumber || '—',
+      r.date ? new Date(r.date).toLocaleDateString() : '—',
+      r.department || '—',
+      r.details || '—',
+      r.amount ? (typeof r.amount === 'number' ? Number(r.amount).toLocaleString('en-US') : r.amount) : '—',
+      r.status || '—'
+    ]);
+
+    analyzeReportWithChatGPT({
+      reportTitle: 'HR & Workforce Analytics Reports',
+      reportSubtitle: 'Workforce headcount, attendance metrics, overtime hours, leave records & payroll expenditures',
+      moduleName: 'Human Resources & Talent Management',
+      timeframeLabel,
+      filterDetails: filterDetails || 'All HR Records',
+      summaryCards,
+      tableHeaders,
+      tableRows,
+      analytics: reportData?.analytics
+    });
+  };
+
   return (
     <div className="space-y-6">
       {/* Header & Actions */}
@@ -281,6 +351,15 @@ export default function HrReports() {
           >
             <FileText className="w-3.5 h-3.5" />
             <span>Export PDF</span>
+          </button>
+
+          <button
+            onClick={handleAnalyzeWithChatGPT}
+            className="px-3 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition flex items-center gap-1.5"
+            title="Analyze report with ChatGPT"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>AI Analysis</span>
           </button>
         </div>
       </div>
