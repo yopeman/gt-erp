@@ -24,7 +24,7 @@ export default function Login() {
 
     try {
       await login(email, password);
-      navigate('/hr/dashboard');
+      navigate('/');
     } catch (err) {
       setError(err.message || 'Login failed. Please verify credentials.');
     } finally {

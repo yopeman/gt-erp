@@ -35,6 +35,7 @@ import StockTransfers from './pages/store/StockTransfers';
 import StockAdjustments from './pages/store/StockAdjustments';
 import StockMovements from './pages/store/StockMovements';
 import Warehouses from './pages/store/Warehouses';
+import StoreReports from './pages/store/StoreReports';
 
 // Purchasing & Procurement Module Pages (Section 4 of requirements PDF)
 import PurchasingDashboard from './pages/purchasing/PurchasingDashboard';
@@ -45,6 +46,7 @@ import GoodsReceipts from './pages/purchasing/GoodsReceipts';
 import CreditPurchases from './pages/purchasing/CreditPurchases';
 import PurchasePayments from './pages/purchasing/PurchasePayments';
 import SupplierReturns from './pages/purchasing/SupplierReturns';
+import PurchaseReports from './pages/purchasing/PurchaseReports';
 
 // CRM & Sales Module Pages (Phases 3A, 3B & 3C)
 import CrmDashboard from './pages/crm/CrmDashboard';
@@ -66,8 +68,12 @@ import MachineMaintenance from './pages/production/MachineMaintenance';
 import ProductionJobs from './pages/production/ProductionJobs';
 import ProductionWastage from './pages/production/ProductionWastage';
 
-// Dedicated Reports & Analytics Center
+// Dedicated Reports & Analytics Center & Module Reports
 import ReportsCenter from './pages/reports/ReportsCenter';
+import HrReports from './pages/hr/HrReports';
+import CrmReports from './pages/crm/CrmReports';
+import ProductionReports from './pages/production/ProductionReports';
+import FinanceReports from './pages/finance/FinanceReports';
 
 // Finance & Accounting Module Pages (Phase 5)
 import FinanceDashboard from './pages/finance/FinanceDashboard';
@@ -189,6 +195,14 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="hr/reports"
+            element={
+              <ProtectedRoute roles={['admin', 'hr', 'manager']}>
+                <HrReports />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Central Admin Subroutes */}
           <Route
@@ -278,7 +292,7 @@ export default function App() {
             path="store/reports"
             element={
               <ProtectedRoute roles={['admin', 'storekeeper', 'manager', 'employee']}>
-                <ReportsCenter />
+                <StoreReports />
               </ProtectedRoute>
             }
           />
@@ -353,15 +367,64 @@ export default function App() {
             path="purchasing/reports"
             element={
               <ProtectedRoute roles={['admin', 'purchaser', 'manager', 'storekeeper', 'finance']}>
-                <ReportsCenter />
+                <PurchaseReports />
               </ProtectedRoute>
             }
           />
+          {/* Reports & Analytics Center Module Subroutes */}
           <Route
             path="reports"
             element={
               <ProtectedRoute>
                 <ReportsCenter />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="reports/hr"
+            element={
+              <ProtectedRoute roles={['admin', 'hr', 'manager']}>
+                <HrReports />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="reports/store"
+            element={
+              <ProtectedRoute roles={['admin', 'storekeeper', 'manager', 'employee']}>
+                <StoreReports />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="reports/purchasing"
+            element={
+              <ProtectedRoute roles={['admin', 'purchaser', 'manager', 'storekeeper', 'finance']}>
+                <PurchaseReports />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="reports/crm"
+            element={
+              <ProtectedRoute roles={['admin', 'sales', 'manager', 'finance']}>
+                <CrmReports />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="reports/production"
+            element={
+              <ProtectedRoute roles={['admin', 'production_manager', 'operator', 'manager']}>
+                <ProductionReports />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="reports/finance"
+            element={
+              <ProtectedRoute roles={['admin', 'finance', 'manager']}>
+                <FinanceReports />
               </ProtectedRoute>
             }
           />
@@ -448,6 +511,14 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="crm/reports"
+            element={
+              <ProtectedRoute roles={['admin', 'sales', 'manager', 'finance']}>
+                <CrmReports />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Machine & Production Operations Module Subroutes (Phases 4A, 4B, 4C & 4D) */}
           <Route path="production" element={<Navigate to="/production/dashboard" replace />} />
@@ -496,6 +567,14 @@ export default function App() {
             element={
               <ProtectedRoute roles={['admin', 'production_manager', 'operator', 'manager']}>
                 <ProductionWastage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="production/reports"
+            element={
+              <ProtectedRoute roles={['admin', 'production_manager', 'operator', 'manager']}>
+                <ProductionReports />
               </ProtectedRoute>
             }
           />
@@ -566,13 +645,21 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="finance/reports"
+            element={
+              <ProtectedRoute roles={['admin', 'finance', 'manager']}>
+                <FinanceReports />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Non-Blocking Planned Modules */}
           <Route path="production/*" element={<UpcomingModule moduleId="production" />} />
           <Route path="crm/*" element={<UpcomingModule moduleId="crm" />} />
 
           {/* Fallback */}
-          <Route path="*" element={<Navigate to="/hr/dashboard" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
     </BrowserRouter>

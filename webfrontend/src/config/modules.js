@@ -22,6 +22,7 @@ export const ERP_MODULES = [
       { id: 'internships', path: '/hr/internships', titleKey: 'nav.internships', icon: 'GraduationCap', requiredRoles: ['admin', 'hr', 'manager'], status: 'active' },
       { id: 'clearances', path: '/hr/clearances', titleKey: 'nav.clearances', icon: 'FileCheck2', requiredRoles: ['admin', 'hr', 'manager', 'storekeeper', 'employee', 'purchaser', 'finance'], status: 'active' },
       { id: 'settings', path: '/hr/settings', titleKey: 'nav.companySettings', icon: 'Building2', requiredRoles: ['admin', 'hr'], status: 'active' },
+      { id: 'hr-reports', path: '/hr/reports', titleKey: 'nav.hrReports', icon: 'BarChart3', requiredRoles: ['admin', 'hr', 'manager'], status: 'active' },
     ]
   },
   {
@@ -79,7 +80,7 @@ export const ERP_MODULES = [
     id: 'crm',
     titleKey: 'modules.crm',
     icon: 'TrendingUp',
-    requiredRoles: ['admin', 'sales', 'manager'],
+    requiredRoles: ['admin', 'sales', 'manager', 'finance'],
     status: 'active',
     phase: 'Phase 3',
     description: 'Lead Management, Customer Directory, Scheduled Follow-ups, Quotations & Orders',
@@ -93,7 +94,8 @@ export const ERP_MODULES = [
       { id: 'crm-design', path: '/crm/design-proofing', titleKey: 'nav.crmDesign', icon: 'Palette', requiredRoles: ['admin', 'sales', 'manager'], status: 'active' },
       { id: 'crm-proformas', path: '/crm/proformas', titleKey: 'nav.crmProformas', icon: 'FileCheck', requiredRoles: ['admin', 'sales', 'manager'], status: 'active' },
       { id: 'crm-invoices', path: '/crm/invoices', titleKey: 'nav.crmInvoices', icon: 'DollarSign', requiredRoles: ['admin', 'sales', 'manager', 'finance'], status: 'active' },
-      { id: 'crm-payments', path: '/crm/payments', titleKey: 'nav.crmPayments', icon: 'CreditCard', requiredRoles: ['admin', 'sales', 'manager', 'finance'], status: 'active' }
+      { id: 'crm-payments', path: '/crm/payments', titleKey: 'nav.crmPayments', icon: 'CreditCard', requiredRoles: ['admin', 'sales', 'manager', 'finance'], status: 'active' },
+      { id: 'crm-reports', path: '/crm/reports', titleKey: 'nav.crmReports', icon: 'BarChart3', requiredRoles: ['admin', 'sales', 'manager', 'finance'], status: 'active' }
     ]
   },
   {
@@ -110,7 +112,8 @@ export const ERP_MODULES = [
       { id: 'production-checkups', path: '/production/checkups', titleKey: 'nav.productionCheckups', icon: 'ClipboardCheck', requiredRoles: ['admin', 'production_manager', 'operator', 'manager'], status: 'active' },
       { id: 'production-maintenance', path: '/production/maintenance', titleKey: 'nav.productionMaintenance', icon: 'Wrench', requiredRoles: ['admin', 'production_manager', 'operator', 'manager'], status: 'active' },
       { id: 'production-jobs', path: '/production/jobs', titleKey: 'nav.productionJobs', icon: 'Workflow', requiredRoles: ['admin', 'production_manager', 'operator', 'manager'], status: 'active' },
-      { id: 'production-wastage', path: '/production/wastage', titleKey: 'nav.productionWastage', icon: 'Trash2', requiredRoles: ['admin', 'production_manager', 'operator', 'manager'], status: 'active' }
+      { id: 'production-wastage', path: '/production/wastage', titleKey: 'nav.productionWastage', icon: 'Trash2', requiredRoles: ['admin', 'production_manager', 'operator', 'manager'], status: 'active' },
+      { id: 'production-reports', path: '/production/reports', titleKey: 'nav.productionReports', icon: 'BarChart3', requiredRoles: ['admin', 'production_manager', 'operator', 'manager'], status: 'active' }
     ]
   },
   {
@@ -129,7 +132,26 @@ export const ERP_MODULES = [
       { id: 'finance-bills', path: '/finance/supplier-bills', titleKey: 'nav.financeBills', icon: 'ArrowDownRight', requiredRoles: ['admin', 'finance', 'manager'], status: 'active' },
       { id: 'finance-payroll', path: '/finance/payroll-batches', titleKey: 'nav.financePayroll', icon: 'DollarSign', requiredRoles: ['admin', 'finance'], status: 'active' },
       { id: 'finance-expenses', path: '/finance/expenses', titleKey: 'nav.financeExpenses', icon: 'Receipt', requiredRoles: ['admin', 'finance', 'manager'], status: 'active' },
-      { id: 'finance-tax', path: '/finance/tax', titleKey: 'nav.financeTax', icon: 'ShieldCheck', requiredRoles: ['admin', 'finance'], status: 'active' }
+      { id: 'finance-tax', path: '/finance/tax', titleKey: 'nav.financeTax', icon: 'ShieldCheck', requiredRoles: ['admin', 'finance'], status: 'active' },
+      { id: 'finance-reports', path: '/finance/reports', titleKey: 'nav.financeReports', icon: 'BarChart3', requiredRoles: ['admin', 'finance', 'manager'], status: 'active' }
+    ]
+  },
+  {
+    id: 'reports',
+    titleKey: 'modules.reports',
+    icon: 'BarChart3',
+    requiredRoles: ['admin', 'manager', 'finance', 'hr', 'purchaser', 'storekeeper', 'sales', 'production_manager'],
+    status: 'active',
+    phase: 'Phase 6',
+    description: 'Centralized Cross-Module Intelligence, Department Analytics & Auditing',
+    submodules: [
+      { id: 'reports-center', path: '/reports', titleKey: 'nav.reportsCenter', icon: 'LayoutDashboard', requiredRoles: [], status: 'active' },
+      { id: 'reports-hr', path: '/reports/hr', titleKey: 'nav.hrReports', icon: 'Users', requiredRoles: ['admin', 'hr', 'manager'], status: 'active' },
+      { id: 'reports-store', path: '/reports/store', titleKey: 'nav.storeReports', icon: 'Package', requiredRoles: ['admin', 'storekeeper', 'manager', 'employee'], status: 'active' },
+      { id: 'reports-purchasing', path: '/reports/purchasing', titleKey: 'nav.purchasingReports', icon: 'ShoppingCart', requiredRoles: ['admin', 'purchaser', 'manager', 'storekeeper', 'finance'], status: 'active' },
+      { id: 'reports-crm', path: '/reports/crm', titleKey: 'nav.crmReports', icon: 'TrendingUp', requiredRoles: ['admin', 'sales', 'manager', 'finance'], status: 'active' },
+      { id: 'reports-production', path: '/reports/production', titleKey: 'nav.productionReports', icon: 'Factory', requiredRoles: ['admin', 'production_manager', 'operator', 'manager'], status: 'active' },
+      { id: 'reports-finance', path: '/reports/finance', titleKey: 'nav.financeReports', icon: 'Landmark', requiredRoles: ['admin', 'finance', 'manager'], status: 'active' }
     ]
   }
 ];
