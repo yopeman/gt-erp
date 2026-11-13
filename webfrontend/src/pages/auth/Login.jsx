@@ -1,21 +1,30 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useTranslation } from '../../i18n';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import { Sun, Moon, Lock, Mail, AlertCircle, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { Sun, Moon, Lock, Mail, AlertCircle, ArrowRight, Eye, EyeOff, ArrowLeft } from 'lucide-react';
 
 export default function Login() {
   const { t, lang, setLanguage } = useTranslation();
   const { resolvedTheme, toggleTheme } = useTheme();
-  const { login } = useAuth();
+  const { login, token, user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Auto-redirect if already authenticated
+  useEffect(() => {
+    if (token && user) {
+      const destination = location.state?.from?.pathname || '/';
+      navigate(destination, { replace: true });
+    }
+  }, [token, user, navigate, location]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -24,7 +33,8 @@ export default function Login() {
 
     try {
       await login(email, password);
-      navigate('/');
+      const destination = location.state?.from?.pathname || '/';
+      navigate(destination, { replace: true });
     } catch (err) {
       setError(err.message || 'Login failed. Please verify credentials.');
     } finally {
@@ -33,9 +43,19 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8 transition-colors">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8 transition-colors relative">
       {/* Top Controls */}
-      <div className="absolute top-4 right-4 flex items-center gap-2">
+      <div className="absolute top-4 left-4 sm:left-8">
+        <Link
+          to="/"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xs text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-primary-600 dark:hover:text-primary-400 hover:border-primary-300 shadow-xs transition"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          <span>{t('landing.backToHome', 'Back to Home')}</span>
+        </Link>
+      </div>
+
+      <div className="absolute top-4 right-4 sm:right-8 flex items-center gap-2">
         <button
           onClick={() => setLanguage(lang === 'en' ? 'am' : 'en')}
           className="px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800 shadow-xs transition"

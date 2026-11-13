@@ -1,10 +1,11 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import AppLayout from './components/layout/AppLayout';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import { useAuth } from './context/AuthContext';
 
-// Auth
+// Public & Landing
+import LandingPage from './pages/landing/LandingPage';
 import Login from './pages/auth/Login';
 
 // System Central Analytics Dashboard
@@ -116,11 +117,44 @@ function PurchasingRedirect() {
   return <Navigate to="/purchasing/requests" replace />;
 }
 
+/**
+ * AppShellLayout dynamically serves the public Landing Page when unauthenticated at root,
+ * or mounts the complete authenticated ERP application shell (Sidebar, Header, Outlet).
+ */
+function AppShellLayout() {
+  const { user, token, loading } = useAuth();
+  const location = useLocation();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center">
+        <div className="text-xs font-semibold text-slate-500 animate-pulse">
+          Validating session...
+        </div>
+      </div>
+    );
+  }
+
+  // If unauthenticated:
+  if (!token || !user) {
+    // If accessing root `/`, show Landing Page directly
+    if (location.pathname === '/' || location.pathname === '') {
+      return <LandingPage />;
+    }
+    // If accessing a deep protected route while unauthenticated, redirect to root with origin state
+    return <Navigate to="/" state={{ from: location }} replace />;
+  }
+
+  // Authenticated user: load the full ERP AppLayout shell
+  return <AppLayout />;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Public Login & Public Careers Board */}
+        {/* Public Landing, Login & Careers Board */}
+        <Route path="/landing" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/careers" element={<PublicJobs />} />
         <Route path="/careers/:id" element={<PublicJobDetail />} />
@@ -132,18 +166,14 @@ export default function App() {
         <Route path="/id-card/:id" element={<PublicIdCardVerification />} />
         <Route path="/id/:id" element={<PublicIdCardVerification />} />
 
-        {/* Protected ERP Shell */}
+        {/* Dynamic ERP Shell: Landing for unauth at root, AppLayout for auth */}
         <Route
           path="/"
-          element={
-            <ProtectedRoute>
-              <AppLayout />
-            </ProtectedRoute>
-          }
+          element={<AppShellLayout />}
         >
           {/* System Central Analytics Dashboard */}
           <Route index element={<MainDashboard />} />
-          <Route path="dashboard" element={<Navigate to="/" replace />} />
+          <Route path="dashboard" element={<MainDashboard />} />
 
           {/* HR Module Subroutes */}
           <Route
