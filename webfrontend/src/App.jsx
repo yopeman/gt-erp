@@ -610,7 +610,7 @@ export default function App() {
           <Route path="crm/*" element={<UpcomingModule moduleId="crm" />} />
 
           {/* Fallback */}
-          <Route path="*" element={<Navigate to="/hr/dashboard" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
     </BrowserRouter>
