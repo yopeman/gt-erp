@@ -35,6 +35,7 @@ import StockTransfers from './pages/store/StockTransfers';
 import StockAdjustments from './pages/store/StockAdjustments';
 import StockMovements from './pages/store/StockMovements';
 import Warehouses from './pages/store/Warehouses';
+import StoreReports from './pages/store/StoreReports';
 
 // Purchasing & Procurement Module Pages (Section 4 of requirements PDF)
 import PurchasingDashboard from './pages/purchasing/PurchasingDashboard';
@@ -45,6 +46,7 @@ import GoodsReceipts from './pages/purchasing/GoodsReceipts';
 import CreditPurchases from './pages/purchasing/CreditPurchases';
 import PurchasePayments from './pages/purchasing/PurchasePayments';
 import SupplierReturns from './pages/purchasing/SupplierReturns';
+import PurchaseReports from './pages/purchasing/PurchaseReports';
 
 // CRM & Sales Module Pages (Phases 3A, 3B & 3C)
 import CrmDashboard from './pages/crm/CrmDashboard';
@@ -290,7 +292,7 @@ export default function App() {
             path="store/reports"
             element={
               <ProtectedRoute roles={['admin', 'storekeeper', 'manager', 'employee']}>
-                <ReportsCenter />
+                <StoreReports />
               </ProtectedRoute>
             }
           />
@@ -365,7 +367,7 @@ export default function App() {
             path="purchasing/reports"
             element={
               <ProtectedRoute roles={['admin', 'purchaser', 'manager', 'storekeeper', 'finance']}>
-                <ReportsCenter />
+                <PurchaseReports />
               </ProtectedRoute>
             }
           />
