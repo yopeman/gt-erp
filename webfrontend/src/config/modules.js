@@ -145,6 +145,19 @@ export const ERP_MODULES = [
     ]
   },
   {
+    id: 'communication',
+    titleKey: 'modules.communication',
+    icon: 'MessageSquare',
+    requiredRoles: [],
+    status: 'active',
+    description: 'Internal Messaging, Notifications & Personal Notes',
+    submodules: [
+      { id: 'notifications', path: '/notifications', titleKey: 'nav.notifications', icon: 'Bell', requiredRoles: [], status: 'active' },
+      { id: 'messages', path: '/messages', titleKey: 'nav.messages', icon: 'MessageSquare', requiredRoles: [], status: 'active' },
+      { id: 'notes', path: '/notes', titleKey: 'nav.notes', icon: 'StickyNote', requiredRoles: [], status: 'active' }
+    ]
+  },
+  {
     id: 'admin',
     titleKey: 'modules.admin',
     icon: 'ShieldCheck',

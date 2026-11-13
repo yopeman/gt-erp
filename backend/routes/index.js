@@ -56,6 +56,8 @@ import productionWastageRoutes from './productionWastageRoutes.js';
 import approvalHistoryRoutes from './approvalHistoryRoutes.js';
 import inventoryAuditLogRoutes from './inventoryAuditLogRoutes.js';
 import notificationRoutes from './notificationRoutes.js';
+import noteRoutes from './noteRoutes.js';
+import messageRoutes from './messageRoutes.js';
 import reportRoutes from './reportRoutes.js';
 
 // Finance Module Routes
@@ -122,11 +124,13 @@ router.use('/production-jobs', productionJobRoutes);
 router.use('/production-wastages', productionWastageRoutes);
 router.use('/production-wastage', productionWastageRoutes);
 
-// System Support
+// System Support & Collaboration
 router.use('/approval-history', approvalHistoryRoutes);
 router.use('/approval-histories', approvalHistoryRoutes);
 router.use('/inventory-audit-logs', inventoryAuditLogRoutes);
 router.use('/notifications', notificationRoutes);
+router.use('/notes', noteRoutes);
+router.use('/messages', messageRoutes);
 router.use('/reports', reportRoutes);
 
 // Finance Module (GL, Treasury, AP, AR, Payroll Disbursements, Expenses, Tax)

@@ -13,9 +13,16 @@
     "production": "Production & Machine",
     "crm": "CRM & Sales",
     "finance": "Finance & Accounting",
-    "reports": "Reports & Analytics"
+    "reports": "Reports & Analytics",
+    "communication": "Communication",
+    "notifications": "Notifications",
+    "messages": "Messages",
+    "notes": "Personal Notes"
   },
   "nav": {
+    "notifications": "Notifications Center",
+    "messages": "Direct Messages",
+    "notes": "My Notes",
     "dashboard": "Dashboard",
     "hrDashboard": "HR Overview",
     "employees": "Employees Directory",

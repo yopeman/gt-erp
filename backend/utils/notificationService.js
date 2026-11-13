@@ -1,6 +1,7 @@
 import User from '../models/User.js';
 import Notification from '../models/Notification.js';
 import Employee from '../models/Employee.js';
+import { broadcastNotification } from './realtimeService.js';
 
 /**
  * Send in-app notification and FCM push notification to a specific employee
@@ -59,6 +60,13 @@ export const sendNotificationToUser = async ({
       type,
       data
     });
+
+    // Broadcast in real-time via SSE
+    try {
+      broadcastNotification(userId, notification);
+    } catch (e) {
+      // SSE broadcast failure should not interrupt database flow
+    }
 
     // 2. Lookup user and their active FCM tokens
     const user = await User.findById(userId);

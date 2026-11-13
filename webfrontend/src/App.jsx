@@ -92,6 +92,11 @@ import PublicJobDetail from './pages/careers/PublicJobDetail';
 // Public Employee ID Card Verification (accessible via QR code scan)
 import PublicIdCardVerification from './pages/public/PublicIdCardVerification';
 
+// Collaboration & Personal Modules
+import Notifications from './pages/notifications/Notifications';
+import Messages from './pages/messages/Messages';
+import Notes from './pages/notes/Notes';
+
 // Future Modules (Sections 1, 3, 4, 5, 6 - non-blocking modular placeholders)
 import UpcomingModule from './pages/modules/UpcomingModule';
 
@@ -650,6 +655,33 @@ export default function App() {
             element={
               <ProtectedRoute roles={['admin', 'finance', 'manager']}>
                 <FinanceReports />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Communication & Collaboration Main Module Routes */}
+          <Route path="communication" element={<Navigate to="/messages" replace />} />
+          <Route
+            path="notifications"
+            element={
+              <ProtectedRoute>
+                <Notifications />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="messages"
+            element={
+              <ProtectedRoute>
+                <Messages />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="notes"
+            element={
+              <ProtectedRoute>
+                <Notes />
               </ProtectedRoute>
             }
           />

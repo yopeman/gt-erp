@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useNotification } from '../../context/NotificationContext';
 import {
   Bell,
@@ -212,18 +213,22 @@ export default function NotificationDropdown() {
             )}
           </div>
 
-          {/* Footer with Test Button */}
+          {/* Footer with View All & Test Button */}
           <div className="p-2.5 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between text-[11px]">
-            <span className="text-slate-400 font-mono text-[10px]">
-              FCM: {permission === 'granted' ? '● Connected' : '○ Standby'}
-            </span>
+            <Link
+              to="/notifications"
+              onClick={() => setIsOpen(false)}
+              className="text-primary-600 dark:text-primary-400 font-bold hover:underline"
+            >
+              View all notifications →
+            </Link>
             <button
               onClick={handleTest}
               disabled={testing}
-              className="px-2.5 py-1 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-950/40 rounded-lg font-bold flex items-center gap-1 transition disabled:opacity-50"
+              className="px-2.5 py-1 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg font-bold flex items-center gap-1 transition disabled:opacity-50"
             >
               <Send className="w-3 h-3" />
-              <span>{testing ? 'Sending...' : 'Send Test Alert'}</span>
+              <span>{testing ? 'Sending...' : 'Test'}</span>
             </button>
           </div>
         </div>

@@ -48,6 +48,9 @@ import {
   BarChart3,
   BookOpen,
   ArrowDownRight,
+  Bell,
+  MessageSquare,
+  StickyNote,
   ChevronDown,
   ChevronRight,
   X
@@ -97,7 +100,10 @@ const iconMap = {
   Trash2,
   BarChart3,
   BookOpen,
-  ArrowDownRight
+  ArrowDownRight,
+  Bell,
+  MessageSquare,
+  StickyNote
 };
 
 // Helper to determine which modules match the current URL path

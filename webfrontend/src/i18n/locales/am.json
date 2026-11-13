@@ -13,9 +13,16 @@
     "production": "ማምረቻና ማሽነሪ ኦፕሬሽን",
     "crm": "የደንበኞችና ሽያጭ አስተዳደር",
     "finance": "ፋይናንስና ሂሳብ አስተዳደር",
-    "reports": "ሪፖርቶችና ትንተናዎች"
+    "reports": "ሪፖርቶችና ትንተናዎች",
+    "communication": "ኮሙኒኬሽን (መገናኛ)",
+    "notifications": "ማሳወቂያዎች",
+    "messages": "መልዕክቶችና ውይይት",
+    "notes": "የግል ማስታወሻዎች"
   },
   "nav": {
+    "notifications": "የማሳወቂያዎች ማዕከል",
+    "messages": "የቀጥታ መልዕክቶች",
+    "notes": "የግል ማስታወሻዎች",
     "dashboard": "ዳሽቦርድ",
     "hrDashboard": "የሰው ኃይል አጠቃላይ እይታ",
     "employees": "የሠራተኞች ዝርዝር",

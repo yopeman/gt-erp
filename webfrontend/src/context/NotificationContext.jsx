@@ -1,7 +1,7 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from './AuthContext';
-import api from '../services/api';
-import { requestFcmToken, removeFcmTokenFromServer, onMessageListener } from '../config/firebase';
+import api, { API_BASE_URL } from '../services/api';
+import { requestFcmToken, onMessageListener } from '../config/firebase';
 
 const NotificationContext = createContext(null);
 
@@ -10,7 +10,11 @@ export function NotificationProvider({ children }) {
 
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [readCount, setReadCount] = useState(0);
+  const [allCount, setAllCount] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [isRealtimeConnected, setIsRealtimeConnected] = useState(false);
+  const [currentFilter, setCurrentFilter] = useState('all'); // 'all' | 'unread' | 'read'
   const [fcmToken, setFcmToken] = useState(() => localStorage.getItem('gt_erp_fcm_token') || null);
   const [permission, setPermission] = useState(() => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
@@ -22,20 +26,39 @@ export function NotificationProvider({ children }) {
   // Active foreground toast notification popup
   const [activeToast, setActiveToast] = useState(null);
 
-  // Fetch notifications from server
-  const fetchNotifications = useCallback(async () => {
+  // Reference to avoid stale closures in SSE and interval handlers
+  const filterRef = useRef(currentFilter);
+  useEffect(() => {
+    filterRef.current = currentFilter;
+  }, [currentFilter]);
+
+  // Fetch notifications with optional status/filter parameter
+  const fetchNotifications = useCallback(async (filterOverride, isSilent = false) => {
     if (!authToken || !user) return;
-    setLoading(true);
+    if (!isSilent) setLoading(true);
+
+    const filterToUse = filterOverride !== undefined ? filterOverride : filterRef.current;
+
     try {
-      const response = await api.get('/notifications?limit=25');
+      const queryParams = new URLSearchParams({ limit: '50' });
+      if (filterToUse && filterToUse !== 'all') {
+        queryParams.set('filter', filterToUse);
+      }
+
+      const response = await api.get(`/notifications?${queryParams.toString()}`);
       if (response.success && Array.isArray(response.data)) {
         setNotifications(response.data);
-        setUnreadCount(response.unreadCount || 0);
+        if (response.unreadCount !== undefined) setUnreadCount(response.unreadCount);
+        if (response.readCount !== undefined) setReadCount(response.readCount);
+        if (response.allCount !== undefined) setAllCount(response.allCount);
       }
     } catch (err) {
-      console.warn('Could not fetch notifications:', err);
+      // Avoid spamming error console during background polling
+      if (!isSilent) {
+        console.warn('Could not fetch notifications:', err);
+      }
     } finally {
-      setLoading(false);
+      if (!isSilent) setLoading(false);
     }
   }, [authToken, user]);
 
@@ -67,10 +90,35 @@ export function NotificationProvider({ children }) {
         setNotifications((prev) =>
           prev.map((n) => (n._id === id ? { ...n, isRead: true } : n))
         );
-        setUnreadCount((prev) => Math.max(0, prev - 1));
+        if (response.unreadCount !== undefined) {
+          setUnreadCount(response.unreadCount);
+        } else {
+          setUnreadCount((prev) => Math.max(0, prev - 1));
+        }
+        if (response.readCount !== undefined) setReadCount(response.readCount);
       }
     } catch (err) {
       console.warn('Failed to mark notification as read:', err);
+    }
+  };
+
+  // Mark single notification as unread
+  const markAsUnread = async (id) => {
+    try {
+      const response = await api.patch(`/notifications/${id}/unread`);
+      if (response.success) {
+        setNotifications((prev) =>
+          prev.map((n) => (n._id === id ? { ...n, isRead: false } : n))
+        );
+        if (response.unreadCount !== undefined) {
+          setUnreadCount(response.unreadCount);
+        } else {
+          setUnreadCount((prev) => prev + 1);
+        }
+        if (response.readCount !== undefined) setReadCount(response.readCount);
+      }
+    } catch (err) {
+      console.warn('Failed to mark notification as unread:', err);
     }
   };
 
@@ -81,6 +129,7 @@ export function NotificationProvider({ children }) {
       if (response.success) {
         setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
         setUnreadCount(0);
+        setReadCount(allCount);
       }
     } catch (err) {
       console.warn('Failed to mark all notifications as read:', err);
@@ -96,6 +145,7 @@ export function NotificationProvider({ children }) {
         if (response.unreadCount !== undefined) {
           setUnreadCount(response.unreadCount);
         }
+        fetchNotifications(filterRef.current, true);
       }
     } catch (err) {
       console.warn('Failed to delete notification:', err);
@@ -106,11 +156,11 @@ export function NotificationProvider({ children }) {
   const sendTestNotification = async () => {
     try {
       const response = await api.post('/notifications/test', {
-        title: 'GT-ERP Firebase Test',
-        body: 'Push notification system connected and active!'
+        title: 'GT-ERP Notification Test',
+        body: 'Real-time SSE and push notifications are active!'
       });
       if (response.success) {
-        await fetchNotifications();
+        await fetchNotifications(filterRef.current, true);
         return true;
       }
     } catch (err) {
@@ -119,36 +169,92 @@ export function NotificationProvider({ children }) {
     }
   };
 
-  // Auto-fetch notifications on session change
+  // Real-time SSE connection for instantaneous notification events
   useEffect(() => {
-    if (authToken && user) {
-      fetchNotifications();
-
-      // If permission is already granted, refresh FCM token
-      if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-        requestPushPermission();
-      }
-    } else {
-      setNotifications([]);
-      setUnreadCount(0);
+    if (!authToken || !user) {
+      setIsRealtimeConnected(false);
+      return;
     }
+
+    let eventSource = null;
+    try {
+      const sseUrl = `${API_BASE_URL}/notifications/realtime?token=${encodeURIComponent(authToken)}`;
+      eventSource = new EventSource(sseUrl);
+
+      eventSource.onopen = () => {
+        setIsRealtimeConnected(true);
+      };
+
+      eventSource.addEventListener('notification', (e) => {
+        try {
+          const newNotif = JSON.parse(e.data);
+          setActiveToast({
+            title: newNotif.title || 'New Notification',
+            body: newNotif.body || '',
+            timestamp: new Date()
+          });
+
+          // Prepend to current list if matches filter
+          setNotifications((prev) => {
+            if (filterRef.current === 'read') return prev; // Don't show unread in 'read' tab
+            if (prev.some((n) => n._id === newNotif._id)) return prev;
+            return [newNotif, ...prev];
+          });
+          setUnreadCount((prev) => prev + 1);
+          setAllCount((prev) => prev + 1);
+        } catch (err) {
+          fetchNotifications(filterRef.current, true);
+        }
+      });
+
+      eventSource.onerror = () => {
+        setIsRealtimeConnected(false);
+        // Will rely on the 2s auto-fetch fallback
+      };
+    } catch (err) {
+      console.warn('Could not establish SSE notification stream:', err);
+    }
+
+    return () => {
+      if (eventSource) {
+        eventSource.close();
+      }
+    };
   }, [authToken, user, fetchNotifications]);
 
-  // Listen for foreground push notifications
+  // Realtime Fail-safe: 2-second auto-fetch polling fallback
+  useEffect(() => {
+    if (!authToken || !user) return;
+
+    // Run first initial fetch immediately
+    fetchNotifications(currentFilter);
+
+    // Refresh FCM if permission granted
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+      requestPushPermission();
+    }
+
+    // 2-second auto-fetch failback interval
+    const interval = setInterval(() => {
+      fetchNotifications(filterRef.current, true);
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [authToken, user, currentFilter, fetchNotifications]);
+
+  // Listen for FCM foreground push notifications
   useEffect(() => {
     onMessageListener((payload) => {
       const title = payload.notification?.title || payload.data?.title || 'GT-ERP Notification';
       const body = payload.notification?.body || payload.data?.body || '';
 
-      // Trigger toast popup banner
       setActiveToast({
         title,
         body,
         timestamp: new Date()
       });
 
-      // Refresh notification list and badge
-      fetchNotifications();
+      fetchNotifications(filterRef.current, true);
     });
   }, [fetchNotifications]);
 
@@ -166,14 +272,20 @@ export function NotificationProvider({ children }) {
       value={{
         notifications,
         unreadCount,
+        readCount,
+        allCount,
         loading,
         permission,
         fcmToken,
+        isRealtimeConnected,
+        currentFilter,
+        setCurrentFilter,
         activeToast,
         dismissToast: () => setActiveToast(null),
         fetchNotifications,
         requestPushPermission,
         markAsRead,
+        markAsUnread,
         markAllAsRead,
         removeNotification,
         sendTestNotification
@@ -191,4 +303,3 @@ export function useNotification() {
   }
   return context;
 }
-

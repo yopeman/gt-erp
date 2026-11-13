@@ -1,21 +1,53 @@
 import Notification from '../models/Notification.js';
 import User from '../models/User.js';
 import { sendNotificationToUser } from '../utils/notificationService.js';
+import { registerNotificationStream } from '../utils/realtimeService.js';
 
-// Get current user's notifications with unread count
+// Real-time SSE stream for current user notifications
+export const streamNotifications = (req, res) => {
+  registerNotificationStream(req.user._id, req, res);
+};
+
+// Get current user's notifications with read/unread filtering
 export const getMyNotifications = async (req, res) => {
   try {
     const userId = req.user._id;
-    const { page = 1, limit = 30, unreadOnly } = req.query;
+    const {
+      page = 1,
+      limit = 30,
+      unreadOnly,
+      readOnly,
+      filter,
+      status,
+      type,
+      search
+    } = req.query;
 
     const query = { user: userId };
-    if (unreadOnly === 'true') {
+
+    // Filtering read / unread
+    if (filter === 'unread' || status === 'unread' || unreadOnly === 'true') {
       query.isRead = false;
+    } else if (filter === 'read' || status === 'read' || readOnly === 'true') {
+      query.isRead = true;
+    }
+
+    // Type filtering
+    if (type && type !== 'all') {
+      query.type = type;
+    }
+
+    // Keyword search in title & body
+    if (search && search.trim()) {
+      const searchRegex = new RegExp(search.trim(), 'i');
+      query.$or = [{ title: searchRegex }, { body: searchRegex }];
     }
 
     const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
     const total = await Notification.countDocuments(query);
     const unreadCount = await Notification.countDocuments({ user: userId, isRead: false });
+    const readCount = await Notification.countDocuments({ user: userId, isRead: true });
+    const allCount = await Notification.countDocuments({ user: userId });
 
     const notifications = await Notification.find(query)
       .sort({ createdAt: -1 })
@@ -25,6 +57,8 @@ export const getMyNotifications = async (req, res) => {
     res.status(200).json({
       success: true,
       unreadCount,
+      readCount,
+      allCount,
       data: notifications,
       pagination: {
         total,
@@ -58,16 +92,52 @@ export const markNotificationRead = async (req, res) => {
     }
 
     const unreadCount = await Notification.countDocuments({ user: req.user._id, isRead: false });
+    const readCount = await Notification.countDocuments({ user: req.user._id, isRead: true });
 
     res.status(200).json({
       success: true,
       unreadCount,
+      readCount,
       data: notification
     });
   } catch (error) {
     res.status(500).json({
       success: false,
       message: 'Failed to mark notification as read',
+      error: error.message
+    });
+  }
+};
+
+// Mark a single notification as unread
+export const markNotificationUnread = async (req, res) => {
+  try {
+    const notification = await Notification.findOneAndUpdate(
+      { _id: req.params.id, user: req.user._id },
+      { $set: { isRead: false, readAt: null } },
+      { new: true }
+    );
+
+    if (!notification) {
+      return res.status(404).json({
+        success: false,
+        message: 'Notification not found'
+      });
+    }
+
+    const unreadCount = await Notification.countDocuments({ user: req.user._id, isRead: false });
+    const readCount = await Notification.countDocuments({ user: req.user._id, isRead: true });
+
+    res.status(200).json({
+      success: true,
+      unreadCount,
+      readCount,
+      data: notification
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to mark notification as unread',
       error: error.message
     });
   }
