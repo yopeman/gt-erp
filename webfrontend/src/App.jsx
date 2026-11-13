@@ -66,6 +66,16 @@ import ProductionWastage from './pages/production/ProductionWastage';
 // Dedicated Reports & Analytics Center
 import ReportsCenter from './pages/reports/ReportsCenter';
 
+// Finance & Accounting Module Pages (Phase 5)
+import FinanceDashboard from './pages/finance/FinanceDashboard';
+import ChartOfAccounts from './pages/finance/ChartOfAccounts';
+import JournalEntries from './pages/finance/JournalEntries';
+import TreasuryBanking from './pages/finance/TreasuryBanking';
+import SupplierBills from './pages/finance/SupplierBills';
+import PayrollBatches from './pages/finance/PayrollBatches';
+import OperatingExpenses from './pages/finance/OperatingExpenses';
+import TaxCompliance from './pages/finance/TaxCompliance';
+
 // Public Careers & Job Application Pages
 import PublicJobs from './pages/careers/PublicJobs';
 import PublicJobDetail from './pages/careers/PublicJobDetail';
@@ -506,10 +516,76 @@ export default function App() {
             }
           />
 
+          {/* Finance & General Ledger Module Routes (Phase 5) */}
+          <Route path="finance" element={<Navigate to="/finance/dashboard" replace />} />
+          <Route
+            path="finance/dashboard"
+            element={
+              <ProtectedRoute roles={['admin', 'finance', 'manager']}>
+                <FinanceDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="finance/accounts"
+            element={
+              <ProtectedRoute roles={['admin', 'finance']}>
+                <ChartOfAccounts />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="finance/journal-entries"
+            element={
+              <ProtectedRoute roles={['admin', 'finance']}>
+                <JournalEntries />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="finance/treasury"
+            element={
+              <ProtectedRoute roles={['admin', 'finance', 'manager']}>
+                <TreasuryBanking />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="finance/supplier-bills"
+            element={
+              <ProtectedRoute roles={['admin', 'finance', 'manager']}>
+                <SupplierBills />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="finance/payroll-batches"
+            element={
+              <ProtectedRoute roles={['admin', 'finance']}>
+                <PayrollBatches />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="finance/expenses"
+            element={
+              <ProtectedRoute roles={['admin', 'finance', 'manager']}>
+                <OperatingExpenses />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="finance/tax"
+            element={
+              <ProtectedRoute roles={['admin', 'finance']}>
+                <TaxCompliance />
+              </ProtectedRoute>
+            }
+          />
+
           {/* Non-Blocking Planned Modules */}
           <Route path="production/*" element={<UpcomingModule moduleId="production" />} />
           <Route path="crm/*" element={<UpcomingModule moduleId="crm" />} />
-          <Route path="finance/*" element={<UpcomingModule moduleId="finance" />} />
 
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/hr/dashboard" replace />} />

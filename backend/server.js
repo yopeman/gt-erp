@@ -33,7 +33,7 @@ app.get('/', (req, res) => {
   res.json({
     status: 'online',
     system: 'GT-ERP Backend API',
-    modules: ['HR', 'Inventory', 'Procurement', 'Approvals']
+    modules: ['HR', 'Inventory', 'Procurement', 'Approvals', 'Finance']
   });
 });
 

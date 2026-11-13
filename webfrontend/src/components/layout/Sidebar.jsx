@@ -46,6 +46,8 @@ import {
   Workflow,
   Trash2,
   BarChart3,
+  BookOpen,
+  ArrowDownRight,
   ChevronDown,
   ChevronRight,
   X
@@ -93,7 +95,9 @@ const iconMap = {
   Wrench,
   Workflow,
   Trash2,
-  BarChart3
+  BarChart3,
+  BookOpen,
+  ArrowDownRight
 };
 
 export default function Sidebar({ isOpen, onClose }) {

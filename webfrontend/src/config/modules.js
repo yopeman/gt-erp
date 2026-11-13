@@ -117,14 +117,19 @@ export const ERP_MODULES = [
     id: 'finance',
     titleKey: 'modules.finance',
     icon: 'Landmark',
-    requiredRoles: ['admin', 'finance'],
-    status: 'upcoming',
+    requiredRoles: ['admin', 'finance', 'manager'],
+    status: 'active',
     phase: 'Phase 5',
-    description: 'Income, Expenses, Tax, Order Costing & Profitability, Financial Statements',
+    description: 'Double-Entry General Ledger, Treasury, Accounts Payable, Payroll Disbursements, Operating Costs & Ethiopian Tax',
     submodules: [
-      { id: 'finance-dashboard', path: '/finance/dashboard', titleKey: 'nav.dashboard', icon: 'LayoutDashboard', status: 'upcoming' },
-      { id: 'finance-expenses', path: '/finance/expenses', titleKey: 'Income & Expenses', icon: 'Wallet', status: 'upcoming' },
-      { id: 'finance-profitability', path: '/finance/profitability', titleKey: 'Cost & Profitability', icon: 'PieChart', status: 'upcoming' }
+      { id: 'finance-dashboard', path: '/finance/dashboard', titleKey: 'nav.financeDashboard', icon: 'LayoutDashboard', requiredRoles: ['admin', 'finance', 'manager'], status: 'active' },
+      { id: 'finance-accounts', path: '/finance/accounts', titleKey: 'nav.financeAccounts', icon: 'BookOpen', requiredRoles: ['admin', 'finance'], status: 'active' },
+      { id: 'finance-journals', path: '/finance/journal-entries', titleKey: 'nav.financeJournals', icon: 'FileCheck2', requiredRoles: ['admin', 'finance'], status: 'active' },
+      { id: 'finance-treasury', path: '/finance/treasury', titleKey: 'nav.financeTreasury', icon: 'Building2', requiredRoles: ['admin', 'finance', 'manager'], status: 'active' },
+      { id: 'finance-bills', path: '/finance/supplier-bills', titleKey: 'nav.financeBills', icon: 'ArrowDownRight', requiredRoles: ['admin', 'finance', 'manager'], status: 'active' },
+      { id: 'finance-payroll', path: '/finance/payroll-batches', titleKey: 'nav.financePayroll', icon: 'DollarSign', requiredRoles: ['admin', 'finance'], status: 'active' },
+      { id: 'finance-expenses', path: '/finance/expenses', titleKey: 'nav.financeExpenses', icon: 'Receipt', requiredRoles: ['admin', 'finance', 'manager'], status: 'active' },
+      { id: 'finance-tax', path: '/finance/tax', titleKey: 'nav.financeTax', icon: 'ShieldCheck', requiredRoles: ['admin', 'finance'], status: 'active' }
     ]
   }
 ];

@@ -58,6 +58,9 @@ import inventoryAuditLogRoutes from './inventoryAuditLogRoutes.js';
 import notificationRoutes from './notificationRoutes.js';
 import reportRoutes from './reportRoutes.js';
 
+// Finance Module Routes
+import financeRoutes from './financeRoutes.js';
+
 const router = express.Router();
 
 // HR Module
@@ -125,5 +128,8 @@ router.use('/approval-histories', approvalHistoryRoutes);
 router.use('/inventory-audit-logs', inventoryAuditLogRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/reports', reportRoutes);
+
+// Finance Module (GL, Treasury, AP, AR, Payroll Disbursements, Expenses, Tax)
+router.use('/finance', financeRoutes);
 
 export default router;
