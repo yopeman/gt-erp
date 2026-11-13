@@ -12,7 +12,8 @@
     "purchasing": "Purchasing & Procurement",
     "production": "Production & Machine",
     "crm": "CRM & Sales",
-    "finance": "Finance & Accounting"
+    "finance": "Finance & Accounting",
+    "reports": "Reports & Analytics"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -49,6 +50,11 @@
     "supplierReturns": "Supplier Returns",
     "purchasingReports": "Procurement & Spend Reports",
     "reports": "Reports & Analytics",
+    "reportsCenter": "Central Reports Hub",
+    "hrReports": "HR & Workforce Reports",
+    "crmReports": "Sales & CRM Reports",
+    "productionReports": "Production & Machine Reports",
+    "financeReports": "Financial Statements & Reports",
     "crmDashboard": "CRM Overview",
     "crmLeads": "Leads & Prospects",
     "crmCustomers": "Customer Directory",

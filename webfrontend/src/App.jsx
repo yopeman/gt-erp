@@ -66,8 +66,12 @@ import MachineMaintenance from './pages/production/MachineMaintenance';
 import ProductionJobs from './pages/production/ProductionJobs';
 import ProductionWastage from './pages/production/ProductionWastage';
 
-// Dedicated Reports & Analytics Center
+// Dedicated Reports & Analytics Center & Module Reports
 import ReportsCenter from './pages/reports/ReportsCenter';
+import HrReports from './pages/hr/HrReports';
+import CrmReports from './pages/crm/CrmReports';
+import ProductionReports from './pages/production/ProductionReports';
+import FinanceReports from './pages/finance/FinanceReports';
 
 // Finance & Accounting Module Pages (Phase 5)
 import FinanceDashboard from './pages/finance/FinanceDashboard';
@@ -186,6 +190,14 @@ export default function App() {
             element={
               <ProtectedRoute roles={['admin', 'hr']}>
                 <CompanySettings />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="hr/reports"
+            element={
+              <ProtectedRoute roles={['admin', 'hr', 'manager']}>
+                <HrReports />
               </ProtectedRoute>
             }
           />
@@ -448,6 +460,14 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="crm/reports"
+            element={
+              <ProtectedRoute roles={['admin', 'sales', 'manager', 'finance']}>
+                <CrmReports />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Machine & Production Operations Module Subroutes (Phases 4A, 4B, 4C & 4D) */}
           <Route path="production" element={<Navigate to="/production/dashboard" replace />} />
@@ -496,6 +516,14 @@ export default function App() {
             element={
               <ProtectedRoute roles={['admin', 'production_manager', 'operator', 'manager']}>
                 <ProductionWastage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="production/reports"
+            element={
+              <ProtectedRoute roles={['admin', 'production_manager', 'operator', 'manager']}>
+                <ProductionReports />
               </ProtectedRoute>
             }
           />
@@ -563,6 +591,14 @@ export default function App() {
             element={
               <ProtectedRoute roles={['admin', 'finance']}>
                 <TaxCompliance />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="finance/reports"
+            element={
+              <ProtectedRoute roles={['admin', 'finance', 'manager']}>
+                <FinanceReports />
               </ProtectedRoute>
             }
           />

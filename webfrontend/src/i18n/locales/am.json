@@ -12,7 +12,8 @@
     "purchasing": "ግዢና አቅርቦት አስተዳደር",
     "production": "ማምረቻና ማሽነሪ ኦፕሬሽን",
     "crm": "የደንበኞችና ሽያጭ አስተዳደር",
-    "finance": "ፋይናንስና ሂሳብ አስተዳደር"
+    "finance": "ፋይናንስና ሂሳብ አስተዳደር",
+    "reports": "ሪፖርቶችና ትንተናዎች"
   },
   "nav": {
     "dashboard": "ዳሽቦርድ",
@@ -49,6 +50,11 @@
     "supplierReturns": "የተመላሽ ዕቃዎች መዝገብ",
     "purchasingReports": "የግዢና የወጪ ሪፖርቶች",
     "reports": "ሪፖርቶችና ትንተናዎች",
+    "reportsCenter": "የሪፖርቶች ማዕከል",
+    "hrReports": "የሰው ኃይል ሪፖርቶች",
+    "crmReports": "የሽያጭና የደንበኞች ሪፖርቶች",
+    "productionReports": "የምርትና የማሽነሪ ሪፖርቶች",
+    "financeReports": "የፋይናንስና የሂሳብ ሪፖርቶች",
     "crmDashboard": "የሽያጭ አጠቃላይ እይታ",
     "crmLeads": "እምቅ ደንበኞች (Leads)",
     "crmCustomers": "የደንበኞች ማውጫ",

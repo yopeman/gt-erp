@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from '../../i18n';
 import { useAuth } from '../../context/AuthContext';
 import reportService from '../../services/reportService';
@@ -27,7 +28,9 @@ import {
   ArrowRight,
   ShieldCheck,
   Package,
-  Search
+  Search,
+  Factory,
+  Landmark
 } from 'lucide-react';
 
 const DEPARTMENTS = [
@@ -46,6 +49,7 @@ const DEPARTMENTS = [
 export default function ReportsCenter() {
   const { t } = useTranslation();
   const { hasRole, user } = useAuth();
+  const location = useLocation();
 
   // Timeframe state
   const [timeframe, setTimeframe] = useState('monthly'); // 'daily' | 'weekly' | 'monthly' | 'yearly' | 'custom'
@@ -55,7 +59,12 @@ export default function ReportsCenter() {
   const [customEndDate, setCustomEndDate] = useState(new Date().toISOString().split('T')[0]);
 
   // Actor / Role Perspective Tab
-  const [activeActorTab, setActiveActorTab] = useState('all'); // 'all' | 'storekeeper' | 'purchaser' | 'employee' | 'manager'
+  const initialActor = location.pathname.includes('/store/')
+    ? 'storekeeper'
+    : location.pathname.includes('/purchasing/')
+    ? 'purchaser'
+    : 'all';
+  const [activeActorTab, setActiveActorTab] = useState(initialActor);
 
   // Secondary Filters
   const [warehouseFilter, setWarehouseFilter] = useState('');
@@ -216,6 +225,45 @@ export default function ReportsCenter() {
             <span>Print Report</span>
           </button>
         </div>
+      </div>
+
+      {/* Module Reporting Navigation Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
+        {[
+          { title: 'HR Workforce', path: '/hr/reports', icon: Users, desc: 'Attendance & Payroll' },
+          { title: 'Store & Inventory', path: '/store/reports', icon: Package, desc: 'Stock & Movements' },
+          { title: 'Procurement', path: '/purchasing/reports', icon: ShoppingCart, desc: 'Spend & Orders' },
+          { title: 'CRM & Sales', path: '/crm/reports', icon: TrendingUp, desc: 'Orders & Receivables' },
+          { title: 'Production Floor', path: '/production/reports', icon: Factory, desc: 'Jobs & Spoilage' },
+          { title: 'Finance Ledger', path: '/finance/reports', icon: Landmark, desc: 'P&L, AP & Taxes' }
+        ].map((mod) => {
+          const ModIcon = mod.icon;
+          const isCurrent = location.pathname === mod.path;
+          return (
+            <Link
+              key={mod.path}
+              to={mod.path}
+              className={`p-3 rounded-2xl border transition flex flex-col justify-between group ${
+                isCurrent
+                  ? 'bg-primary-500 text-white border-primary-500 shadow-xs'
+                  : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-primary-500/60 hover:shadow-xs text-slate-800 dark:text-slate-100'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div className={`p-1.5 rounded-lg ${isCurrent ? 'bg-white/20' : 'bg-primary-50 dark:bg-primary-950/60 text-primary-500'}`}>
+                  <ModIcon className="w-4 h-4" />
+                </div>
+                <ArrowRight className={`w-3.5 h-3.5 transition group-hover:translate-x-0.5 ${isCurrent ? 'text-white' : 'text-slate-400'}`} />
+              </div>
+              <div className="mt-2.5">
+                <div className="text-xs font-bold leading-tight">{mod.title}</div>
+                <div className={`text-[10px] truncate mt-0.5 ${isCurrent ? 'text-primary-100' : 'text-slate-400'}`}>
+                  {mod.desc}
+                </div>
+              </div>
+            </Link>
+          );
+        })}
       </div>
 
       {/* Timeframe & Date Range Controls */}
