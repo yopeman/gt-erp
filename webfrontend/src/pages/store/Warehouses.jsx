@@ -182,7 +182,7 @@ export default function Warehouses() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
-            {t('store.storeWarehouses')}
+            {t('nav.storeWarehouses')}
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
             Physical storage facilities, branches, location managers, and live capacity tracking
