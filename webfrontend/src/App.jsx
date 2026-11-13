@@ -371,11 +371,60 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+          {/* Reports & Analytics Center Module Subroutes */}
           <Route
             path="reports"
             element={
               <ProtectedRoute>
                 <ReportsCenter />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="reports/hr"
+            element={
+              <ProtectedRoute roles={['admin', 'hr', 'manager']}>
+                <HrReports />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="reports/store"
+            element={
+              <ProtectedRoute roles={['admin', 'storekeeper', 'manager', 'employee']}>
+                <StoreReports />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="reports/purchasing"
+            element={
+              <ProtectedRoute roles={['admin', 'purchaser', 'manager', 'storekeeper', 'finance']}>
+                <PurchaseReports />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="reports/crm"
+            element={
+              <ProtectedRoute roles={['admin', 'sales', 'manager', 'finance']}>
+                <CrmReports />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="reports/production"
+            element={
+              <ProtectedRoute roles={['admin', 'production_manager', 'operator', 'manager']}>
+                <ProductionReports />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="reports/finance"
+            element={
+              <ProtectedRoute roles={['admin', 'finance', 'manager']}>
+                <FinanceReports />
               </ProtectedRoute>
             }
           />

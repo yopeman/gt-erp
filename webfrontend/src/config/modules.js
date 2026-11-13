@@ -146,12 +146,12 @@ export const ERP_MODULES = [
     description: 'Centralized Cross-Module Intelligence, Department Analytics & Auditing',
     submodules: [
       { id: 'reports-center', path: '/reports', titleKey: 'nav.reportsCenter', icon: 'LayoutDashboard', requiredRoles: [], status: 'active' },
-      { id: 'reports-hr', path: '/hr/reports', titleKey: 'nav.hrReports', icon: 'Users', requiredRoles: ['admin', 'hr', 'manager'], status: 'active' },
-      { id: 'reports-store', path: '/store/reports', titleKey: 'nav.storeReports', icon: 'Package', requiredRoles: ['admin', 'storekeeper', 'manager', 'employee'], status: 'active' },
-      { id: 'reports-purchasing', path: '/purchasing/reports', titleKey: 'nav.purchasingReports', icon: 'ShoppingCart', requiredRoles: ['admin', 'purchaser', 'manager', 'storekeeper', 'finance'], status: 'active' },
-      { id: 'reports-crm', path: '/crm/reports', titleKey: 'nav.crmReports', icon: 'TrendingUp', requiredRoles: ['admin', 'sales', 'manager', 'finance'], status: 'active' },
-      { id: 'reports-production', path: '/production/reports', titleKey: 'nav.productionReports', icon: 'Factory', requiredRoles: ['admin', 'production_manager', 'operator', 'manager'], status: 'active' },
-      { id: 'reports-finance', path: '/finance/reports', titleKey: 'nav.financeReports', icon: 'Landmark', requiredRoles: ['admin', 'finance', 'manager'], status: 'active' }
+      { id: 'reports-hr', path: '/reports/hr', titleKey: 'nav.hrReports', icon: 'Users', requiredRoles: ['admin', 'hr', 'manager'], status: 'active' },
+      { id: 'reports-store', path: '/reports/store', titleKey: 'nav.storeReports', icon: 'Package', requiredRoles: ['admin', 'storekeeper', 'manager', 'employee'], status: 'active' },
+      { id: 'reports-purchasing', path: '/reports/purchasing', titleKey: 'nav.purchasingReports', icon: 'ShoppingCart', requiredRoles: ['admin', 'purchaser', 'manager', 'storekeeper', 'finance'], status: 'active' },
+      { id: 'reports-crm', path: '/reports/crm', titleKey: 'nav.crmReports', icon: 'TrendingUp', requiredRoles: ['admin', 'sales', 'manager', 'finance'], status: 'active' },
+      { id: 'reports-production', path: '/reports/production', titleKey: 'nav.productionReports', icon: 'Factory', requiredRoles: ['admin', 'production_manager', 'operator', 'manager'], status: 'active' },
+      { id: 'reports-finance', path: '/reports/finance', titleKey: 'nav.financeReports', icon: 'Landmark', requiredRoles: ['admin', 'finance', 'manager'], status: 'active' }
     ]
   }
 ];
