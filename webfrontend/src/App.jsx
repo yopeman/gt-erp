@@ -7,6 +7,9 @@ import { useAuth } from './context/AuthContext';
 // Auth
 import Login from './pages/auth/Login';
 
+// System Central Analytics Dashboard
+import MainDashboard from './pages/dashboard/MainDashboard';
+
 // HR Module Pages (Section 2 of requirements PDF)
 import HrDashboard from './pages/hr/HrDashboard';
 import Employees from './pages/hr/Employees';
@@ -102,26 +105,6 @@ function PurchasingRedirect() {
   return <Navigate to="/purchasing/requests" replace />;
 }
 
-function IndexRedirect() {
-  const { user } = useAuth();
-  if (user?.roles?.includes('purchaser') && !user?.roles?.includes('admin') && !user?.roles?.includes('hr')) {
-    return <Navigate to="/purchasing/dashboard" replace />;
-  }
-  if (user?.roles?.includes('storekeeper') && !user?.roles?.includes('admin') && !user?.roles?.includes('hr')) {
-    return <Navigate to="/store/dashboard" replace />;
-  }
-  if (user?.roles?.includes('sales') && !user?.roles?.includes('admin') && !user?.roles?.includes('hr')) {
-    return <Navigate to="/crm/dashboard" replace />;
-  }
-  if ((user?.roles?.includes('production_manager') || user?.roles?.includes('operator')) && !user?.roles?.includes('admin') && !user?.roles?.includes('hr')) {
-    return <Navigate to="/production/dashboard" replace />;
-  }
-  if (user?.roles?.includes('employee') && !user?.roles?.includes('admin') && !user?.roles?.includes('hr') && !user?.roles?.includes('manager')) {
-    return <Navigate to="/store/outward" replace />;
-  }
-  return <Navigate to="/hr/dashboard" replace />;
-}
-
 export default function App() {
   return (
     <BrowserRouter>
@@ -147,8 +130,9 @@ export default function App() {
             </ProtectedRoute>
           }
         >
-          {/* Smart Landing Redirect */}
-          <Route index element={<IndexRedirect />} />
+          {/* System Central Analytics Dashboard */}
+          <Route index element={<MainDashboard />} />
+          <Route path="dashboard" element={<Navigate to="/" replace />} />
 
           {/* HR Module Subroutes */}
           <Route

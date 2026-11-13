@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useTranslation } from '../../i18n';
 import { useAuth } from '../../context/AuthContext';
@@ -100,15 +100,42 @@ const iconMap = {
   ArrowDownRight
 };
 
+// Helper to determine which modules match the current URL path
+const getModulesMatchingPath = (pathname) => {
+  const matching = {};
+  ERP_MODULES.forEach((module) => {
+    const isMatched =
+      (module.id && (pathname === `/${module.id}` || pathname.startsWith(`/${module.id}/`))) ||
+      module.submodules?.some(
+        (sub) => sub.path === pathname || (sub.path !== '/' && pathname.startsWith(sub.path))
+      );
+    if (isMatched) {
+      matching[module.id] = true;
+    }
+  });
+  return matching;
+};
+
 export default function Sidebar({ isOpen, onClose }) {
   const { t } = useTranslation();
   const { hasRole } = useAuth();
   const location = useLocation();
 
-  // Track expanded modules in sidebar
-  const [expandedModules, setExpandedModules] = useState({
-    hr: true,
-  });
+  // Track expanded modules in sidebar (default based on current URL)
+  const [expandedModules, setExpandedModules] = useState(() =>
+    getModulesMatchingPath(location.pathname)
+  );
+
+  // Automatically expand active module when user navigates
+  useEffect(() => {
+    const matching = getModulesMatchingPath(location.pathname);
+    if (Object.keys(matching).length > 0) {
+      setExpandedModules((prev) => ({
+        ...prev,
+        ...matching
+      }));
+    }
+  }, [location.pathname]);
 
   const toggleModule = (moduleId) => {
     setExpandedModules((prev) => ({
@@ -167,6 +194,33 @@ export default function Sidebar({ isOpen, onClose }) {
 
         {/* Modules & Navigation Items */}
         <div className="flex-1 overflow-y-auto overscroll-y-contain custom-scrollbar px-3 py-4 space-y-4">
+          {/* Primary System Dashboard */}
+          <div>
+            <NavLink
+              to="/"
+              end
+              onClick={() => {
+                if (window.innerWidth < 1024) onClose();
+              }}
+              className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold transition ${
+                location.pathname === '/' || location.pathname === '/dashboard'
+                  ? 'bg-primary-500 text-white shadow-xs'
+                  : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
+              }`}
+            >
+              <LayoutDashboard
+                className={`w-4 h-4 ${
+                  location.pathname === '/' || location.pathname === '/dashboard'
+                    ? 'text-white'
+                    : 'text-primary-500'
+                }`}
+              />
+              <span className="truncate">{t('nav.dashboard') || 'Dashboard'}</span>
+            </NavLink>
+          </div>
+
+          <div className="h-px bg-slate-200/80 dark:bg-slate-800/80 my-1" />
+
           {visibleModules.map((module) => {
             const ModuleIcon = iconMap[module.icon] || Users;
             const isExpanded = expandedModules[module.id] ?? false;
