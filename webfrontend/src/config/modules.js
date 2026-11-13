@@ -26,16 +26,6 @@ export const ERP_MODULES = [
     ]
   },
   {
-    id: 'admin',
-    titleKey: 'modules.admin',
-    icon: 'ShieldCheck',
-    requiredRoles: ['admin'],
-    status: 'active',
-    submodules: [
-      { id: 'users', path: '/admin/users', titleKey: 'nav.users', icon: 'Shield', requiredRoles: ['admin'], status: 'active' }
-    ]
-  },
-  {
     id: 'store',
     titleKey: 'modules.store',
     icon: 'Package',
@@ -153,5 +143,15 @@ export const ERP_MODULES = [
       { id: 'reports-production', path: '/reports/production', titleKey: 'nav.productionReports', icon: 'Factory', requiredRoles: ['admin', 'production_manager', 'operator', 'manager'], status: 'active' },
       { id: 'reports-finance', path: '/reports/finance', titleKey: 'nav.financeReports', icon: 'Landmark', requiredRoles: ['admin', 'finance', 'manager'], status: 'active' }
     ]
-  }
+  },
+  {
+    id: 'admin',
+    titleKey: 'modules.admin',
+    icon: 'ShieldCheck',
+    requiredRoles: ['admin'],
+    status: 'active',
+    submodules: [
+      { id: 'users', path: '/admin/users', titleKey: 'nav.users', icon: 'Shield', requiredRoles: ['admin'], status: 'active' }
+    ]
+  },
 ];
