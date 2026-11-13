@@ -14,10 +14,12 @@ import {
   MinusCircle
 } from 'lucide-react';
 import financeService from '../../services/financeService';
+import { useAuth } from '../../context/AuthContext';
 import Modal from '../../components/common/Modal';
 import Badge from '../../components/common/Badge';
 
 export default function JournalEntries() {
+  const { user } = useAuth();
   const [entries, setEntries] = useState([]);
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -107,7 +109,8 @@ export default function JournalEntries() {
         status: formData.status,
         lines: formData.lines.filter(l => l.account && (l.debit > 0 || l.credit > 0)),
         totalDebit,
-        totalCredit
+        totalCredit,
+        ...(user?._id || user?.id ? { postedBy: user._id || user.id } : {})
       };
 
       await financeService.createJournalEntry(payload);

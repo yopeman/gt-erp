@@ -1,5 +1,6 @@
 // backend/routes/financeRoutes.js
 import express from 'express';
+import { optionalAuth } from '../middleware/auth.js';
 
 // GL & Chart of Accounts
 import * as accountCtrl from '../controllers/accountController.js';
@@ -29,6 +30,7 @@ import * as expCtrl from '../controllers/expenseVoucherController.js';
 import * as taxCtrl from '../controllers/taxPeriodRecordController.js';
 
 const router = express.Router();
+router.use(optionalAuth);
 
 // ─── 1. Chart of Accounts ───────────────────────────────────────────────────
 router.get('/accounts', accountCtrl.listAccounts);
