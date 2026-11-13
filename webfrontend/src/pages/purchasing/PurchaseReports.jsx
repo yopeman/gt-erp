@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../../i18n';
+import { useAuth } from '../../context/AuthContext';
 import reportService from '../../services/reportService';
 import storeService from '../../services/storeService';
+import { exportReportToPdf } from '../../utils/reportPdfExport';
 import StatCard from '../../components/common/StatCard';
 import Badge from '../../components/common/Badge';
 import {
@@ -22,7 +24,7 @@ import {
   Calendar,
   Filter,
   Download,
-  Printer,
+  FileText,
   RefreshCw,
   CreditCard,
   DollarSign,
@@ -39,6 +41,7 @@ const PIE_COLORS = ['#da1f26', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6'];
 
 export default function PurchaseReports() {
   const { t } = useTranslation();
+  const { user } = useAuth();
 
   const [timeframe, setTimeframe] = useState('monthly');
   const [customStartDate, setCustomStartDate] = useState(
@@ -141,8 +144,106 @@ export default function PurchaseReports() {
     document.body.removeChild(link);
   };
 
-  const handlePrint = () => {
-    window.print();
+  const handleExportPDF = () => {
+    const logsToExport = filteredLogs.length > 0 ? filteredLogs : purchasingLogs;
+    if (!reportData || logsToExport.length === 0) {
+      alert('No data available to export.');
+      return;
+    }
+
+    const timeframeLabel = timeframe === 'custom'
+      ? `Custom (${customStartDate} to ${customEndDate})`
+      : timeframe.toUpperCase();
+
+    const selectedWh = warehouses.find((w) => w._id === warehouseFilter)?.name || warehouseFilter;
+    const filterDetails = [
+      `Warehouse: ${selectedWh || 'All'}`,
+      `VAT: ${vatFilter ? (vatFilter === 'with_vat' ? 'With VAT' : 'No VAT') : 'All'}`,
+      searchTable ? `Search: "${searchTable}"` : null
+    ].filter(Boolean).join(' | ');
+
+    const summaryCards = [
+      {
+        label: 'Procurement Spend',
+        value: formatCurrency(summary.totalSpend),
+        subtitle: `${summary.totalPOs || 0} purchase orders placed`
+      },
+      {
+        label: 'VAT Recoverable',
+        value: formatCurrency(summary.totalVatAmount),
+        subtitle: `${summary.withVatCount || 0} POs with 15% VAT`
+      },
+      {
+        label: 'Credit Purchases',
+        value: formatCurrency(summary.totalCreditSpend),
+        subtitle: 'Accounts Payable commitments'
+      },
+      {
+        label: 'Cash Purchases',
+        value: formatCurrency(summary.totalCashSpend),
+        subtitle: 'Immediate cash outflow'
+      },
+      {
+        label: 'Goods Received (GRN)',
+        value: `${summary.totalGrnCount || 0} GRNs`,
+        subtitle: `${summary.totalAcceptedItemsQty || 0} items accepted`
+      }
+    ];
+
+    const tableHeaders = ['Type', 'PO Number', 'Date', 'Supplier / Vendor', 'Department', 'Warehouse', 'Details', 'Amount (ETB)', 'VAT Status', 'Status'];
+    const tableRows = logsToExport.map((r) => [
+      r.type || 'N/A',
+      r.referenceNumber || '—',
+      r.date ? new Date(r.date).toLocaleDateString() : '—',
+      r.actor || '—',
+      r.department || '—',
+      r.warehouse || '—',
+      r.details || '—',
+      Number(r.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      r.vatStatus || '—',
+      r.status || '—'
+    ]);
+
+    const totalAmount = logsToExport.reduce((acc, r) => acc + Number(r.amount || 0), 0);
+    const tableFooters = [
+      `Total (${logsToExport.length} entries)`,
+      '',
+      '',
+      '',
+      '',
+      '',
+      '',
+      Number(totalAmount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      '',
+      ''
+    ];
+
+    exportReportToPdf({
+      reportTitle: 'Procurement & Spend Analytics Audit Report',
+      reportSubtitle: 'Vendor procurement spend, purchase order commitments, goods receipts and VAT performance',
+      formNumber: 'FORM-GT-PUR-01',
+      moduleName: 'Purchasing & Supply Chain',
+      timeframeLabel,
+      filterDetails: filterDetails || 'All Purchasing Records',
+      summaryCards,
+      tableHeaders,
+      tableRows,
+      tableFooters,
+      columnStyles: {
+        0: { cellWidth: 24 },
+        1: { cellWidth: 26, fontStyle: 'bold' },
+        2: { cellWidth: 18, halign: 'center' },
+        3: { cellWidth: 35 },
+        4: { cellWidth: 24 },
+        5: { cellWidth: 24 },
+        6: { cellWidth: 'auto' },
+        7: { cellWidth: 26, halign: 'right' },
+        8: { cellWidth: 20, halign: 'center' },
+        9: { cellWidth: 20, halign: 'center' }
+      },
+      fileName: `GT_ERP_Purchasing_Report_${timeframe}_${new Date().toISOString().split('T')[0]}.pdf`,
+      user
+    });
   };
 
   const summary = reportData?.summary || {};
@@ -207,11 +308,12 @@ export default function PurchaseReports() {
           </button>
 
           <button
-            onClick={handlePrint}
+            onClick={handleExportPDF}
             className="px-3 py-2 rounded-xl text-xs font-bold bg-primary-500 hover:bg-primary-600 text-white shadow-xs transition flex items-center gap-1.5"
+            title="Export official PDF report in form format"
           >
-            <Printer className="w-3.5 h-3.5" />
-            <span>Print Report</span>
+            <FileText className="w-3.5 h-3.5" />
+            <span>Export PDF</span>
           </button>
         </div>
       </div>

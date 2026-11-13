@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../../i18n';
+import { useAuth } from '../../context/AuthContext';
 import reportService from '../../services/reportService';
+import { exportReportToPdf } from '../../utils/reportPdfExport';
 import StatCard from '../../components/common/StatCard';
 import Badge from '../../components/common/Badge';
 import {
@@ -21,7 +23,7 @@ import {
   Calendar,
   Filter,
   Download,
-  Printer,
+  FileText,
   RefreshCw,
   ShoppingCart,
   Receipt,
@@ -38,6 +40,7 @@ const PIE_COLORS = ['#da1f26', '#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4
 
 export default function CrmReports() {
   const { t } = useTranslation();
+  const { user } = useAuth();
 
   const [timeframe, setTimeframe] = useState('monthly');
   const [customStartDate, setCustomStartDate] = useState(
@@ -120,8 +123,98 @@ export default function CrmReports() {
     document.body.removeChild(link);
   };
 
-  const handlePrint = () => {
-    window.print();
+  const handleExportPDF = () => {
+    const logsToExport = filteredLogs.length > 0 ? filteredLogs : (reportData?.unifiedLog || []);
+    if (!reportData || logsToExport.length === 0) {
+      alert('No data available to export.');
+      return;
+    }
+
+    const timeframeLabel = timeframe === 'custom'
+      ? `Custom (${customStartDate} to ${customEndDate})`
+      : timeframe.toUpperCase();
+
+    const filterDetails = [
+      `Status: ${statusFilter || 'All'}`,
+      searchTable ? `Search: "${searchTable}"` : null
+    ].filter(Boolean).join(' | ');
+
+    const summaryCards = [
+      {
+        label: 'Total Sales Value',
+        value: formatCurrency(summary.totalSalesRevenue),
+        subtitle: `${summary.totalOrdersCount || 0} orders booked`
+      },
+      {
+        label: 'Orders Completed',
+        value: `${summary.completedOrdersCount || 0}`,
+        subtitle: `${summary.inProductionOrdersCount || 0} in production`
+      },
+      {
+        label: 'Lead Conversion',
+        value: `${summary.conversionRate || 0}%`,
+        subtitle: `${summary.convertedLeadsCount || 0} of ${summary.totalLeads || 0} leads`
+      },
+      {
+        label: 'Unpaid Receivables',
+        value: formatCurrency(summary.totalUnpaidReceivables),
+        subtitle: `Invoiced: ${formatCurrency(summary.totalInvoicedAmount)}`
+      },
+      {
+        label: 'Estimated Margin',
+        value: `${summary.estimatedProfitMargin || 0}%`,
+        subtitle: `Cost: ${formatCurrency(summary.totalEstimatedCost)}`
+      }
+    ];
+
+    const tableHeaders = ['Type', 'Reference / Order', 'Date', 'Customer / Party', 'Department', 'Details', 'Amount (ETB)', 'Status'];
+    const tableRows = logsToExport.map((r) => [
+      r.type || 'N/A',
+      r.referenceNumber || '—',
+      r.date ? new Date(r.date).toLocaleDateString() : '—',
+      r.actor || '—',
+      r.department || '—',
+      r.details || '—',
+      Number(r.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      r.status || '—'
+    ]);
+
+    const totalAmount = logsToExport.reduce((acc, r) => acc + Number(r.amount || 0), 0);
+    const tableFooters = [
+      `Total (${logsToExport.length} entries)`,
+      '',
+      '',
+      '',
+      '',
+      '',
+      Number(totalAmount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      ''
+    ];
+
+    exportReportToPdf({
+      reportTitle: 'CRM & Sales Performance Audit Report',
+      reportSubtitle: 'Printing orders throughput, revenue by service, customer receivables & lead pipeline analytics',
+      formNumber: 'FORM-GT-CRM-01',
+      moduleName: 'CRM & Sales Operations',
+      timeframeLabel,
+      filterDetails: filterDetails || 'All Records',
+      summaryCards,
+      tableHeaders,
+      tableRows,
+      tableFooters,
+      columnStyles: {
+        0: { cellWidth: 24 },
+        1: { cellWidth: 28, fontStyle: 'bold' },
+        2: { cellWidth: 20, halign: 'center' },
+        3: { cellWidth: 38 },
+        4: { cellWidth: 26 },
+        5: { cellWidth: 'auto' },
+        6: { cellWidth: 30, halign: 'right' },
+        7: { cellWidth: 22, halign: 'center' }
+      },
+      fileName: `GT_ERP_CRM_Report_${timeframe}_${new Date().toISOString().split('T')[0]}.pdf`,
+      user
+    });
   };
 
   const summary = reportData?.summary || {};
@@ -173,11 +266,12 @@ export default function CrmReports() {
           </button>
 
           <button
-            onClick={handlePrint}
+            onClick={handleExportPDF}
             className="px-3 py-2 rounded-xl text-xs font-bold bg-primary-500 hover:bg-primary-600 text-white shadow-xs transition flex items-center gap-1.5"
+            title="Export official PDF report in form format"
           >
-            <Printer className="w-3.5 h-3.5" />
-            <span>Print Report</span>
+            <FileText className="w-3.5 h-3.5" />
+            <span>Export PDF</span>
           </button>
         </div>
       </div>

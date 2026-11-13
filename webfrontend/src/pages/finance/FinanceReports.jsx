@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../../i18n';
+import { useAuth } from '../../context/AuthContext';
 import reportService from '../../services/reportService';
+import { exportReportToPdf } from '../../utils/reportPdfExport';
 import StatCard from '../../components/common/StatCard';
 import Badge from '../../components/common/Badge';
 import {
@@ -21,7 +23,7 @@ import {
   Calendar,
   Filter,
   Download,
-  Printer,
+  FileText,
   RefreshCw,
   DollarSign,
   TrendingUp,
@@ -39,6 +41,7 @@ const PIE_COLORS = ['#10b981', '#f59e0b', '#da1f26', '#3b82f6', '#8b5cf6'];
 
 export default function FinanceReports() {
   const { t } = useTranslation();
+  const { user } = useAuth();
 
   const [timeframe, setTimeframe] = useState('monthly');
   const [customStartDate, setCustomStartDate] = useState(
@@ -118,8 +121,99 @@ export default function FinanceReports() {
     document.body.removeChild(link);
   };
 
-  const handlePrint = () => {
-    window.print();
+  const handleExportPDF = () => {
+    const logsToExport = filteredLogs.length > 0 ? filteredLogs : (reportData?.unifiedLog || []);
+    if (!reportData || logsToExport.length === 0) {
+      alert('No data available to export.');
+      return;
+    }
+
+    const timeframeLabel = timeframe === 'custom'
+      ? `Custom (${customStartDate} to ${customEndDate})`
+      : timeframe.toUpperCase();
+
+    const filterDetails = [
+      `View: ${activeTab.toUpperCase()}`,
+      searchTable ? `Search: "${searchTable}"` : null
+    ].filter(Boolean).join(' | ');
+
+    const summaryCards = [
+      {
+        label: 'Gross Invoiced Revenue',
+        value: formatCurrency(summary.totalGrossRevenue),
+        subtitle: `Collected: ${formatCurrency(summary.totalPaymentsReceived)}`
+      },
+      {
+        label: 'Accounts Payable Billed',
+        value: formatCurrency(summary.totalBillsAmount),
+        subtitle: `Due: ${formatCurrency(summary.totalBillsOutstanding)}`
+      },
+      {
+        label: 'Operating Expenses',
+        value: formatCurrency(summary.totalOperatingExpenses),
+        subtitle: 'Overhead & administration'
+      },
+      {
+        label: 'Net Operating Profit',
+        value: formatCurrency(summary.netOperatingProfit),
+        subtitle: `Gross Margin: ${formatCurrency(summary.grossProfit)}`
+      },
+      {
+        label: 'Treasury Reserves',
+        value: formatCurrency(summary.totalBankReserves),
+        subtitle: 'Available liquid funds'
+      }
+    ];
+
+    const tableHeaders = ['Type', 'Reference #', 'Date', 'Party / Vendor', 'Category / Cost Center', 'Amount (ETB)', 'VAT / Tax (ETB)', 'Status'];
+    const tableRows = logsToExport.map((r) => [
+      r.type || 'N/A',
+      r.referenceNumber || '—',
+      r.date ? new Date(r.date).toLocaleDateString() : '—',
+      r.party || '—',
+      r.category || '—',
+      Number(r.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      Number(r.vat || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      r.status || '—'
+    ]);
+
+    const totalAmount = logsToExport.reduce((acc, r) => acc + Number(r.amount || 0), 0);
+    const totalVat = logsToExport.reduce((acc, r) => acc + Number(r.vat || 0), 0);
+    const tableFooters = [
+      `Total (${logsToExport.length} entries)`,
+      '',
+      '',
+      '',
+      '',
+      Number(totalAmount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      Number(totalVat).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      ''
+    ];
+
+    exportReportToPdf({
+      reportTitle: 'Financial Statements & General Ledger Audit Report',
+      reportSubtitle: 'General ledger summaries, profit & loss statement, AP aging, treasury reserves & tax compliance',
+      formNumber: 'FORM-GT-FIN-01',
+      moduleName: 'Finance & Corporate Treasury',
+      timeframeLabel,
+      filterDetails: filterDetails || 'All Financial Records',
+      summaryCards,
+      tableHeaders,
+      tableRows,
+      tableFooters,
+      columnStyles: {
+        0: { cellWidth: 24 },
+        1: { cellWidth: 28, fontStyle: 'bold' },
+        2: { cellWidth: 20, halign: 'center' },
+        3: { cellWidth: 38 },
+        4: { cellWidth: 35 },
+        5: { cellWidth: 28, halign: 'right' },
+        6: { cellWidth: 26, halign: 'right' },
+        7: { cellWidth: 22, halign: 'center' }
+      },
+      fileName: `GT_ERP_Finance_Report_${timeframe}_${new Date().toISOString().split('T')[0]}.pdf`,
+      user
+    });
   };
 
   const summary = reportData?.summary || {};
@@ -177,11 +271,12 @@ export default function FinanceReports() {
           </button>
 
           <button
-            onClick={handlePrint}
+            onClick={handleExportPDF}
             className="px-3 py-2 rounded-xl text-xs font-bold bg-primary-500 hover:bg-primary-600 text-white shadow-xs transition flex items-center gap-1.5"
+            title="Export official PDF report in form format"
           >
-            <Printer className="w-3.5 h-3.5" />
-            <span>Print Report</span>
+            <FileText className="w-3.5 h-3.5" />
+            <span>Export PDF</span>
           </button>
         </div>
       </div>

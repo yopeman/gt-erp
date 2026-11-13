@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../../i18n';
+import { useAuth } from '../../context/AuthContext';
 import reportService from '../../services/reportService';
+import { exportReportToPdf } from '../../utils/reportPdfExport';
 import StatCard from '../../components/common/StatCard';
 import Badge from '../../components/common/Badge';
 import EmptyState from '../../components/common/EmptyState';
@@ -22,7 +24,7 @@ import {
   Calendar,
   Filter,
   Download,
-  Printer,
+  FileText,
   RefreshCw,
   Clock,
   Timer,
@@ -52,6 +54,7 @@ const PIE_COLORS = ['#da1f26', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4
 
 export default function HrReports() {
   const { t } = useTranslation();
+  const { user } = useAuth();
 
   const [timeframe, setTimeframe] = useState('monthly');
   const [customStartDate, setCustomStartDate] = useState(
@@ -133,8 +136,94 @@ export default function HrReports() {
     document.body.removeChild(link);
   };
 
-  const handlePrint = () => {
-    window.print();
+  const handleExportPDF = () => {
+    const logsToExport = filteredLogs.length > 0 ? filteredLogs : (reportData?.unifiedLog || []);
+    if (!reportData || logsToExport.length === 0) {
+      alert('No data available to export.');
+      return;
+    }
+
+    const timeframeLabel = timeframe === 'custom'
+      ? `Custom (${customStartDate} to ${customEndDate})`
+      : timeframe.toUpperCase();
+
+    const filterDetails = [
+      `Department: ${departmentFilter || 'All Departments'}`,
+      searchTable ? `Search: "${searchTable}"` : null
+    ].filter(Boolean).join(' | ');
+
+    const summaryCards = [
+      {
+        label: 'Total Workforce',
+        value: `${summary.totalHeadcount || 0}`,
+        subtitle: `${summary.activeHeadcount || 0} active employees`
+      },
+      {
+        label: 'Attendance Rate',
+        value: `${summary.attendanceRate || 100}%`,
+        subtitle: `${summary.presentCount || 0} on-time • ${summary.lateCount || 0} late`
+      },
+      {
+        label: 'Approved Overtime',
+        value: `${summary.totalApprovedOtHours || 0} hrs`,
+        subtitle: `Cost: ${formatCurrency(summary.totalOtCost)}`
+      },
+      {
+        label: 'Leave Days Taken',
+        value: `${summary.totalLeaveDays || 0} days`,
+        subtitle: `${summary.approvedLeavesCount || 0} approved`
+      },
+      {
+        label: 'Total Net Payroll',
+        value: formatCurrency(summary.totalNetPayroll),
+        subtitle: `Gross: ${formatCurrency(summary.totalGrossPayroll)}`
+      }
+    ];
+
+    const tableHeaders = ['Type', 'Employee / Reference', 'Date', 'Department', 'Details / Description', 'Metric / Value', 'Status'];
+    const tableRows = logsToExport.map((r) => [
+      r.type || 'N/A',
+      r.referenceNumber || '—',
+      r.date ? new Date(r.date).toLocaleDateString() : '—',
+      r.department || '—',
+      r.details || '—',
+      r.amount ? (typeof r.amount === 'number' ? Number(r.amount).toLocaleString('en-US') : r.amount) : '—',
+      r.status || '—'
+    ]);
+
+    const tableFooters = [
+      `Total (${logsToExport.length} entries)`,
+      '',
+      '',
+      '',
+      '',
+      '',
+      ''
+    ];
+
+    exportReportToPdf({
+      reportTitle: 'HR & Workforce Analytics Audit Report',
+      reportSubtitle: 'Workforce headcount, attendance metrics, overtime hours, leave records & payroll expenditures',
+      formNumber: 'FORM-GT-HR-01',
+      moduleName: 'Human Resources & Talent Management',
+      timeframeLabel,
+      filterDetails: filterDetails || 'All HR Records',
+      summaryCards,
+      tableHeaders,
+      tableRows,
+      tableFooters,
+      columnStyles: {
+        0: { cellWidth: 26 },
+        1: { cellWidth: 34, fontStyle: 'bold' },
+        2: { cellWidth: 20, halign: 'center' },
+        3: { cellWidth: 30 },
+        4: { cellWidth: 'auto' },
+        5: { cellWidth: 26, halign: 'right' },
+        6: { cellWidth: 22, halign: 'center' }
+      },
+      fileName: `GT_ERP_HR_Report_${timeframe}_${new Date().toISOString().split('T')[0]}.pdf`,
+      user
+    });
   };
 
   const summary = reportData?.summary || {};
@@ -186,11 +275,12 @@ export default function HrReports() {
           </button>
 
           <button
-            onClick={handlePrint}
+            onClick={handleExportPDF}
             className="px-3 py-2 rounded-xl text-xs font-bold bg-primary-500 hover:bg-primary-600 text-white shadow-xs transition flex items-center gap-1.5"
+            title="Export official PDF report in form format"
           >
-            <Printer className="w-3.5 h-3.5" />
-            <span>Print Report</span>
+            <FileText className="w-3.5 h-3.5" />
+            <span>Export PDF</span>
           </button>
         </div>
       </div>

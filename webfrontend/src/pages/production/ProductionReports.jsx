@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../../i18n';
+import { useAuth } from '../../context/AuthContext';
 import reportService from '../../services/reportService';
+import { exportReportToPdf } from '../../utils/reportPdfExport';
 import StatCard from '../../components/common/StatCard';
 import Badge from '../../components/common/Badge';
 import {
@@ -21,7 +23,7 @@ import {
   Calendar,
   Filter,
   Download,
-  Printer,
+  FileText,
   RefreshCw,
   Workflow,
   Wrench,
@@ -37,6 +39,7 @@ const PIE_COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#da1f26', '#8b5cf6', '#ec4
 
 export default function ProductionReports() {
   const { t } = useTranslation();
+  const { user } = useAuth();
 
   const [timeframe, setTimeframe] = useState('monthly');
   const [customStartDate, setCustomStartDate] = useState(
@@ -119,8 +122,98 @@ export default function ProductionReports() {
     document.body.removeChild(link);
   };
 
-  const handlePrint = () => {
-    window.print();
+  const handleExportPDF = () => {
+    const logsToExport = filteredLogs.length > 0 ? filteredLogs : (reportData?.unifiedLog || []);
+    if (!reportData || logsToExport.length === 0) {
+      alert('No data available to export.');
+      return;
+    }
+
+    const timeframeLabel = timeframe === 'custom'
+      ? `Custom (${customStartDate} to ${customEndDate})`
+      : timeframe.toUpperCase();
+
+    const filterDetails = [
+      `Machine: ${machineFilter || 'All Machines'}`,
+      searchTable ? `Search: "${searchTable}"` : null
+    ].filter(Boolean).join(' | ');
+
+    const summaryCards = [
+      {
+        label: 'Completed Jobs',
+        value: `${summary.completedJobsCount || 0}`,
+        subtitle: `${summary.inProgressJobsCount || 0} active on floor`
+      },
+      {
+        label: 'Fleet Uptime',
+        value: `${summary.machineUptimePercent || 100}%`,
+        subtitle: `${summary.totalMachines || 0} units active`
+      },
+      {
+        label: 'Spoilage Cost',
+        value: formatCurrency(summary.totalWastageCost),
+        subtitle: `${summary.totalWastageRecords || 0} scrap logs`
+      },
+      {
+        label: 'Wasted Material',
+        value: `${Number(summary.totalWastedQuantity || 0).toLocaleString()} units`,
+        subtitle: 'Spoiled raw material sheets'
+      },
+      {
+        label: 'Maintenance Cost',
+        value: formatCurrency(summary.totalMaintenanceCost),
+        subtitle: `${summary.activeMaintenanceCount || 0} active tickets`
+      }
+    ];
+
+    const tableHeaders = ['Type', 'Reference #', 'Date', 'Machine / Entity', 'Stage / Details', 'Quantity', 'Cost (ETB)', 'Status'];
+    const tableRows = logsToExport.map((r) => [
+      r.type || 'N/A',
+      r.referenceNumber || '—',
+      r.date ? new Date(r.date).toLocaleDateString() : '—',
+      r.machineOrEntity || '—',
+      r.stageOrDetails || '—',
+      r.quantity ? Number(r.quantity).toLocaleString() : '—',
+      Number(r.cost || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      r.status || '—'
+    ]);
+
+    const totalCost = logsToExport.reduce((acc, r) => acc + Number(r.cost || 0), 0);
+    const tableFooters = [
+      `Total (${logsToExport.length} entries)`,
+      '',
+      '',
+      '',
+      '',
+      '',
+      Number(totalCost).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      ''
+    ];
+
+    exportReportToPdf({
+      reportTitle: 'Production & Machine Operations Audit Report',
+      reportSubtitle: 'Floor run throughput, machine fleet uptime, maintenance expenditures & spoilage wastage analysis',
+      formNumber: 'FORM-GT-PRD-01',
+      moduleName: 'Production Floor Operations',
+      timeframeLabel,
+      filterDetails: filterDetails || 'All Production Runs',
+      summaryCards,
+      tableHeaders,
+      tableRows,
+      tableFooters,
+      columnStyles: {
+        0: { cellWidth: 26 },
+        1: { cellWidth: 28, fontStyle: 'bold' },
+        2: { cellWidth: 20, halign: 'center' },
+        3: { cellWidth: 35 },
+        4: { cellWidth: 'auto' },
+        5: { cellWidth: 24, halign: 'right' },
+        6: { cellWidth: 28, halign: 'right' },
+        7: { cellWidth: 22, halign: 'center' }
+      },
+      fileName: `GT_ERP_Production_Report_${timeframe}_${new Date().toISOString().split('T')[0]}.pdf`,
+      user
+    });
   };
 
   const summary = reportData?.summary || {};
@@ -173,11 +266,12 @@ export default function ProductionReports() {
           </button>
 
           <button
-            onClick={handlePrint}
+            onClick={handleExportPDF}
             className="px-3 py-2 rounded-xl text-xs font-bold bg-primary-500 hover:bg-primary-600 text-white shadow-xs transition flex items-center gap-1.5"
+            title="Export official PDF report in form format"
           >
-            <Printer className="w-3.5 h-3.5" />
-            <span>Print Report</span>
+            <FileText className="w-3.5 h-3.5" />
+            <span>Export PDF</span>
           </button>
         </div>
       </div>
