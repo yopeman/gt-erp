@@ -36,7 +36,7 @@ export default function Login() {
       const destination = location.state?.from?.pathname || '/';
       navigate(destination, { replace: true });
     } catch (err) {
-      setError(err.message || 'Login failed. Please verify credentials.');
+      setError(err.message || t('Login failed. Please verify credentials.'));
     } finally {
       setLoading(false);
     }
@@ -75,7 +75,7 @@ export default function Login() {
         <div className="inline-block p-2 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm mb-3">
           <img 
             src="/gt-logo.jpg" 
-            alt="GT Logo" 
+            alt={t('GT Logo')} 
             className="h-16 w-16 mx-auto rounded-xl object-contain"
           />
         </div>
@@ -135,7 +135,7 @@ export default function Login() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-label={showPassword ? t('Hide password') : t('Show password')}
                   className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition focus:outline-none"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}

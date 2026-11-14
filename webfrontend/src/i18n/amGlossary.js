@@ -1054,7 +1054,20 @@ export const amGlossary = {
   'unchanged': 'ያልተለወጠ',
   'assign system roles (rbac permissions)': 'የስርዓት ሚናዎችን መድብ (የ-RBAC ፈቃዶች)',
   'saving...': 'በማስቀመጥ ላይ...',
-  'search users...': 'ተጠቃሚዎችን ይፈልጉ...'
+  'search users...': 'ተጠቃሚዎችን ይፈልጉ...',
+  // Authentication & Login
+  'login failed. please verify credentials.': 'መግባት አልተሳካም። እባክዎ የይለፍ ቃልዎን እና ኢሜይልዎን ያረጋግጡ።',
+  'login failed': 'መግባት አልተሳካም',
+  'show password': 'የይለፍ ቃል አሳይ',
+  'hide password': 'የይለፍ ቃል ደብቅ',
+  'gt logo': 'የጂቲ ሎጎ',
+  'submitting': 'በመላክ ላይ',
+  'submitting...': 'በመላክ ላይ...',
+  'signing in...': 'በመግባት ላይ...',
+  'sign in': 'ግባ',
+  'sign in to your account': 'ወደ መለያዎ ይግቡ',
+  'back to home': 'ወደ መነሻ ገጽ ተመለስ'
+
 
 
 };
