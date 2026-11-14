@@ -79,6 +79,7 @@ export function UserAvatar({ user, size = 'md', className = '' }) {
  * Interactive Audio Player Component for Voice Messages
  */
 function AudioPlayer({ audio, isMe }) {
+  const { t } = useTranslation();
   const audioRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -166,7 +167,7 @@ function AudioPlayer({ audio, isMe }) {
         <div
           onClick={handleSeek}
           className="h-2 rounded-full bg-black/15 dark:bg-white/15 cursor-pointer relative overflow-hidden"
-          title="Click to seek"
+          title={t('Click to seek')}
         >
           <div
             className={`h-full rounded-full transition-all ${
@@ -190,7 +191,7 @@ function AudioPlayer({ audio, isMe }) {
             ? 'bg-white/20 text-white hover:bg-white/30'
             : 'bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-200'
         }`}
-        title="Toggle playback speed"
+        title={t('Toggle playback speed')}
       >
         {playbackRate}x
       </button>
@@ -327,7 +328,7 @@ export default function Messages() {
     files.forEach((file) => {
       // 20MB max file size check
       if (file.size > 20 * 1024 * 1024) {
-        alert(`File "${file.name}" exceeds the 20MB size limit.`);
+        alert(t('File exceeds the 20MB size limit.'));
         return;
       }
 
@@ -366,7 +367,7 @@ export default function Messages() {
   const handleStartRecording = async () => {
     try {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        alert('Microphone access is not supported by your browser.');
+        alert(t('Microphone access is not supported by your browser.'));
         return;
       }
 
@@ -392,7 +393,7 @@ export default function Messages() {
       }, 1000);
     } catch (err) {
       console.warn('Microphone permission denied or error:', err);
-      alert('Could not access microphone. Please check browser permissions.');
+      alert(t('Could not access microphone. Please check browser permissions.'));
     }
   };
 
@@ -655,9 +656,9 @@ export default function Messages() {
     const now = new Date();
     const diffSecs = Math.floor((now - date) / 1000);
 
-    if (diffSecs < 60) return 'Just now';
-    if (diffSecs < 3600) return `${Math.floor(diffSecs / 60)}m ago`;
-    if (diffSecs < 86400) return `${Math.floor(diffSecs / 3600)}h ago`;
+    if (diffSecs < 60) return t('Just now');
+    if (diffSecs < 3600) return `${Math.floor(diffSecs / 60)} ${t('m ago')}`;
+    if (diffSecs < 86400) return `${Math.floor(diffSecs / 3600)} ${t('h ago')}`;
     return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
   };
 
@@ -687,7 +688,7 @@ export default function Messages() {
                   <MessageSquare className="w-4 h-4" />
                 </div>
                 <h2 className="font-black text-sm text-slate-900 dark:text-slate-100 tracking-tight">
-                  {t('nav.messages') || 'Direct Messages'}
+                  {t('nav.messages', 'Direct Messages')}
                 </h2>
               </div>
 
@@ -698,10 +699,10 @@ export default function Messages() {
                     ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400'
                     : 'bg-amber-50 text-amber-600 dark:bg-amber-950/60 dark:text-amber-400'
                 }`}
-                title={isRealtimeConnected ? 'Live Real-time SSE active' : '2s Auto-fetch Fallback active'}
+                title={isRealtimeConnected ? t('Live Real-time SSE active') : t('2s Auto-fetch Fallback active')}
               >
                 <span className={`w-1.5 h-1.5 rounded-full ${isRealtimeConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
-                <span>{isRealtimeConnected ? 'Live' : '2s Poll'}</span>
+                <span>{isRealtimeConnected ? t('Live') : t('2s Poll')}</span>
               </div>
             </div>
 
@@ -711,7 +712,7 @@ export default function Messages() {
                 <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
-                  placeholder="Search chats..."
+                  placeholder={t('Search chats...')}
                   value={conversationSearch}
                   onChange={(e) => setConversationSearch(e.target.value)}
                   className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
@@ -720,7 +721,7 @@ export default function Messages() {
               <button
                 onClick={handleOpenNewChat}
                 className="p-2 rounded-xl bg-primary-500 text-white hover:bg-primary-600 transition shadow-2xs shrink-0 active:scale-95"
-                title="Start a new message"
+                title={t('Start a new message')}
               >
                 <Plus className="w-4 h-4" />
               </button>
@@ -731,18 +732,18 @@ export default function Messages() {
           <div className="flex-1 overflow-y-auto custom-scrollbar divide-y divide-slate-100 dark:divide-slate-800/60">
             {loadingConversations ? (
               <div className="py-12 text-center text-xs text-slate-400">
-                Loading conversations...
+                {t('Loading conversations...')}
               </div>
             ) : filteredConversations.length === 0 ? (
               <div className="p-8 text-center space-y-2">
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  {conversationSearch ? 'No chats match your search' : 'No conversations yet'}
+                  {conversationSearch ? t('No chats match your search') : t('No conversations yet')}
                 </p>
                 <button
                   onClick={handleOpenNewChat}
                   className="text-xs font-bold text-primary-500 hover:underline"
                 >
-                  Start a new chat with a colleague →
+                  {t('Start a new chat with a colleague →')}
                 </button>
               </div>
             ) : (
@@ -751,8 +752,8 @@ export default function Messages() {
                 const lastMsg = c.lastMessage;
                 let previewText = lastMsg?.content || '';
                 if (!previewText) {
-                  if (lastMsg?.audio) previewText = `🎤 Voice note (${lastMsg.audio.duration || 0}s)`;
-                  else if (lastMsg?.attachments?.length > 0) previewText = `📎 ${lastMsg.attachments[0].name || 'Attachment'}`;
+                  if (lastMsg?.audio) previewText = `🎤 ${t('Voice note')} (${lastMsg.audio.duration || 0}s)`;
+                  else if (lastMsg?.attachments?.length > 0) previewText = `📎 ${lastMsg.attachments[0].name || t('Attachment')}`;
                 }
 
                 return (
@@ -802,7 +803,7 @@ export default function Messages() {
                         }`}
                       >
                         {lastMsg?.sender === currentUser?._id && (
-                          <span className="text-slate-400 mr-1 font-normal">You:</span>
+                          <span className="text-slate-400 mr-1 font-normal">{t('You:')}</span>
                         )}
                         {previewText}
                       </p>
@@ -830,7 +831,7 @@ export default function Messages() {
                     onClick={() => setActivePartner(null)}
                     className="md:hidden p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
                   >
-                    ← Back
+                    ← {t('Back')}
                   </button>
 
                   {/* Partner Avatar: profile image or first letter */}
@@ -841,7 +842,7 @@ export default function Messages() {
                       {activePartner.fullName}
                     </h3>
                     <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate flex items-center gap-1.5">
-                      <span>{activePartner.employee?.department || 'GT Press'}</span>
+                      <span>{activePartner.employee?.department || t('GT Press')}</span>
                       {activePartner.employee?.position && (
                         <>
                           <span>•</span>
@@ -859,7 +860,7 @@ export default function Messages() {
                   <button
                     onClick={() => fetchThreadMessages(activePartner._id)}
                     className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-                    title="Refresh thread"
+                    title={t('Refresh thread')}
                   >
                     <RotateCcw className={`w-4 h-4 ${loadingMessages ? 'animate-spin' : ''}`} />
                   </button>
@@ -870,7 +871,7 @@ export default function Messages() {
               <div className="flex-1 p-4 overflow-y-auto space-y-3 custom-scrollbar">
                 {loadingMessages && messages.length === 0 ? (
                   <div className="py-12 text-center text-xs text-slate-400">
-                    Loading messages...
+                    {t('Loading messages...')}
                   </div>
                 ) : messages.length === 0 ? (
                   <div className="py-16 text-center space-y-2">
@@ -878,10 +879,10 @@ export default function Messages() {
                       <MessageSquare className="w-5 h-5" />
                     </div>
                     <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">
-                      No messages yet with {activePartner.fullName}
+                      {t('No messages yet with')} {activePartner.fullName}
                     </h4>
                     <p className="text-xs text-slate-400">
-                      Say hello, share a file, or send a voice note!
+                      {t('Say hello, share a file, or send a voice note!')}
                     </p>
                   </div>
                 ) : (
@@ -940,7 +941,7 @@ export default function Messages() {
                                       />
                                       <div className="absolute inset-0 bg-black/30 opacity-0 group-hover/img:opacity-100 transition flex items-center justify-center text-white text-xs font-bold gap-1">
                                         <Search className="w-4 h-4" />
-                                        <span>Click to view</span>
+                                        <span>{t('Click to view')}</span>
                                       </div>
                                     </div>
                                   );
@@ -1011,9 +1012,9 @@ export default function Messages() {
                             {isMe && (
                               <span>
                                 {msg.isRead ? (
-                                  <CheckCheck className="w-3.5 h-3.5 text-sky-200" title="Read" />
+                                  <CheckCheck className="w-3.5 h-3.5 text-sky-200" title={t('Read')} />
                                 ) : (
-                                  <Check className="w-3 h-3 text-primary-200" title="Sent" />
+                                  <Check className="w-3 h-3 text-primary-200" title={t('Sent')} />
                                 )}
                               </span>
                             )}
@@ -1066,7 +1067,7 @@ export default function Messages() {
                     <div className="flex items-center gap-2.5">
                       <span className="w-3 h-3 rounded-full bg-rose-500 animate-ping" />
                       <span className="text-xs font-black text-rose-600 dark:text-rose-400">
-                        Recording Voice Note...
+                        {t('Recording Voice Note...')}
                       </span>
                       <span className="font-mono text-xs font-bold text-slate-700 dark:text-slate-300">
                         {Math.floor(recordingSeconds / 60)}:
@@ -1080,19 +1081,19 @@ export default function Messages() {
                         type="button"
                         onClick={handleCancelRecording}
                         className="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-rose-100 dark:hover:bg-rose-900/40 transition flex items-center gap-1"
-                        title="Cancel recording"
+                        title={t('Cancel recording')}
                       >
                         <Trash2 className="w-3.5 h-3.5 text-rose-500" />
-                        <span>Cancel</span>
+                        <span>{t('Cancel')}</span>
                       </button>
                       <button
                         type="button"
                         onClick={handleStopAndSendAudio}
                         className="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-primary-500 text-white hover:bg-primary-600 transition flex items-center gap-1 shadow-2xs active:scale-95"
-                        title="Send Voice Note"
+                        title={t('Send Voice Note')}
                       >
                         <Send className="w-3.5 h-3.5" />
-                        <span>Send Audio</span>
+                        <span>{t('Send Audio')}</span>
                       </button>
                     </div>
                   </div>
@@ -1116,7 +1117,7 @@ export default function Messages() {
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
                       className="p-2 rounded-xl text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition shrink-0"
-                      title="Attach files or images"
+                      title={t('Attach files or images')}
                     >
                       <Paperclip className="w-4 h-4" />
                     </button>
@@ -1124,7 +1125,7 @@ export default function Messages() {
                     {/* Text Input */}
                     <input
                       type="text"
-                      placeholder={`Message ${activePartner.fullName}...`}
+                      placeholder={`${t('Message')} ${activePartner.fullName}...`}
                       value={inputText}
                       onChange={(e) => setInputText(e.target.value)}
                       className="flex-1 px-4 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
@@ -1136,7 +1137,7 @@ export default function Messages() {
                       type="button"
                       onClick={handleStartRecording}
                       className="p-2 rounded-xl text-slate-500 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-950/40 transition shrink-0"
-                      title="Record voice note"
+                      title={t('Record voice note')}
                     >
                       <Mic className="w-4 h-4" />
                     </button>
@@ -1146,7 +1147,7 @@ export default function Messages() {
                       type="submit"
                       disabled={(!inputText.trim() && pendingAttachments.length === 0) || sending}
                       className="p-2.5 rounded-xl bg-primary-500 text-white hover:bg-primary-600 transition disabled:opacity-40 disabled:cursor-not-allowed shadow-xs active:scale-95 shrink-0"
-                      title="Send Message"
+                      title={t('Send Message')}
                     >
                       <Send className="w-4 h-4" />
                     </button>
@@ -1162,10 +1163,10 @@ export default function Messages() {
               </div>
               <div className="space-y-1">
                 <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
-                  Select a Conversation
+                  {t('Select a Conversation')}
                 </h3>
                 <p className="text-xs text-slate-400 max-w-sm">
-                  Choose a chat from the left panel or click below to start a new direct conversation with any colleague.
+                  {t('Choose a chat from the left panel or click below to start a new direct conversation with any colleague.')}
                 </p>
               </div>
               <button
@@ -1173,7 +1174,7 @@ export default function Messages() {
                 className="px-4 py-2 rounded-xl text-xs font-bold bg-primary-500 text-white hover:bg-primary-600 transition shadow-xs flex items-center gap-1.5"
               >
                 <Plus className="w-4 h-4" />
-                <span>New Direct Message</span>
+                <span>{t('New Direct Message')}</span>
               </button>
             </div>
           )}
@@ -1188,7 +1189,7 @@ export default function Messages() {
             <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
               <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 flex items-center gap-2">
                 <Plus className="w-4 h-4 text-primary-500" />
-                <span>New Conversation</span>
+                <span>{t('New Conversation')}</span>
               </h3>
               <button
                 onClick={() => setIsNewChatModalOpen(false)}
@@ -1204,7 +1205,7 @@ export default function Messages() {
                 <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
-                  placeholder="Search colleagues by name or email..."
+                  placeholder={t('Search colleagues by name or email...')}
                   value={userDirectorySearch}
                   onChange={(e) => {
                     setUserDirectorySearch(e.target.value);
@@ -1220,11 +1221,11 @@ export default function Messages() {
             <div className="flex-1 overflow-y-auto p-2 divide-y divide-slate-100 dark:divide-slate-800/60 custom-scrollbar">
               {loadingDirectory ? (
                 <div className="py-8 text-center text-xs text-slate-400">
-                  Loading colleagues...
+                  {t('Loading colleagues...')}
                 </div>
               ) : userDirectory.length === 0 ? (
                 <div className="py-8 text-center text-xs text-slate-400">
-                  No colleagues found.
+                  {t('No colleagues found.')}
                 </div>
               ) : (
                 userDirectory.map((colleague) => (
@@ -1246,7 +1247,7 @@ export default function Messages() {
                     </div>
 
                     <span className="text-[10px] font-bold text-primary-500 uppercase tracking-wider px-2 py-0.5 rounded-md bg-primary-50 dark:bg-primary-950/60 shrink-0">
-                      Chat
+                      {t('Chat')}
                     </span>
                   </div>
                 ))
@@ -1271,7 +1272,7 @@ export default function Messages() {
             </button>
             <img
               src={previewImageUrl}
-              alt="Enlarged attachment"
+              alt={t('Enlarged attachment')}
               className="max-h-[85vh] max-w-full rounded-2xl object-contain shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             />

@@ -60,9 +60,9 @@ export default function Notifications() {
     const now = new Date();
     const diffSecs = Math.floor((now - date) / 1000);
 
-    if (diffSecs < 60) return 'Just now';
-    if (diffSecs < 3600) return `${Math.floor(diffSecs / 60)}m ago`;
-    if (diffSecs < 86400) return `${Math.floor(diffSecs / 3600)}h ago`;
+    if (diffSecs < 60) return t('Just now');
+    if (diffSecs < 3600) return `${Math.floor(diffSecs / 60)} ${t('m ago')}`;
+    if (diffSecs < 86400) return `${Math.floor(diffSecs / 3600)} ${t('h ago')}`;
     return date.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
   };
 
@@ -100,7 +100,7 @@ export default function Notifications() {
           <div>
             <div className="flex items-center gap-2.5">
               <h1 className="text-xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
-                {t('nav.notifications') || 'Notifications Center'}
+                {t('nav.notifications', 'Notifications Center')}
               </h1>
               <div
                 className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
@@ -110,11 +110,11 @@ export default function Notifications() {
                 }`}
               >
                 <span className={`w-2 h-2 rounded-full ${isRealtimeConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
-                <span>{isRealtimeConnected ? 'Live Realtime (2s fallback)' : '2s Auto-fetch Fallback'}</span>
+                <span>{isRealtimeConnected ? t('Live Realtime (2s fallback)') : t('2s Auto-fetch Fallback')}</span>
               </div>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              User-specific inbox. Real-time alerts, system updates and personal communications.
+              {t('User-specific inbox. Real-time alerts, system updates and personal communications.')}
             </p>
           </div>
         </div>
@@ -127,14 +127,14 @@ export default function Notifications() {
               className="px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition flex items-center gap-2 active:scale-95"
             >
               <CheckCheck className="w-4 h-4 text-primary-500" />
-              <span>Mark all as read</span>
+              <span>{t('Mark all as read')}</span>
             </button>
           )}
 
           <button
             onClick={() => fetchNotifications(currentFilter)}
             className="p-2 rounded-xl text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-            title="Refresh"
+            title={t('Refresh')}
           >
             <RotateCcw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
@@ -157,7 +157,7 @@ export default function Notifications() {
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
               }`}
             >
-              <span>All</span>
+              <span>{t('All')}</span>
               <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-200">
                 {allCount || notifications.length}
               </span>
@@ -174,7 +174,7 @@ export default function Notifications() {
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
               }`}
             >
-              <span>Unread</span>
+              <span>{t('Unread')}</span>
               {unreadCount > 0 ? (
                 <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-rose-500 text-white font-black animate-pulse">
                   {unreadCount}
@@ -197,7 +197,7 @@ export default function Notifications() {
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
               }`}
             >
-              <span>Read</span>
+              <span>{t('Read')}</span>
               <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-200">
                 {readCount}
               </span>
@@ -209,7 +209,7 @@ export default function Notifications() {
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Search notifications..."
+              placeholder={t('Search notifications...')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
@@ -220,18 +220,18 @@ export default function Notifications() {
         {/* Type Filter Pills */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-1 custom-scrollbar text-xs">
           <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider shrink-0 mr-1 flex items-center gap-1">
-            <Filter className="w-3 h-3" /> Type:
+            <Filter className="w-3 h-3" /> {t('Type:')}
           </span>
           {[
-            { id: 'all', label: 'All Types' },
-            { id: 'general', label: 'General' },
-            { id: 'message', label: 'Messages' },
-            { id: 'attendance', label: 'Attendance' },
-            { id: 'leave', label: 'Leave' },
-            { id: 'overtime', label: 'Overtime' },
-            { id: 'payroll', label: 'Payroll' },
-            { id: 'stock', label: 'Inventory' },
-            { id: 'approval', label: 'Approvals' }
+            { id: 'all', label: t('All Types') },
+            { id: 'general', label: t('General') },
+            { id: 'message', label: t('Messages') },
+            { id: 'attendance', label: t('Attendance') },
+            { id: 'leave', label: t('Leave') },
+            { id: 'overtime', label: t('Overtime') },
+            { id: 'payroll', label: t('Payroll') },
+            { id: 'stock', label: t('Inventory') },
+            { id: 'approval', label: t('Approvals') }
           ].map((type) => (
             <button
               key={type.id}
@@ -258,15 +258,15 @@ export default function Notifications() {
             <div>
               <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
                 {currentFilter === 'unread'
-                  ? 'No unread notifications'
+                  ? t('No unread notifications')
                   : currentFilter === 'read'
-                  ? 'No read notifications'
-                  : 'No notifications found'}
+                  ? t('No read notifications')
+                  : t('No notifications found')}
               </h3>
               <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
                 {currentFilter === 'unread'
-                  ? 'You are all caught up! New alerts and messages will show up in real-time.'
-                  : 'No notifications match your current filter settings.'}
+                  ? t('You are all caught up! New alerts and messages will show up in real-time.')
+                  : t('No notifications match your current filter settings.')}
               </p>
             </div>
           </div>
@@ -331,7 +331,7 @@ export default function Notifications() {
                   {isExpanded && item.data && Object.keys(item.data).length > 0 && (
                     <div className="mt-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700/60 text-[11px] font-mono text-slate-600 dark:text-slate-300 space-y-1">
                       <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-sans">
-                        Event Metadata
+                        {t('Event Metadata')}
                       </div>
                       <pre className="overflow-x-auto whitespace-pre-wrap">
                         {JSON.stringify(item.data, null, 2)}
@@ -349,7 +349,7 @@ export default function Notifications() {
                     <button
                       onClick={() => markAsUnread(item._id)}
                       className="p-1.5 rounded-lg text-slate-400 hover:text-primary-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-                      title="Mark as unread"
+                      title={t('Mark as unread')}
                     >
                       <RotateCcw className="w-4 h-4" />
                     </button>
@@ -357,7 +357,7 @@ export default function Notifications() {
                     <button
                       onClick={() => markAsRead(item._id)}
                       className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition"
-                      title="Mark as read"
+                      title={t('Mark as read')}
                     >
                       <Check className="w-4 h-4" />
                     </button>
@@ -366,7 +366,7 @@ export default function Notifications() {
                   <button
                     onClick={() => removeNotification(item._id)}
                     className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition"
-                    title="Delete notification"
+                    title={t('Delete notification')}
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
