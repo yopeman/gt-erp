@@ -37,6 +37,7 @@ import {
  * "in messages show user/employee profile image if connected user to employee else use users first letter"
  */
 export function UserAvatar({ user, size = 'md', className = '' }) {
+  const { t } = useTranslation();
   const profileImage = user?.employee?.profileImage;
   const initial = user?.fullName?.trim()?.charAt(0)?.toUpperCase() || 'U';
 
@@ -54,7 +55,7 @@ export function UserAvatar({ user, size = 'md', className = '' }) {
     return (
       <img
         src={profileImage}
-        alt={user?.fullName || 'User Profile'}
+        alt={user?.fullName || t('User Profile')}
         className={`${chosenSize} rounded-full object-cover border border-slate-200 dark:border-slate-700 shadow-2xs shrink-0 ${className}`}
         onError={(e) => {
           e.target.style.display = 'none';
@@ -200,7 +201,7 @@ function AudioPlayer({ audio, isMe }) {
 }
 
 export default function Messages() {
-  const { t } = useTranslation();
+  const { t, lang } = useTranslation();
   const { user: currentUser, token: authToken } = useAuth();
 
   // Conversations & Active Thread State
@@ -647,7 +648,7 @@ export default function Messages() {
   const formatMessageTime = (dateStr) => {
     if (!dateStr) return '';
     const date = new Date(dateStr);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return date.toLocaleTimeString(lang === 'am' ? 'am-ET' : [], { hour: '2-digit', minute: '2-digit' });
   };
 
   const formatConversationTime = (dateStr) => {
@@ -659,7 +660,7 @@ export default function Messages() {
     if (diffSecs < 60) return t('Just now');
     if (diffSecs < 3600) return `${Math.floor(diffSecs / 60)} ${t('m ago')}`;
     if (diffSecs < 86400) return `${Math.floor(diffSecs / 3600)} ${t('h ago')}`;
-    return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    return date.toLocaleDateString(lang === 'am' ? 'am-ET' : [], { month: 'short', day: 'numeric' });
   };
 
   const formatFileSize = (bytes) => {
@@ -791,7 +792,7 @@ export default function Messages() {
 
                       {/* Position / Role Snippet */}
                       <p className="text-[10px] font-medium text-primary-600 dark:text-primary-400 truncate">
-                        {c.partner.employee?.position || c.partner.roles?.join(', ')}
+                        {t(c.partner.employee?.position) || c.partner.roles?.map((r) => t(r)).join(', ')}
                       </p>
 
                       {/* Last Message Preview */}
@@ -842,11 +843,11 @@ export default function Messages() {
                       {activePartner.fullName}
                     </h3>
                     <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate flex items-center gap-1.5">
-                      <span>{activePartner.employee?.department || t('GT Press')}</span>
+                      <span>{t(activePartner.employee?.department) || t('GT Press')}</span>
                       {activePartner.employee?.position && (
                         <>
                           <span>•</span>
-                          <span>{activePartner.employee.position}</span>
+                          <span>{t(activePartner.employee.position)}</span>
                         </>
                       )}
                     </p>
@@ -1038,7 +1039,7 @@ export default function Messages() {
                       {att.type === 'image' ? (
                         <img
                           src={att.url}
-                          alt="preview"
+                          alt={t('preview')}
                           className="w-6 h-6 rounded object-cover"
                         />
                       ) : (
@@ -1242,7 +1243,7 @@ export default function Messages() {
                         {colleague.fullName}
                       </h4>
                       <p className="text-[11px] text-slate-400 truncate">
-                        {colleague.employee?.position || colleague.employee?.department || colleague.email}
+                        {t(colleague.employee?.position) || t(colleague.employee?.department) || colleague.email}
                       </p>
                     </div>
 

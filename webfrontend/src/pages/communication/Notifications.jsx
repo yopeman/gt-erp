@@ -33,7 +33,7 @@ const TYPE_ICONS = {
 };
 
 export default function Notifications() {
-  const { t } = useTranslation();
+  const { t, lang } = useTranslation();
   const {
     notifications,
     unreadCount,
@@ -63,7 +63,7 @@ export default function Notifications() {
     if (diffSecs < 60) return t('Just now');
     if (diffSecs < 3600) return `${Math.floor(diffSecs / 60)} ${t('m ago')}`;
     if (diffSecs < 86400) return `${Math.floor(diffSecs / 3600)} ${t('h ago')}`;
-    return date.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    return date.toLocaleDateString(lang === 'am' ? 'am-ET' : [], { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
   };
 
   // Client-side filtering for type and search
@@ -308,7 +308,7 @@ export default function Notifications() {
                             : 'font-bold text-slate-900 dark:text-slate-100'
                         }`}
                       >
-                        {item.title}
+                        {t(item.title)}
                       </h3>
                       {!item.isRead && (
                         <span className="w-2 h-2 rounded-full bg-primary-500 shrink-0" />
@@ -324,7 +324,7 @@ export default function Notifications() {
                       isExpanded ? '' : 'line-clamp-2'
                     }`}
                   >
-                    {item.body}
+                    {t(item.body)}
                   </p>
 
                   {/* Metadata display if expanded */}

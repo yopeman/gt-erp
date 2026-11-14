@@ -1125,11 +1125,23 @@ export const amGlossary = {
   'or portfolio / google drive / linkedin link': 'ወይም የፖርትፎሊዮ / የጉግል ድራይቭ / የሊንክድኢን ሊንክ',
   'https://linkedin.com/in/... or drive link': 'https://linkedin.com/in/... ወይም የድራይቭ ሊንክ',
   'submitting application...': 'ማመልከቻውን በመላክ ላይ...',
-  'submit application': 'ማመልከቻውን አስገባ'
+  'submit application': 'ማመልከቻውን አስገባ',
 
-
-
-
+  // Notifications & Communication Extras
+  'new leave request': 'አዲስ የፈቃድ ጥያቄ',
+  'new overtime request': 'አዲስ የትርፍ ሰዓት ጥያቄ',
+  'overtime shift recorded': 'የትርፍ ሰዓት ፈረቃ ተመዝግቧል',
+  'payslip payment disbursed': 'የደመወዝ ክፍያ ተፈጽሟል',
+  'leave request approved': 'የፈቃድ ጥያቄው ጸድቋል',
+  'leave request rejected': 'የፈቃድ ጥያቄው ውድቅ ተደርጓል',
+  'purchase request approved': 'የግዢ ጥያቄው ጸድቋል',
+  'purchase request rejected': 'የግዢ ጥያቄው ውድቅ ተደርጓል',
+  'overtime request approved': 'የትርፍ ሰዓት ጥያቄው ጸድቋል',
+  'overtime request rejected': 'የትርፍ ሰዓት ጥያቄው ውድቅ ተደርጓል',
+  'user profile': 'የተጠቃሚ መገለጫ',
+  'preview': 'ቅድመ-ዕይታ',
+  'enlarged attachment': 'የተከፈተ አባሪ',
+  'event metadata': 'የክስተቱ ተጨማሪ መረጃ'
 };
 
 export default amGlossary;
