@@ -92,7 +92,7 @@ export default function Customers() {
       const res = await crmService.getCustomers(params);
       setCustomers(extractArray(res, 'customers'));
     } catch (err) {
-      setError(err?.message || 'Failed to fetch customers');
+      setError(err?.message || t('Failed to fetch customers'));
     } finally {
       setLoading(false);
     }
@@ -208,7 +208,7 @@ export default function Customers() {
       setIsModalOpen(false);
       fetchCustomers();
     } catch (err) {
-      alert(err?.message || 'Error saving customer');
+      alert(err?.message || t('Error saving customer'));
     } finally {
       setSubmitting(false);
     }
@@ -232,7 +232,7 @@ export default function Customers() {
       setCreditModalCustomer(null);
       fetchCustomers();
     } catch (err) {
-      alert(err?.message || 'Failed to update credit terms');
+      alert(err?.message || t('Failed to update credit terms'));
     } finally {
       setSubmitting(false);
     }
@@ -243,17 +243,17 @@ export default function Customers() {
       const res = await crmService.getCustomerById(id);
       setViewingCustomer(extractData(res));
     } catch (err) {
-      alert(err?.message || 'Failed to load customer details');
+      alert(err?.message || t('Failed to load customer details'));
     }
   };
 
   const handleDeleteCustomer = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this customer?')) return;
+    if (!window.confirm(t('Are you sure you want to delete this customer?'))) return;
     try {
       await crmService.deleteCustomer(id);
       fetchCustomers();
     } catch (err) {
-      alert(err?.message || 'Failed to delete customer');
+      alert(err?.message || t('Failed to delete customer'));
     }
   };
 
@@ -268,10 +268,10 @@ export default function Customers() {
         <div>
           <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2.5">
             <Building2 className="w-7 h-7 text-primary-500" />
-            Customer Directory
+            {t('Customer Directory')}
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Manage commercial accounts, government entities, credit limits, and client transaction profiles.
+            {t('Manage commercial accounts, government entities, credit limits, and client transaction profiles.')}
           </p>
         </div>
 
@@ -280,7 +280,7 @@ export default function Customers() {
           className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold bg-primary-600 hover:bg-primary-700 text-white shadow-sm transition self-start sm:self-auto"
         >
           <Plus className="w-4 h-4" />
-          Add Customer
+          {t('Add Customer')}
         </button>
       </div>
 
@@ -299,7 +299,7 @@ export default function Customers() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by customer name, TIN, code..."
+            placeholder={t('Search by customer name, TIN, code...')}
             className="w-full pl-9 pr-4 py-2 rounded-xl text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-hidden text-slate-800 dark:text-slate-100"
           />
         </form>
@@ -311,7 +311,7 @@ export default function Customers() {
             className="px-3 py-2 rounded-xl text-xs font-semibold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 focus:outline-hidden"
           >
             {CUSTOMER_CATEGORIES.map((c) => (
-              <option key={c.value} value={c.value}>{c.label}</option>
+              <option key={c.value} value={c.value}>{t(c.label)}</option>
             ))}
           </select>
 
@@ -320,9 +320,9 @@ export default function Customers() {
             onChange={(e) => setCreditFilter(e.target.value)}
             className="px-3 py-2 rounded-xl text-xs font-semibold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 focus:outline-hidden"
           >
-            <option value="all">All Credit Statuses</option>
-            <option value="true">Credit Allowed</option>
-            <option value="false">Cash Only</option>
+            <option value="all">{t('All Credit Statuses')}</option>
+            <option value="true">{t('Credit Allowed')}</option>
+            <option value="false">{t('Cash Only')}</option>
           </select>
         </div>
       </div>
@@ -330,13 +330,13 @@ export default function Customers() {
       {/* Customers Table */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
         {loading ? (
-          <div className="p-12 text-center text-slate-400 text-sm">Loading customers...</div>
+          <div className="p-12 text-center text-slate-400 text-sm">{t('Loading customers...')}</div>
         ) : customers.length === 0 ? (
           <EmptyState
             icon={Building2}
-            title="No customers registered"
-            description="Add existing clients or convert sales leads to start building your directory."
-            actionLabel="Add Customer"
+            title={t('No customers registered')}
+            description={t('Add existing clients or convert sales leads to start building your directory.')}
+            actionLabel={t('Add Customer')}
             onAction={handleOpenCreateModal}
           />
         ) : (
@@ -344,13 +344,13 @@ export default function Customers() {
             <table className="w-full text-left text-xs text-slate-600 dark:text-slate-300">
               <thead className="bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider text-[11px] border-b border-slate-200 dark:border-slate-800">
                 <tr>
-                  <th className="py-3 px-4">Code</th>
-                  <th className="py-3 px-4">Customer / Company</th>
-                  <th className="py-3 px-4">TIN / VAT</th>
-                  <th className="py-3 px-4">Primary Contact</th>
-                  <th className="py-3 px-4">Credit Terms</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
+                  <th className="py-3 px-4">{t('Code')}</th>
+                  <th className="py-3 px-4">{t('Customer / Company')}</th>
+                  <th className="py-3 px-4">{t('TIN / VAT')}</th>
+                  <th className="py-3 px-4">{t('Primary Contact')}</th>
+                  <th className="py-3 px-4">{t('Credit Terms')}</th>
+                  <th className="py-3 px-4">{t('Status')}</th>
+                  <th className="py-3 px-4 text-right">{t('Actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -362,18 +362,18 @@ export default function Customers() {
                         {c.customerNumber}
                       </td>
                       <td className="py-3.5 px-4">
-                        <div className="font-bold text-slate-900 dark:text-white">{c.name || c.companyName || 'Unnamed Customer'}</div>
+                        <div className="font-bold text-slate-900 dark:text-white">{c.name || c.companyName || t('Unnamed Customer')}</div>
                         {c.companyName && c.companyName !== c.name && (
                           <div className="text-[11px] text-slate-500 font-medium">{c.companyName}</div>
                         )}
-                        <div className="text-[11px] text-slate-400 capitalize">{c.category}</div>
+                        <div className="text-[11px] text-slate-400 capitalize">{t(c.category)}</div>
                       </td>
                       <td className="py-3.5 px-4">
                         <div className="font-mono text-slate-800 dark:text-slate-200">
                           {c.tinNumber || '-'}
                         </div>
                         {c.vatNumber && (
-                          <div className="text-[10px] text-slate-400">VAT: {c.vatNumber}</div>
+                          <div className="text-[10px] text-slate-400">{t('VAT')}: {c.vatNumber}</div>
                         )}
                       </td>
                       <td className="py-3.5 px-4">
@@ -385,35 +385,35 @@ export default function Customers() {
                             </div>
                           </div>
                         ) : (
-                          <span className="text-slate-400 italic">No contact</span>
+                          <span className="text-slate-400 italic">{t('No contact')}</span>
                         )}
                       </td>
                       <td className="py-3.5 px-4">
                         {c.creditTerms?.allowedCredit ? (
                           <div>
                             <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                              Limit: {formatCurrency(c.creditTerms.creditLimit)}
+                              {t('Limit')}: {formatCurrency(c.creditTerms.creditLimit)}
                             </span>
                             <div className="text-[11px] text-slate-400">
-                              Terms: {c.creditTerms.creditTermDays} Days | Due: {formatCurrency(c.creditTerms.currentBalance)}
+                              {t('Terms')}: {c.creditTerms.creditTermDays} {t('Days')} | {t('Due')}: {formatCurrency(c.creditTerms.currentBalance)}
                             </div>
                           </div>
                         ) : (
                           <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-500">
-                            Cash Basis
+                            {t('Cash Basis')}
                           </span>
                         )}
                       </td>
                       <td className="py-3.5 px-4">
                         <Badge variant={c.status === 'active' ? 'success' : 'danger'}>
-                          {c.status}
+                          {t(c.status)}
                         </Badge>
                       </td>
                       <td className="py-3.5 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
                           <button
                             onClick={() => handleViewCustomer(c._id)}
-                            title="View Customer Profile"
+                            title={t('View Customer Profile')}
                             className="p-1.5 rounded-lg text-slate-500 hover:text-primary-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
                           >
                             <Eye className="w-4 h-4" />
@@ -421,7 +421,7 @@ export default function Customers() {
 
                           <button
                             onClick={() => handleOpenCreditModal(c)}
-                            title="Manage Credit Terms"
+                            title={t('Manage Credit Terms')}
                             className="p-1.5 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 transition"
                           >
                             <CreditCard className="w-4 h-4" />
@@ -429,7 +429,7 @@ export default function Customers() {
 
                           <button
                             onClick={() => handleOpenEditModal(c)}
-                            title="Edit Customer"
+                            title={t('Edit Customer')}
                             className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
                           >
                             <Edit className="w-4 h-4" />
@@ -437,7 +437,7 @@ export default function Customers() {
 
                           <button
                             onClick={() => handleDeleteCustomer(c._id)}
-                            title="Delete Customer"
+                            title={t('Delete Customer')}
                             disabled={c.creditTerms?.currentBalance > 0}
                             className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition disabled:opacity-40"
                           >
@@ -458,13 +458,13 @@ export default function Customers() {
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={editingCustomer ? `Edit Customer: ${editingCustomer.customerNumber}` : 'Register New Customer'}
+        title={editingCustomer ? `${t('Edit Customer')}: ${editingCustomer.customerNumber}` : t('Register New Customer')}
       >
         <form onSubmit={handleSaveCustomer} className="space-y-4 max-h-[75vh] overflow-y-auto pr-1">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Customer / Organization Name *
+                {t('Customer / Organization Name')} *
               </label>
               <input
                 type="text"
@@ -478,24 +478,24 @@ export default function Customers() {
 
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Category
+                {t('Category')}
               </label>
               <select
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                 className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
               >
-                <option value="company">Company / Business</option>
-                <option value="corporation">Corporation</option>
-                <option value="government">Government Agency</option>
-                <option value="ngo">NGO / Non-Profit</option>
-                <option value="individual">Individual</option>
+                <option value="company">{t('Company / Business')}</option>
+                <option value="corporation">{t('Corporation')}</option>
+                <option value="government">{t('Government Agency')}</option>
+                <option value="ngo">{t('NGO / Non-Profit')}</option>
+                <option value="individual">{t('Individual')}</option>
               </select>
             </div>
 
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Tax Identification Number (TIN)
+                {t('Tax Identification Number (TIN)')}
               </label>
               <input
                 type="text"
@@ -508,7 +508,7 @@ export default function Customers() {
 
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                VAT Registration Number
+                {t('VAT Registration Number')}
               </label>
               <input
                 type="text"
@@ -523,11 +523,11 @@ export default function Customers() {
           {/* Primary Contact Section */}
           <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 space-y-3">
             <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
-              <User className="w-3.5 h-3.5 text-primary-500" /> Primary Contact Person
+              <User className="w-3.5 h-3.5 text-primary-500" /> {t('Primary Contact Person')}
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-300 mb-1">Full Name *</label>
+                <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-300 mb-1">{t('Full Name')} *</label>
                 <input
                   type="text"
                   required
@@ -538,7 +538,7 @@ export default function Customers() {
                 />
               </div>
               <div>
-                <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-300 mb-1">Phone Number *</label>
+                <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-300 mb-1">{t('Phone Number')} *</label>
                 <input
                   type="text"
                   required
@@ -549,7 +549,7 @@ export default function Customers() {
                 />
               </div>
               <div>
-                <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-300 mb-1">Email</label>
+                <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-300 mb-1">{t('Email')}</label>
                 <input
                   type="email"
                   value={formData.primaryContactEmail}
@@ -559,7 +559,7 @@ export default function Customers() {
                 />
               </div>
               <div>
-                <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-300 mb-1">Position</label>
+                <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-300 mb-1">{t('Position')}</label>
                 <input
                   type="text"
                   value={formData.primaryContactPosition}
@@ -575,8 +575,8 @@ export default function Customers() {
           <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-xs font-bold text-slate-800 dark:text-slate-200">Credit Facility</div>
-                <div className="text-[11px] text-slate-400">Allow invoicing with net payment terms</div>
+                <div className="text-xs font-bold text-slate-800 dark:text-slate-200">{t('Credit Facility')}</div>
+                <div className="text-[11px] text-slate-400">{t('Allow invoicing with net payment terms')}</div>
               </div>
               <input
                 type="checkbox"
@@ -589,7 +589,7 @@ export default function Customers() {
             {formData.allowedCredit && (
               <div className="grid grid-cols-2 gap-3 pt-1">
                 <div>
-                  <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-300 mb-1">Credit Limit (ETB)</label>
+                  <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-300 mb-1">{t('Credit Limit')} (ETB)</label>
                   <input
                     type="number"
                     min="0"
@@ -599,7 +599,7 @@ export default function Customers() {
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-300 mb-1">Term Window (Days)</label>
+                  <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-300 mb-1">{t('Term Window (Days)')}</label>
                   <input
                     type="number"
                     min="0"
@@ -614,14 +614,14 @@ export default function Customers() {
 
           <div>
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-              Account Manager / Assigned Sales Rep
+              {t('Account Manager / Assigned Sales Rep')}
             </label>
             <select
               value={formData.assignedSalesRepresentative}
               onChange={(e) => setFormData({ ...formData, assignedSalesRepresentative: e.target.value })}
               className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
             >
-              <option value="">-- Unassigned --</option>
+              <option value="">-- {t('Unassigned')} --</option>
               {employees.map((emp) => {
                 const name = emp.fullName || `${emp.firstName || ''} ${emp.lastName || ''}`.trim() || emp.name || 'Sales Rep';
                 const code = emp.employeeCode || emp.employeeId || '';
@@ -640,14 +640,14 @@ export default function Customers() {
               onClick={() => setIsModalOpen(false)}
               className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100"
             >
-              Cancel
+              {t('Cancel')}
             </button>
             <button
               type="submit"
               disabled={submitting}
               className="px-5 py-2 rounded-xl text-xs font-bold bg-primary-600 hover:bg-primary-700 text-white disabled:opacity-50"
             >
-              {submitting ? 'Saving...' : editingCustomer ? 'Update Customer' : 'Save Customer'}
+              {submitting ? t('Saving...') : editingCustomer ? t('Update Customer') : t('Save Customer')}
             </button>
           </div>
         </form>
@@ -658,13 +658,13 @@ export default function Customers() {
         <Modal
           isOpen={Boolean(creditModalCustomer)}
           onClose={() => setCreditModalCustomer(null)}
-          title={`Credit Terms: ${creditModalCustomer.name}`}
+          title={`${t('Credit Terms')}: ${creditModalCustomer.name}`}
         >
           <form onSubmit={handleSaveCreditTerms} className="space-y-4">
             <div className="flex items-center justify-between p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800">
               <div>
-                <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Allow Credit Invoicing</span>
-                <p className="text-[11px] text-slate-400">Permit credit orders within approved threshold</p>
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200">{t('Allow Credit Invoicing')}</span>
+                <p className="text-[11px] text-slate-400">{t('Permit credit orders within approved threshold')}</p>
               </div>
               <input
                 type="checkbox"
@@ -678,7 +678,7 @@ export default function Customers() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Credit Limit (ETB)
+                    {t('Credit Limit')} (ETB)
                   </label>
                   <input
                     type="number"
@@ -690,7 +690,7 @@ export default function Customers() {
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Payment Window (Days)
+                    {t('Payment Window (Days)')}
                   </label>
                   <input
                     type="number"
@@ -709,14 +709,14 @@ export default function Customers() {
                 onClick={() => setCreditModalCustomer(null)}
                 className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100"
               >
-                Cancel
+                {t('Cancel')}
               </button>
               <button
                 type="submit"
                 disabled={submitting}
                 className="px-5 py-2 rounded-xl text-xs font-bold bg-primary-600 hover:bg-primary-700 text-white disabled:opacity-50"
               >
-                {submitting ? 'Updating...' : 'Update Credit Terms'}
+                {submitting ? t('Updating...') : t('Update Credit Terms')}
               </button>
             </div>
           </form>
@@ -728,36 +728,36 @@ export default function Customers() {
         <Modal
           isOpen={Boolean(viewingCustomer)}
           onClose={() => setViewingCustomer(null)}
-          title={`Customer Profile: ${viewingCustomer.name || viewingCustomer.companyName} (${viewingCustomer.customerNumber || ''})`}
+          title={`${t('Customer Profile')}: ${viewingCustomer.name || viewingCustomer.companyName} (${viewingCustomer.customerNumber || ''})`}
         >
           <div className="space-y-4 max-h-[75vh] overflow-y-auto pr-1 text-xs">
             {/* Top overview banner */}
             <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 flex items-center justify-between">
               <div>
                 <h3 className="text-base font-bold text-slate-900 dark:text-white">{viewingCustomer.name || viewingCustomer.companyName}</h3>
-                <span className="text-slate-400 capitalize">{viewingCustomer.category} • TIN: {viewingCustomer.tinNumber || 'N/A'}</span>
+                <span className="text-slate-400 capitalize">{t(viewingCustomer.category)} • {t('TIN')}: {viewingCustomer.tinNumber || 'N/A'}</span>
               </div>
               <Badge variant={viewingCustomer.status === 'active' ? 'success' : 'danger'}>
-                {viewingCustomer.status}
+                {t(viewingCustomer.status)}
               </Badge>
             </div>
 
             {/* Credit Status Card */}
             <div className="p-3.5 rounded-xl bg-primary-50/60 dark:bg-primary-950/30 border border-primary-100 dark:border-primary-900 grid grid-cols-3 gap-2 text-center">
               <div>
-                <span className="text-[10px] uppercase font-bold text-slate-500">Credit Allowed</span>
+                <span className="text-[10px] uppercase font-bold text-slate-500">{t('Credit Allowed')}</span>
                 <div className="text-sm font-bold text-slate-800 dark:text-slate-200 mt-0.5">
-                  {viewingCustomer.creditTerms?.allowedCredit ? 'Yes' : 'Cash Only'}
+                  {viewingCustomer.creditTerms?.allowedCredit ? t('Yes') : t('Cash Only')}
                 </div>
               </div>
               <div>
-                <span className="text-[10px] uppercase font-bold text-slate-500">Credit Limit</span>
+                <span className="text-[10px] uppercase font-bold text-slate-500">{t('Credit Limit')}</span>
                 <div className="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
                   {formatCurrency(viewingCustomer.creditTerms?.creditLimit)}
                 </div>
               </div>
               <div>
-                <span className="text-[10px] uppercase font-bold text-slate-500">Current Balance</span>
+                <span className="text-[10px] uppercase font-bold text-slate-500">{t('Current Balance')}</span>
                 <div className="text-sm font-bold text-rose-600 dark:text-rose-400 mt-0.5">
                   {formatCurrency(viewingCustomer.creditTerms?.currentBalance)}
                 </div>
@@ -767,7 +767,7 @@ export default function Customers() {
             {/* Contact Persons */}
             <div>
               <h4 className="font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider text-[11px] mb-2">
-                Contacts
+                {t('Contacts')}
               </h4>
               <div className="space-y-2">
                 {viewingCustomer.contactPersons?.map((cp, idx) => (
@@ -780,7 +780,7 @@ export default function Customers() {
                         {cp.email && <span>• {cp.email}</span>}
                       </div>
                     </div>
-                    {cp.isPrimary && <Badge variant="primary">Primary</Badge>}
+                    {cp.isPrimary && <Badge variant="primary">{t('Primary')}</Badge>}
                   </div>
                 ))}
               </div>
@@ -790,17 +790,17 @@ export default function Customers() {
             {viewingCustomer.recentFollowups?.length > 0 && (
               <div>
                 <h4 className="font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider text-[11px] mb-2">
-                  Recent Interactions & Follow-ups
+                  {t('Recent Interactions & Follow-ups')}
                 </h4>
                 <div className="space-y-2">
                   {viewingCustomer.recentFollowups.map((flw) => (
                     <div key={flw._id} className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
                       <div className="flex items-center justify-between">
                         <span className="font-semibold text-slate-800 dark:text-slate-200">{flw.agenda}</span>
-                        <Badge variant={flw.status === 'completed' ? 'success' : 'warning'}>{flw.status}</Badge>
+                        <Badge variant={flw.status === 'completed' ? 'success' : 'warning'}>{t(flw.status)}</Badge>
                       </div>
                       <div className="text-slate-400 text-[10px] mt-1">
-                        {new Date(flw.scheduledTime).toLocaleDateString()} by {flw.assignedTo?.fullName || `${flw.assignedTo?.firstName || ''} ${flw.assignedTo?.lastName || ''}`.trim() || 'Staff'}
+                        {new Date(flw.scheduledTime).toLocaleDateString()} {t('by')} {flw.assignedTo?.fullName || `${flw.assignedTo?.firstName || ''} ${flw.assignedTo?.lastName || ''}`.trim() || t('Staff')}
                       </div>
                       {flw.result && <p className="text-slate-700 dark:text-slate-300 mt-1">{flw.result}</p>}
                     </div>

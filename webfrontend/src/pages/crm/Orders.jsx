@@ -112,14 +112,14 @@ export default function Orders() {
         setOrders(extractArray(ordersRes.value, 'orders'));
       } else {
         console.error('Failed to fetch sales orders:', ordersRes.reason);
-        setError(ordersRes.reason?.message || 'Failed to fetch sales orders');
+        setError(ordersRes.reason?.message || t('Failed to fetch sales orders'));
       }
 
       if (statsRes.status === 'fulfilled') {
         setStats(extractData(statsRes.value));
       }
     } catch (err) {
-      setError(err?.message || 'Failed to fetch sales orders');
+      setError(err?.message || t('Failed to fetch sales orders'));
     } finally {
       setLoading(false);
     }
@@ -275,7 +275,7 @@ export default function Orders() {
       setIsCreateModalOpen(false);
       fetchOrders();
     } catch (err) {
-      alert(err?.message || 'Error creating order');
+      alert(err?.message || t('Error creating order'));
     } finally {
       setSubmitting(false);
     }
@@ -295,7 +295,7 @@ export default function Orders() {
       setStatusModalOrder(null);
       fetchOrders();
     } catch (err) {
-      alert(err?.message || 'Failed to update order status');
+      alert(err?.message || t('Failed to update order status'));
     } finally {
       setSubmitting(false);
     }
@@ -306,7 +306,7 @@ export default function Orders() {
       const res = await crmService.getOrderById(id);
       setViewingOrder(res.data || res);
     } catch (err) {
-      alert(err?.message || 'Failed to load order details');
+      alert(err?.message || t('Failed to load order details'));
     }
   };
 
@@ -337,10 +337,10 @@ export default function Orders() {
         <div>
           <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2.5">
             <Receipt className="w-7 h-7 text-primary-500" />
-            Printing Orders & Production Jobs
+            {t('Printing Orders & Production Jobs')}
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Create sales orders with detailed printing specifications, calculate VAT and costs, and route to pre-press design.
+            {t('Create sales orders with detailed printing specifications, calculate VAT and costs, and route to pre-press design.')}
           </p>
         </div>
 
@@ -350,14 +350,14 @@ export default function Orders() {
             className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition"
           >
             <Palette className="w-4 h-4 text-primary-500" />
-            Pre-press Proofing
+            {t('Pre-press Proofing')}
           </Link>
           <button
             onClick={handleOpenCreateModal}
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-primary-600 hover:bg-primary-700 text-white shadow-sm transition"
           >
             <Plus className="w-4 h-4" />
-            Create Sales Order
+            {t('Create Sales Order')}
           </button>
         </div>
       </div>
@@ -373,19 +373,19 @@ export default function Orders() {
       {stats && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Sales Orders</span>
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t('Total Sales Orders')}</span>
             <div className="text-2xl font-black text-slate-900 dark:text-white mt-1">{stats.totalOrders}</div>
           </div>
           <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Active in Pipe</span>
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t('Active in Pipe')}</span>
             <div className="text-2xl font-black text-primary-600 dark:text-primary-400 mt-1">{stats.activeOrders}</div>
           </div>
           <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">In Production</span>
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t('In Production')}</span>
             <div className="text-2xl font-black text-amber-500 mt-1">{stats.stageCounts?.inProduction || 0}</div>
           </div>
           <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Revenue</span>
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t('Total Revenue')}</span>
             <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">{formatCurrency(stats.totalRevenue)}</div>
           </div>
         </div>
@@ -400,7 +400,7 @@ export default function Orders() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && fetchOrders()}
-            placeholder="Search by order #, client, or title..."
+            placeholder={t('Search by order #, client, or title...')}
             className="w-full pl-9 pr-4 py-2 rounded-xl text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-hidden text-slate-800 dark:text-slate-100"
           />
         </div>
@@ -412,7 +412,7 @@ export default function Orders() {
             className="px-3 py-2 rounded-xl text-xs font-semibold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200"
           >
             {ORDER_STATUSES.map((s) => (
-              <option key={s.value} value={s.value}>{s.label}</option>
+              <option key={s.value} value={s.value}>{t(s.label)}</option>
             ))}
           </select>
 
@@ -421,11 +421,11 @@ export default function Orders() {
             onChange={(e) => setPriorityFilter(e.target.value)}
             className="px-3 py-2 rounded-xl text-xs font-semibold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200"
           >
-            <option value="all">All Priorities</option>
-            <option value="urgent">Urgent</option>
-            <option value="high">High</option>
-            <option value="medium">Medium</option>
-            <option value="low">Low</option>
+            <option value="all">{t('All Priorities')}</option>
+            <option value="urgent">{t('Urgent')}</option>
+            <option value="high">{t('High')}</option>
+            <option value="medium">{t('Medium')}</option>
+            <option value="low">{t('Low')}</option>
           </select>
         </div>
       </div>
@@ -433,13 +433,13 @@ export default function Orders() {
       {/* Orders Table */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
         {loading ? (
-          <div className="p-12 text-center text-slate-400 text-sm">Loading printing orders...</div>
+          <div className="p-12 text-center text-slate-400 text-sm">{t('Loading printing orders...')}</div>
         ) : orders.length === 0 ? (
           <EmptyState
             icon={Receipt}
-            title="No orders found"
-            description="Create your first customer sales order to initiate production routing."
-            actionLabel="Create Sales Order"
+            title={t('No orders found')}
+            description={t('Create your first customer sales order to initiate production routing.')}
+            actionLabel={t('Create Sales Order')}
             onAction={handleOpenCreateModal}
           />
         ) : (
@@ -447,13 +447,13 @@ export default function Orders() {
             <table className="w-full text-left text-xs text-slate-600 dark:text-slate-300">
               <thead className="bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider text-[11px] border-b border-slate-200 dark:border-slate-800">
                 <tr>
-                  <th className="py-3 px-4">Order #</th>
-                  <th className="py-3 px-4">Customer</th>
-                  <th className="py-3 px-4">Product / Item</th>
-                  <th className="py-3 px-4">Deadline</th>
-                  <th className="py-3 px-4">Grand Total (ETB)</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
+                  <th className="py-3 px-4">{t('Order #')}</th>
+                  <th className="py-3 px-4">{t('Customer')}</th>
+                  <th className="py-3 px-4">{t('Product / Item')}</th>
+                  <th className="py-3 px-4">{t('Deadline')}</th>
+                  <th className="py-3 px-4">{t('Grand Total')} (ETB)</th>
+                  <th className="py-3 px-4">{t('Status')}</th>
+                  <th className="py-3 px-4 text-right">{t('Actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -465,16 +465,16 @@ export default function Orders() {
                         {ord.orderNumber}
                       </td>
                       <td className="py-3.5 px-4">
-                        <div className="font-bold text-slate-900 dark:text-white">{ord.customer?.name || ord.customer?.companyName || 'Customer'}</div>
-                        <div className="text-[11px] text-slate-400">Rep: {ord.salesRepresentative?.firstName} {ord.salesRepresentative?.lastName}</div>
+                        <div className="font-bold text-slate-900 dark:text-white">{ord.customer?.name || ord.customer?.companyName || t('Customer')}</div>
+                        <div className="text-[11px] text-slate-400">{t('Rep')}: {ord.salesRepresentative?.firstName} {ord.salesRepresentative?.lastName}</div>
                       </td>
                       <td className="py-3.5 px-4">
                         <div className="font-semibold text-slate-800 dark:text-slate-200">
-                          {firstItem.productTitle || 'Printing Job'}
-                          {ord.items?.length > 1 && ` (+${ord.items.length - 1} more)`}
+                          {firstItem.productTitle || t('Printing Job')}
+                          {ord.items?.length > 1 && ` (+${ord.items.length - 1} ${t('more')})`}
                         </div>
                         <div className="text-[11px] text-slate-400">
-                          Qty: {firstItem.quantity?.toLocaleString()} {firstItem.unitOfMeasurement || 'copies'}
+                          {t('Qty')}: {firstItem.quantity?.toLocaleString()} {firstItem.unitOfMeasurement || 'copies'}
                         </div>
                       </td>
                       <td className="py-3.5 px-4">
@@ -488,14 +488,14 @@ export default function Orders() {
                       </td>
                       <td className="py-3.5 px-4">
                         <Badge variant={getOrderStatusVariant(ord.status)}>
-                          {ord.status.replace(/_/g, ' ')}
+                          {t(ord.status.replace(/_/g, ' '))}
                         </Badge>
                       </td>
                       <td className="py-3.5 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
                           <button
                             onClick={() => handleViewOrder(ord._id)}
-                            title="View Full Order Specifications"
+                            title={t('View Full Order Specifications')}
                             className="p-1.5 rounded-lg text-slate-500 hover:text-primary-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
                           >
                             <Eye className="w-4 h-4" />
@@ -503,7 +503,7 @@ export default function Orders() {
 
                           <button
                             onClick={() => handleOpenStatusModal(ord)}
-                            title="Advance / Update Status"
+                            title={t('Advance / Update Status')}
                             className="p-1.5 rounded-lg text-slate-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition"
                           >
                             <Edit className="w-4 h-4" />
@@ -523,37 +523,37 @@ export default function Orders() {
       <Modal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        title="Create New Printing Sales Order"
+        title={t('Create New Printing Sales Order')}
       >
         <form onSubmit={handleSaveOrder} className="space-y-4 max-h-[75vh] overflow-y-auto pr-1">
           {/* Header row: Customer & Rep & Deadline */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Customer *</label>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">{t('Customer')} *</label>
               <select
                 required
                 value={formData.customer}
                 onChange={(e) => setFormData({ ...formData, customer: e.target.value })}
                 className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
               >
-                <option value="">-- Choose Customer --</option>
+                <option value="">-- {t('Choose Customer')} --</option>
                 {customers.map((c) => (
                   <option key={c._id} value={c._id}>
-                    {c.name || c.companyName || 'Customer'} [{c.customerNumber || ''}]
+                    {c.name || c.companyName || t('Customer')} [{c.customerNumber || ''}]
                   </option>
                 ))}
               </select>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Sales Rep *</label>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">{t('Sales Rep')} *</label>
               <select
                 required
                 value={formData.salesRepresentative}
                 onChange={(e) => setFormData({ ...formData, salesRepresentative: e.target.value })}
                 className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
               >
-                <option value="">-- Choose Rep --</option>
+                <option value="">-- {t('Choose Rep')} --</option>
                 {employees.map((e) => {
                   const name = e.fullName || `${e.firstName || ''} ${e.lastName || ''}`.trim() || e.name || 'Sales Rep';
                   return (
@@ -566,7 +566,7 @@ export default function Orders() {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Delivery Deadline *</label>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">{t('Delivery Deadline')} *</label>
               <input
                 type="date"
                 required
@@ -581,14 +581,14 @@ export default function Orders() {
           <div className="space-y-3 pt-2">
             <div className="flex items-center justify-between">
               <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-                Order Line Items & Printing Specifications
+                {t('Order Line Items & Printing Specifications')}
               </h4>
               <button
                 type="button"
                 onClick={handleAddItem}
                 className="text-xs font-bold text-primary-600 hover:text-primary-700 px-2 py-1 rounded-md bg-primary-50 dark:bg-primary-950/60"
               >
-                + Add Item
+                + {t('Add Item')}
               </button>
             </div>
 
@@ -598,28 +598,28 @@ export default function Orders() {
                 className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 space-y-3"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Item #{idx + 1}</span>
+                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{t('Item')} #{idx + 1}</span>
                   {formData.items.length > 1 && (
                     <button
                       type="button"
                       onClick={() => handleRemoveItem(idx)}
                       className="text-rose-500 text-xs font-semibold hover:underline"
                     >
-                      Remove Item
+                      {t('Remove Item')}
                     </button>
                   )}
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-[11px] font-medium text-slate-500 mb-1">Service *</label>
+                    <label className="block text-[11px] font-medium text-slate-500 mb-1">{t('Service')} *</label>
                     <select
                       required
                       value={item.service}
                       onChange={(e) => handleItemChange(idx, 'service', e.target.value)}
                       className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                     >
-                      <option value="">-- Select Service --</option>
+                      <option value="">-- {t('Select Service')} --</option>
                       {services.map((s) => (
                         <option key={s._id} value={s._id}>
                           {s.name} ({s.category.replace('_', ' ')})
@@ -629,7 +629,7 @@ export default function Orders() {
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-medium text-slate-500 mb-1">Product Title *</label>
+                    <label className="block text-[11px] font-medium text-slate-500 mb-1">{t('Product Title')} *</label>
                     <input
                       type="text"
                       required
@@ -642,7 +642,7 @@ export default function Orders() {
 
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="block text-[11px] font-medium text-slate-500 mb-1">Quantity</label>
+                      <label className="block text-[11px] font-medium text-slate-500 mb-1">{t('Quantity')}</label>
                       <input
                         type="number"
                         min="1"
@@ -653,7 +653,7 @@ export default function Orders() {
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-medium text-slate-500 mb-1">Unit Price (ETB)</label>
+                      <label className="block text-[11px] font-medium text-slate-500 mb-1">{t('Unit Price')} (ETB)</label>
                       <input
                         type="number"
                         step="0.01"
@@ -670,7 +670,7 @@ export default function Orders() {
                 {/* Printing Specs Row */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2 border-t border-slate-200 dark:border-slate-700">
                   <div>
-                    <label className="block text-[10px] font-semibold text-slate-500 mb-1">Paper Type / GSM</label>
+                    <label className="block text-[10px] font-semibold text-slate-500 mb-1">{t('Paper Type / GSM')}</label>
                     <input
                       type="text"
                       placeholder="e.g. 150 GSM Art Paper"
@@ -680,7 +680,7 @@ export default function Orders() {
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-semibold text-slate-500 mb-1">Color Format</label>
+                    <label className="block text-[10px] font-semibold text-slate-500 mb-1">{t('Color Format')}</label>
                     <input
                       type="text"
                       placeholder="e.g. 4/4 CMYK"
@@ -690,7 +690,7 @@ export default function Orders() {
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-semibold text-slate-500 mb-1">Page Count</label>
+                    <label className="block text-[10px] font-semibold text-slate-500 mb-1">{t('Page Count')}</label>
                     <input
                       type="number"
                       min="1"
@@ -700,7 +700,7 @@ export default function Orders() {
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-semibold text-slate-500 mb-1">Binding Type</label>
+                    <label className="block text-[10px] font-semibold text-slate-500 mb-1">{t('Binding Type')}</label>
                     <input
                       type="text"
                       placeholder="e.g. Saddle Stitch"
@@ -712,7 +712,7 @@ export default function Orders() {
                 </div>
 
                 <div className="text-right text-xs font-bold text-slate-800 dark:text-slate-200">
-                  Item Subtotal: {formatCurrency(item.subtotal)}
+                  {t('Item Subtotal')}: {formatCurrency(item.subtotal)}
                 </div>
               </div>
             ))}
@@ -722,14 +722,14 @@ export default function Orders() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Assign Pre-press Graphic Designer
+                {t('Assign Pre-press Graphic Designer')}
               </label>
               <select
                 value={formData.assignedDesigner}
                 onChange={(e) => setFormData({ ...formData, assignedDesigner: e.target.value })}
                 className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
               >
-                <option value="">-- No Designer (Skip to Production) --</option>
+                <option value="">-- {t('No Designer (Skip to Production)')} --</option>
                 {employees.map((e) => {
                   const name = e.fullName || `${e.firstName || ''} ${e.lastName || ''}`.trim() || e.name || 'Designer';
                   return (
@@ -742,7 +742,7 @@ export default function Orders() {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Discount (ETB)</label>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">{t('Discount')} (ETB)</label>
               <input
                 type="number"
                 min="0"
@@ -759,21 +759,21 @@ export default function Orders() {
             return (
               <div className="p-4 rounded-xl bg-slate-900 text-white space-y-1.5 text-xs">
                 <div className="flex justify-between text-slate-400">
-                  <span>Subtotal:</span>
+                  <span>{t('Subtotal')}:</span>
                   <span>{formatCurrency(subtotal)}</span>
                 </div>
                 {discount > 0 && (
                   <div className="flex justify-between text-rose-400">
-                    <span>Discount:</span>
+                    <span>{t('Discount')}:</span>
                     <span>-{formatCurrency(discount)}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-slate-400">
-                  <span>15% Ethiopian VAT:</span>
+                  <span>{t('15% Ethiopian VAT')}:</span>
                   <span>{formatCurrency(vat)}</span>
                 </div>
                 <div className="flex justify-between text-sm font-black pt-1 border-t border-slate-800 text-emerald-400">
-                  <span>Grand Total:</span>
+                  <span>{t('Grand Total')}:</span>
                   <span>{formatCurrency(grandTotal)}</span>
                 </div>
               </div>
@@ -786,14 +786,14 @@ export default function Orders() {
               onClick={() => setIsCreateModalOpen(false)}
               className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100"
             >
-              Cancel
+              {t('Cancel')}
             </button>
             <button
               type="submit"
               disabled={submitting}
               className="px-5 py-2 rounded-xl text-xs font-bold bg-primary-600 hover:bg-primary-700 text-white disabled:opacity-50"
             >
-              {submitting ? 'Creating...' : 'Create Sales Order'}
+              {submitting ? t('Creating...') : t('Create Sales Order')}
             </button>
           </div>
         </form>
@@ -804,28 +804,28 @@ export default function Orders() {
         <Modal
           isOpen={Boolean(statusModalOrder)}
           onClose={() => setStatusModalOrder(null)}
-          title={`Update Order Status: ${statusModalOrder.orderNumber}`}
+          title={`${t('Update Order Status')}: ${statusModalOrder.orderNumber}`}
         >
           <form onSubmit={handleUpdateStatus} className="space-y-4">
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                New Order Lifecycle Status
+                {t('New Order Lifecycle Status')}
               </label>
               <select
                 value={newStatus}
                 onChange={(e) => setNewStatus(e.target.value)}
                 className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
               >
-                <option value="confirmed">Confirmed</option>
-                <option value="design_in_progress">In Design</option>
-                <option value="design_approved">Design Approved</option>
-                <option value="in_production">In Production</option>
-                <option value="finishing">Finishing & Binding</option>
-                <option value="qc_completed">Quality Inspection Passed</option>
-                <option value="ready_for_delivery">Ready for Delivery</option>
-                <option value="delivered">Delivered to Customer</option>
-                <option value="completed">Completed & Closed</option>
-                <option value="cancelled">Cancelled</option>
+                <option value="confirmed">{t('Confirmed')}</option>
+                <option value="design_in_progress">{t('In Design')}</option>
+                <option value="design_approved">{t('Design Approved')}</option>
+                <option value="in_production">{t('In Production')}</option>
+                <option value="finishing">{t('Finishing & Binding')}</option>
+                <option value="qc_completed">{t('Quality Inspection Passed')}</option>
+                <option value="ready_for_delivery">{t('Ready for Delivery')}</option>
+                <option value="delivered">{t('Delivered to Customer')}</option>
+                <option value="completed">{t('Completed & Closed')}</option>
+                <option value="cancelled">{t('Cancelled')}</option>
               </select>
             </div>
 
@@ -835,14 +835,14 @@ export default function Orders() {
                 onClick={() => setStatusModalOrder(null)}
                 className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100"
               >
-                Cancel
+                {t('Cancel')}
               </button>
               <button
                 type="submit"
                 disabled={submitting}
                 className="px-5 py-2 rounded-xl text-xs font-bold bg-primary-600 hover:bg-primary-700 text-white disabled:opacity-50"
               >
-                {submitting ? 'Updating...' : 'Update Status'}
+                {submitting ? t('Updating...') : t('Update Status')}
               </button>
             </div>
           </form>
@@ -854,24 +854,24 @@ export default function Orders() {
         <Modal
           isOpen={Boolean(viewingOrder)}
           onClose={() => setViewingOrder(null)}
-          title={`Order Dossier: ${viewingOrder.orderNumber}`}
+          title={`${t('Order Dossier')}: ${viewingOrder.orderNumber}`}
         >
           <div className="space-y-4 max-h-[75vh] overflow-y-auto pr-1 text-xs">
             {/* Header overview */}
             <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 flex items-center justify-between">
               <div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-white">{viewingOrder.customer?.name || viewingOrder.customer?.companyName || 'Customer'}</h3>
-                <span className="text-slate-400">Deadline: {new Date(viewingOrder.deliveryDeadline).toLocaleDateString()}</span>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">{viewingOrder.customer?.name || viewingOrder.customer?.companyName || t('Customer')}</h3>
+                <span className="text-slate-400">{t('Deadline')}: {new Date(viewingOrder.deliveryDeadline).toLocaleDateString()}</span>
               </div>
               <Badge variant={getOrderStatusVariant(viewingOrder.status)}>
-                {viewingOrder.status.replace(/_/g, ' ')}
+                {t(viewingOrder.status.replace(/_/g, ' '))}
               </Badge>
             </div>
 
             {/* Line Items & Specifications */}
             <div className="space-y-2.5">
               <h4 className="font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider text-[11px]">
-                Product Specifications
+                {t('Product Specifications')}
               </h4>
               {viewingOrder.items?.map((it, idx) => (
                 <div key={idx} className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 space-y-1.5">
@@ -880,10 +880,10 @@ export default function Orders() {
                     <span>{formatCurrency(it.subtotal)}</span>
                   </div>
                   <div className="text-[11px] text-slate-500 grid grid-cols-2 gap-2">
-                    <span>Quantity: {it.quantity?.toLocaleString()} {it.unitOfMeasurement}</span>
-                    <span>Paper: {it.specifications?.paperType || 'Standard'}</span>
-                    <span>Colors: {it.specifications?.colorFormat || '4/4 CMYK'}</span>
-                    <span>Binding: {it.specifications?.bindingType || 'None'}</span>
+                    <span>{t('Quantity')}: {it.quantity?.toLocaleString()} {it.unitOfMeasurement}</span>
+                    <span>{t('Paper')}: {it.specifications?.paperType || 'Standard'}</span>
+                    <span>{t('Colors')}: {it.specifications?.colorFormat || '4/4 CMYK'}</span>
+                    <span>{t('Binding')}: {it.specifications?.bindingType || 'None'}</span>
                   </div>
                 </div>
               ))}
@@ -892,15 +892,15 @@ export default function Orders() {
             {/* Financial Summary */}
             <div className="p-3.5 rounded-xl bg-slate-900 text-white space-y-1">
               <div className="flex justify-between text-slate-400">
-                <span>Subtotal:</span>
+                <span>{t('Subtotal')}:</span>
                 <span>{formatCurrency(viewingOrder.financials?.subtotal)}</span>
               </div>
               <div className="flex justify-between text-slate-400">
-                <span>15% VAT:</span>
+                <span>{t('15% VAT')}:</span>
                 <span>{formatCurrency(viewingOrder.financials?.vatAmount)}</span>
               </div>
               <div className="flex justify-between font-extrabold text-sm text-emerald-400 pt-1 border-t border-slate-800">
-                <span>Grand Total:</span>
+                <span>{t('Grand Total')}:</span>
                 <span>{formatCurrency(viewingOrder.financials?.grandTotal)}</span>
               </div>
             </div>

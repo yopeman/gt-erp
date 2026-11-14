@@ -75,14 +75,14 @@ export default function Invoices() {
         setInvoices(extractArray(invRes.value, 'invoices'));
       } else {
         console.error('Failed to fetch tax invoices:', invRes.reason);
-        setError(invRes.reason?.message || 'Failed to fetch tax invoices');
+        setError(invRes.reason?.message || t('Failed to fetch tax invoices'));
       }
 
       if (metricsRes.status === 'fulfilled') {
         setMetrics(extractData(metricsRes.value));
       }
     } catch (err) {
-      setError(err?.message || 'Failed to fetch tax invoices');
+      setError(err?.message || t('Failed to fetch tax invoices'));
     } finally {
       setLoading(false);
     }
@@ -120,9 +120,9 @@ export default function Invoices() {
       setIsOrderInvoiceModalOpen(false);
       fetchInvoices();
       fetchOrdersForInvoicing();
-      alert('Official tax invoice issued successfully!');
+      alert(t('Official tax invoice issued successfully!'));
     } catch (err) {
-      alert(err?.message || 'Failed to issue invoice from order');
+      alert(err?.message || t('Failed to issue invoice from order'));
     } finally {
       setSubmitting(false);
     }
@@ -154,9 +154,9 @@ export default function Invoices() {
       });
       setPaymentModalInvoice(null);
       fetchInvoices();
-      alert('Payment receipt successfully recorded and credit balance updated!');
+      alert(t('Payment receipt successfully recorded and credit balance updated!'));
     } catch (err) {
-      alert(err?.message || 'Failed to record payment');
+      alert(err?.message || t('Failed to record payment'));
     } finally {
       setSubmitting(false);
     }
@@ -167,7 +167,7 @@ export default function Invoices() {
       const res = await crmService.getInvoiceById(id);
       setViewingInvoice(extractData(res));
     } catch (err) {
-      alert(err?.message || 'Failed to load invoice details');
+      alert(err?.message || t('Failed to load invoice details'));
     }
   };
 
@@ -191,10 +191,10 @@ export default function Invoices() {
         <div>
           <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2.5">
             <DollarSign className="w-7 h-7 text-primary-500" />
-            Official Tax Invoices & Receivables
+            {t('Official Tax Invoices & Receivables')}
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Generate Ethiopian VAT invoices, track customer receivables, and register collections directly against ledger balances.
+            {t('Generate Ethiopian VAT invoices, track customer receivables, and register collections directly against ledger balances.')}
           </p>
         </div>
 
@@ -203,7 +203,7 @@ export default function Invoices() {
           className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold bg-primary-600 hover:bg-primary-700 text-white shadow-sm transition self-start sm:self-auto"
         >
           <Plus className="w-4 h-4" />
-          Issue Invoice from Order
+          {t('Issue Invoice from Order')}
         </button>
       </div>
 
@@ -218,25 +218,25 @@ export default function Invoices() {
       {metrics && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Invoiced</span>
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t('Total Invoiced')}</span>
             <div className="text-2xl font-black text-slate-900 dark:text-white mt-1">
               {formatCurrency(metrics.totalInvoiced)}
             </div>
           </div>
           <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Collected Revenue</span>
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t('Collected Revenue')}</span>
             <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
               {formatCurrency(metrics.totalPaid)}
             </div>
           </div>
           <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Outstanding Due</span>
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t('Outstanding Due')}</span>
             <div className="text-2xl font-black text-rose-600 dark:text-rose-400 mt-1">
               {formatCurrency(metrics.totalReceivables)}
             </div>
           </div>
           <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Overdue Invoices</span>
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t('Overdue Invoices')}</span>
             <div className={`text-2xl font-black mt-1 ${metrics.overdueInvoicesCount > 0 ? 'text-amber-500' : 'text-slate-400'}`}>
               {metrics.overdueInvoicesCount}
             </div>
@@ -253,7 +253,7 @@ export default function Invoices() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && fetchInvoices()}
-            placeholder="Search by invoice # or client TIN..."
+            placeholder={t('Search by invoice # or client TIN...')}
             className="w-full pl-9 pr-4 py-2 rounded-xl text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-hidden text-slate-800 dark:text-slate-100"
           />
         </div>
@@ -265,7 +265,7 @@ export default function Invoices() {
             className="px-3 py-2 rounded-xl text-xs font-semibold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200"
           >
             {PAYMENT_STATUSES.map((s) => (
-              <option key={s.value} value={s.value}>{s.label}</option>
+              <option key={s.value} value={s.value}>{t(s.label)}</option>
             ))}
           </select>
         </div>
@@ -274,13 +274,13 @@ export default function Invoices() {
       {/* Invoices Table */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
         {loading ? (
-          <div className="p-12 text-center text-slate-400 text-sm">Loading tax invoices...</div>
+          <div className="p-12 text-center text-slate-400 text-sm">{t('Loading tax invoices...')}</div>
         ) : invoices.length === 0 ? (
           <EmptyState
             icon={FileText}
-            title="No invoices issued yet"
-            description="Generate official tax invoices from confirmed customer orders."
-            actionLabel="Issue Invoice"
+            title={t('No invoices issued yet')}
+            description={t('Generate official tax invoices from confirmed customer orders.')}
+            actionLabel={t('Issue Invoice')}
             onAction={() => setIsOrderInvoiceModalOpen(true)}
           />
         ) : (
@@ -288,14 +288,14 @@ export default function Invoices() {
             <table className="w-full text-left text-xs text-slate-600 dark:text-slate-300">
               <thead className="bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider text-[11px] border-b border-slate-200 dark:border-slate-800">
                 <tr>
-                  <th className="py-3 px-4">Invoice #</th>
-                  <th className="py-3 px-4">Customer</th>
-                  <th className="py-3 px-4">Due Date</th>
-                  <th className="py-3 px-4">Total Amount</th>
-                  <th className="py-3 px-4">Paid Amount</th>
-                  <th className="py-3 px-4">Remaining Balance</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
+                  <th className="py-3 px-4">{t('Invoice #')}</th>
+                  <th className="py-3 px-4">{t('Customer')}</th>
+                  <th className="py-3 px-4">{t('Due Date')}</th>
+                  <th className="py-3 px-4">{t('Total Amount')}</th>
+                  <th className="py-3 px-4">{t('Paid Amount')}</th>
+                  <th className="py-3 px-4">{t('Remaining Balance')}</th>
+                  <th className="py-3 px-4">{t('Status')}</th>
+                  <th className="py-3 px-4 text-right">{t('Actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -305,9 +305,9 @@ export default function Invoices() {
                       {inv.invoiceNumber}
                     </td>
                     <td className="py-3.5 px-4">
-                      <div className="font-bold text-slate-900 dark:text-white">{inv.customer?.name || inv.customer?.companyName || 'Customer'}</div>
+                      <div className="font-bold text-slate-900 dark:text-white">{inv.customer?.name || inv.customer?.companyName || t('Customer')}</div>
                       {inv.customerTin && (
-                        <div className="text-[10px] text-slate-400">TIN: {inv.customerTin}</div>
+                        <div className="text-[10px] text-slate-400">{t('TIN')}: {inv.customerTin}</div>
                       )}
                     </td>
                     <td className="py-3.5 px-4">
@@ -327,14 +327,14 @@ export default function Invoices() {
                     </td>
                     <td className="py-3.5 px-4">
                       <Badge variant={getPaymentBadgeVariant(inv.paymentStatus)}>
-                        {inv.paymentStatus.replace(/_/g, ' ')}
+                        {t(inv.paymentStatus.replace(/_/g, ' '))}
                       </Badge>
                     </td>
                     <td className="py-3.5 px-4 text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         <button
                           onClick={() => handleViewInvoice(inv._id)}
-                          title="View Official Tax Invoice"
+                          title={t('View Official Tax Invoice')}
                           className="p-1.5 rounded-lg text-slate-500 hover:text-primary-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
                         >
                           <Eye className="w-4 h-4" />
@@ -346,7 +346,7 @@ export default function Invoices() {
                             className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition"
                           >
                             <CreditCard className="w-3.5 h-3.5" />
-                            Record Payment
+                            {t('Record Payment')}
                           </button>
                         )}
                       </div>
@@ -363,16 +363,16 @@ export default function Invoices() {
       <Modal
         isOpen={isOrderInvoiceModalOpen}
         onClose={() => setIsOrderInvoiceModalOpen(false)}
-        title="Issue Official Tax Invoice from Sales Order"
+        title={t('Issue Official Tax Invoice from Sales Order')}
       >
         <form onSubmit={handleIssueInvoiceFromOrder} className="space-y-4">
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Select a confirmed sales order. The system will generate an official tax invoice with 15% VAT and update the client's credit receivables balance.
+            {t("Select a confirmed sales order. The system will generate an official tax invoice with 15% VAT and update the client's credit receivables balance.")}
           </p>
 
           <div>
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-              Select Sales Order *
+              {t('Select Sales Order')} *
             </label>
             <select
               required
@@ -381,11 +381,11 @@ export default function Invoices() {
               className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
             >
               {orders.length === 0 ? (
-                <option value="">No un-invoiced orders available</option>
+                <option value="">{t('No un-invoiced orders available')}</option>
               ) : (
                 orders.map((o) => (
                   <option key={o._id} value={o._id}>
-                    {o.orderNumber} - {o.customer?.name || o.customer?.companyName || 'Customer'} ({formatCurrency(o.financials?.grandTotal)})
+                    {o.orderNumber} - {o.customer?.name || o.customer?.companyName || t('Customer')} ({formatCurrency(o.financials?.grandTotal)})
                   </option>
                 ))
               )}
@@ -398,14 +398,14 @@ export default function Invoices() {
               onClick={() => setIsOrderInvoiceModalOpen(false)}
               className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100"
             >
-              Cancel
+              {t('Cancel')}
             </button>
             <button
               type="submit"
               disabled={submitting || orders.length === 0}
               className="px-5 py-2 rounded-xl text-xs font-bold bg-primary-600 hover:bg-primary-700 text-white disabled:opacity-50"
             >
-              {submitting ? 'Issuing...' : 'Generate Tax Invoice'}
+              {submitting ? t('Issuing...') : t('Generate Tax Invoice')}
             </button>
           </div>
         </form>
@@ -416,18 +416,18 @@ export default function Invoices() {
         <Modal
           isOpen={Boolean(paymentModalInvoice)}
           onClose={() => setPaymentModalInvoice(null)}
-          title={`Record Payment for ${paymentModalInvoice.invoiceNumber}`}
+          title={`${t('Record Payment')} - ${paymentModalInvoice.invoiceNumber}`}
         >
           <form onSubmit={handleSavePayment} className="space-y-4">
             <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 flex justify-between items-center text-xs">
               <div>
-                <span className="text-slate-400 block font-bold uppercase text-[10px]">Client</span>
+                <span className="text-slate-400 block font-bold uppercase text-[10px]">{t('Client')}</span>
                 <span className="font-bold text-slate-800 dark:text-slate-200 text-sm">
-                  {paymentModalInvoice.customer?.name || paymentModalInvoice.customer?.companyName || 'Client'}
+                  {paymentModalInvoice.customer?.name || paymentModalInvoice.customer?.companyName || t('Client')}
                 </span>
               </div>
               <div className="text-right">
-                <span className="text-slate-400 block font-bold uppercase text-[10px]">Remaining Balance</span>
+                <span className="text-slate-400 block font-bold uppercase text-[10px]">{t('Remaining Balance')}</span>
                 <span className="font-extrabold text-rose-600 dark:text-rose-400 text-sm">
                   {formatCurrency(paymentModalInvoice.remainingBalance)}
                 </span>
@@ -437,7 +437,7 @@ export default function Invoices() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Payment Amount (ETB) *
+                  {t('Payment Amount (ETB) *')}
                 </label>
                 <input
                   type="number"
@@ -453,24 +453,24 @@ export default function Invoices() {
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Payment Channel / Method *
+                  {t('Payment Channel / Method *')}
                 </label>
                 <select
                   value={paymentForm.paymentMethod}
                   onChange={(e) => setPaymentForm({ ...paymentForm, paymentMethod: e.target.value })}
                   className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                 >
-                  <option value="bank_transfer">Bank Transfer (CBE / Dashen / Awash)</option>
-                  <option value="check">Bank Cheque / CPO</option>
-                  <option value="telebirr">Telebirr Merchant</option>
-                  <option value="cbe_birr">CBE Birr</option>
-                  <option value="cash">Cash in Hand</option>
+                  <option value="bank_transfer">{t('Bank Transfer (CBE / Dashen / Awash)')}</option>
+                  <option value="check">{t('Bank Cheque / CPO')}</option>
+                  <option value="telebirr">{t('Telebirr Merchant')}</option>
+                  <option value="cbe_birr">{t('CBE Birr')}</option>
+                  <option value="cash">{t('Cash in Hand')}</option>
                 </select>
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Reference # / Cheque #
+                  {t('Reference # / Cheque #')}
                 </label>
                 <input
                   type="text"
@@ -483,7 +483,7 @@ export default function Invoices() {
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Bank Name
+                  {t('Bank Name')}
                 </label>
                 <input
                   type="text"
@@ -495,10 +495,10 @@ export default function Invoices() {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Payment Notes</label>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">{t('Payment Notes')}</label>
               <textarea
                 rows="2"
-                placeholder="Optional notes or depositor name..."
+                placeholder={t('Optional notes or depositor name...')}
                 value={paymentForm.notes}
                 onChange={(e) => setPaymentForm({ ...paymentForm, notes: e.target.value })}
                 className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
@@ -511,14 +511,14 @@ export default function Invoices() {
                 onClick={() => setPaymentModalInvoice(null)}
                 className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100"
               >
-                Cancel
+                {t('Cancel')}
               </button>
               <button
                 type="submit"
                 disabled={submitting}
                 className="px-5 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50"
               >
-                {submitting ? 'Recording...' : 'Confirm Receipt'}
+                {submitting ? t('Recording...') : t('Confirm Receipt')}
               </button>
             </div>
           </form>
@@ -530,38 +530,38 @@ export default function Invoices() {
         <Modal
           isOpen={Boolean(viewingInvoice)}
           onClose={() => setViewingInvoice(null)}
-          title={`Official Tax Invoice: ${viewingInvoice.invoiceNumber}`}
+          title={`${t('Official Tax Invoice')}: ${viewingInvoice.invoiceNumber}`}
         >
           <div className="space-y-5 max-h-[75vh] overflow-y-auto pr-1 text-xs printable-area">
             {/* Header */}
             <div className="flex items-center justify-between border-b pb-4 border-slate-200 dark:border-slate-800">
               <div>
                 <h2 className="text-xl font-black text-slate-900 dark:text-white">GT PRINTING PRESS PLC</h2>
-                <p className="text-slate-500 text-xs">Official VAT / Tax Commercial Invoice</p>
-                <div className="text-[11px] text-slate-400 mt-1">Company TIN: 0012998844 • VAT Reg: 998811</div>
+                <p className="text-slate-500 text-xs">{t('Official VAT / Tax Commercial Invoice')}</p>
+                <div className="text-[11px] text-slate-400 mt-1">{t('Company TIN: 0012998844 • VAT Reg: 998811')}</div>
               </div>
               <div className="text-right">
                 <div className="font-mono font-bold text-sm text-primary-600">{viewingInvoice.invoiceNumber}</div>
-                <div className="text-slate-400 text-[11px]">Issued: {new Date(viewingInvoice.issueDate).toLocaleDateString()}</div>
-                <div className="text-slate-400 text-[11px]">Due Date: {new Date(viewingInvoice.dueDate).toLocaleDateString()}</div>
+                <div className="text-slate-400 text-[11px]">{t('Issued')}: {new Date(viewingInvoice.issueDate).toLocaleDateString()}</div>
+                <div className="text-slate-400 text-[11px]">{t('Due Date')}: {new Date(viewingInvoice.dueDate).toLocaleDateString()}</div>
               </div>
             </div>
 
             {/* Customer Details */}
             <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 grid grid-cols-2 gap-4">
               <div>
-                <span className="text-[10px] font-bold text-slate-400 uppercase">Billed To:</span>
-                <div className="font-bold text-sm text-slate-900 dark:text-white">{viewingInvoice.customer?.name || viewingInvoice.customer?.companyName || 'Client'}</div>
-                <div className="text-slate-500">TIN: {viewingInvoice.customerTin || 'N/A'}</div>
+                <span className="text-[10px] font-bold text-slate-400 uppercase">{t('Billed To')}:</span>
+                <div className="font-bold text-sm text-slate-900 dark:text-white">{viewingInvoice.customer?.name || viewingInvoice.customer?.companyName || t('Client')}</div>
+                <div className="text-slate-500">{t('TIN')}: {viewingInvoice.customerTin || 'N/A'}</div>
                 {viewingInvoice.customerVat && (
-                  <div className="text-slate-500">VAT: {viewingInvoice.customerVat}</div>
+                  <div className="text-slate-500">{t('VAT')}: {viewingInvoice.customerVat}</div>
                 )}
               </div>
               <div className="text-right">
-                <span className="text-[10px] font-bold text-slate-400 uppercase">Payment Status:</span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase">{t('Payment Status')}:</span>
                 <div className="mt-1">
                   <Badge variant={getPaymentBadgeVariant(viewingInvoice.paymentStatus)}>
-                    {viewingInvoice.paymentStatus.replace(/_/g, ' ')}
+                    {t(viewingInvoice.paymentStatus.replace(/_/g, ' '))}
                   </Badge>
                 </div>
               </div>
@@ -572,10 +572,10 @@ export default function Invoices() {
               <table className="w-full text-left text-xs">
                 <thead className="bg-slate-100 dark:bg-slate-800 font-bold uppercase text-[10px] text-slate-500">
                   <tr>
-                    <th className="py-2.5 px-3">Item Description</th>
-                    <th className="py-2.5 px-3 text-right">Qty</th>
-                    <th className="py-2.5 px-3 text-right">Unit Price</th>
-                    <th className="py-2.5 px-3 text-right">Total (ETB)</th>
+                    <th className="py-2.5 px-3">{t('Item Description')}</th>
+                    <th className="py-2.5 px-3 text-right">{t('Qty')}</th>
+                    <th className="py-2.5 px-3 text-right">{t('Unit Price')}</th>
+                    <th className="py-2.5 px-3 text-right">{t('Total (ETB)')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -594,23 +594,23 @@ export default function Invoices() {
             {/* Financials & Balances */}
             <div className="p-3.5 rounded-xl bg-slate-900 text-white space-y-1">
               <div className="flex justify-between text-slate-400">
-                <span>Subtotal:</span>
+                <span>{t('Subtotal')}:</span>
                 <span>{formatCurrency(viewingInvoice.subtotal)}</span>
               </div>
               <div className="flex justify-between text-slate-400">
-                <span>15% Ethiopian VAT:</span>
+                <span>{t('15% Ethiopian VAT')}:</span>
                 <span>{formatCurrency(viewingInvoice.vatAmount)}</span>
               </div>
               <div className="flex justify-between font-extrabold text-sm text-emerald-400 pt-1 border-t border-slate-800">
-                <span>Grand Total:</span>
+                <span>{t('Grand Total')}:</span>
                 <span>{formatCurrency(viewingInvoice.grandTotal)}</span>
               </div>
               <div className="flex justify-between text-slate-400 pt-1">
-                <span>Paid to Date:</span>
+                <span>{t('Paid to Date')}:</span>
                 <span className="text-emerald-400">{formatCurrency(viewingInvoice.paidAmount)}</span>
               </div>
               <div className="flex justify-between font-bold text-rose-400 border-t border-slate-800 pt-1">
-                <span>Remaining Due:</span>
+                <span>{t('Remaining Due')}:</span>
                 <span>{formatCurrency(viewingInvoice.remainingBalance)}</span>
               </div>
             </div>
@@ -619,15 +619,15 @@ export default function Invoices() {
             {viewingInvoice.payments?.length > 0 && (
               <div className="space-y-2">
                 <h4 className="font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider text-[11px]">
-                  Collections & Receipt Vouchers
+                  {t('Collections & Receipt Vouchers')}
                 </h4>
                 <div className="divide-y border rounded-xl border-slate-200 dark:border-slate-800 divide-slate-100 dark:divide-slate-800">
                   {viewingInvoice.payments.map((p) => (
                     <div key={p._id} className="p-2.5 flex items-center justify-between text-xs">
                       <div>
-                        <div className="font-bold text-slate-900 dark:text-white">Receipt: {p.receiptNumber}</div>
+                        <div className="font-bold text-slate-900 dark:text-white">{t('Receipt')}: {p.receiptNumber}</div>
                         <div className="text-[11px] text-slate-400 capitalize">
-                          {p.paymentMethod.replace(/_/g, ' ')} • {new Date(p.paymentDate).toLocaleDateString()}
+                          {t(p.paymentMethod.replace(/_/g, ' '))} • {new Date(p.paymentDate).toLocaleDateString()}
                         </div>
                       </div>
                       <div className="font-extrabold text-emerald-600 dark:text-emerald-400">
@@ -645,7 +645,7 @@ export default function Invoices() {
                 onClick={() => window.print()}
                 className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
               >
-                <Printer className="w-4 h-4" /> Print Tax Invoice
+                <Printer className="w-4 h-4" /> {t('Print Tax Invoice')}
               </button>
             </div>
           </div>

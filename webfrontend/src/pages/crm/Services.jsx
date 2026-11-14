@@ -74,7 +74,7 @@ export default function Services() {
       const res = await crmService.getServices(params);
       setServices(res.data?.services || res.services || []);
     } catch (err) {
-      setError(err?.message || 'Failed to fetch services');
+      setError(err?.message ? t(err.message) : t('Failed to fetch services'));
     } finally {
       setLoading(false);
     }
@@ -169,19 +169,19 @@ export default function Services() {
       setIsModalOpen(false);
       fetchServices();
     } catch (err) {
-      alert(err?.message || 'Error saving service');
+      alert(err?.message ? t(err.message) : t('Error saving service'));
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleDeleteService = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this printing service catalog item?')) return;
+    if (!window.confirm(t('Are you sure you want to delete this printing service catalog item?'))) return;
     try {
       await crmService.deleteService(id);
       fetchServices();
     } catch (err) {
-      alert(err?.message || 'Failed to delete service');
+      alert(err?.message ? t(err.message) : t('Failed to delete service'));
     }
   };
 
@@ -196,10 +196,10 @@ export default function Services() {
         <div>
           <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2.5">
             <FileText className="w-7 h-7 text-primary-500" />
-            Printing Services Catalog
+            {t('Printing Services Catalog')}
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Configure printing product offerings, baseline pricing models, and standard production routing templates.
+            {t('Configure printing product offerings, baseline pricing models, and standard production routing templates.')}
           </p>
         </div>
 
@@ -208,7 +208,7 @@ export default function Services() {
           className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold bg-primary-600 hover:bg-primary-700 text-white shadow-sm transition self-start sm:self-auto"
         >
           <Plus className="w-4 h-4" />
-          Add Service
+          {t('Add Service')}
         </button>
       </div>
 
@@ -228,7 +228,7 @@ export default function Services() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && fetchServices()}
-            placeholder="Search services by name or code..."
+            placeholder={t('Search services by name or code...')}
             className="w-full pl-9 pr-4 py-2 rounded-xl text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-hidden text-slate-800 dark:text-slate-100"
           />
         </div>
@@ -240,7 +240,7 @@ export default function Services() {
             className="px-3 py-2 rounded-xl text-xs font-semibold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200"
           >
             {SERVICE_CATEGORIES.map((c) => (
-              <option key={c.value} value={c.value}>{c.label}</option>
+              <option key={c.value} value={c.value}>{t(c.label)}</option>
             ))}
           </select>
         </div>
@@ -249,14 +249,14 @@ export default function Services() {
       {/* Services Grid */}
       {loading ? (
         <div className="p-12 text-center text-slate-400 text-sm bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
-          Loading printing services...
+          {t('Loading printing services...')}
         </div>
       ) : services.length === 0 ? (
         <EmptyState
           icon={FileText}
-          title="No services found"
-          description="Register your printing offerings such as book printing, packaging, or flex banners."
-          actionLabel="Add Service"
+          title={t('No services found')}
+          description={t('Register your printing offerings such as book printing, packaging, or flex banners.')}
+          actionLabel={t('Add Service')}
           onAction={handleOpenCreateModal}
         />
       ) : (
@@ -272,26 +272,26 @@ export default function Services() {
                     {srv.serviceCode}
                   </span>
                   <Badge variant={srv.status === 'active' ? 'success' : 'neutral'}>
-                    {srv.status}
+                    {t(srv.status)}
                   </Badge>
                 </div>
 
                 <h3 className="text-base font-bold text-slate-900 dark:text-white">{srv.name}</h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">
-                  {srv.description || 'Standard printing service package with customizable specifications.'}
+                  {srv.description ? t(srv.description) : t('Standard printing service package with customizable specifications.')}
                 </p>
 
                 <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
                   <div>
-                    <span className="text-slate-400 block text-[10px] uppercase font-bold">Base Price</span>
+                    <span className="text-slate-400 block text-[10px] uppercase font-bold">{t('Base Price')}</span>
                     <span className="font-extrabold text-slate-900 dark:text-white">
-                      {formatCurrency(srv.pricingModel?.basePrice)} / {srv.pricingModel?.unitOfMeasurement || 'unit'}
+                      {formatCurrency(srv.pricingModel?.basePrice)} / {t(srv.pricingModel?.unitOfMeasurement || 'unit')}
                     </span>
                   </div>
                   <div className="text-right">
-                    <span className="text-slate-400 block text-[10px] uppercase font-bold">Min Order</span>
+                    <span className="text-slate-400 block text-[10px] uppercase font-bold">{t('Min Order')}</span>
                     <span className="font-semibold text-slate-700 dark:text-slate-300">
-                      {srv.pricingModel?.minimumOrderQuantity || 1} {srv.pricingModel?.unitOfMeasurement || 'units'}
+                      {srv.pricingModel?.minimumOrderQuantity || 1} {t(srv.pricingModel?.unitOfMeasurement || 'units')}
                     </span>
                   </div>
                 </div>
@@ -304,20 +304,20 @@ export default function Services() {
                   className="text-xs font-semibold text-primary-600 hover:text-primary-700 flex items-center gap-1.5"
                 >
                   <Workflow className="w-3.5 h-3.5" />
-                  {srv.workflowTemplate?.length || 0} Routing Stages
+                  {srv.workflowTemplate?.length || 0} {t('Routing Stages')}
                 </button>
 
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => handleOpenEditModal(srv)}
-                    title="Edit Service"
+                    title={t('Edit Service')}
                     className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
                   >
                     <Edit className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => handleDeleteService(srv._id)}
-                    title="Delete Service"
+                    title={t('Delete Service')}
                     className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -333,13 +333,13 @@ export default function Services() {
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={editingService ? `Edit Service: ${editingService.serviceCode}` : 'Register New Printing Service'}
+        title={editingService ? `${t('Edit Service:')} ${editingService.serviceCode}` : t('Register New Printing Service')}
       >
         <form onSubmit={handleSaveService} className="space-y-4 max-h-[75vh] overflow-y-auto pr-1">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Service Title *
+                {t('Service Title *')}
               </label>
               <input
                 type="text"
@@ -353,25 +353,25 @@ export default function Services() {
 
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Service Category
+                {t('Service Category')}
               </label>
               <select
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                 className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
               >
-                <option value="offset_printing">Offset Press Printing</option>
-                <option value="digital_printing">Digital Printing</option>
-                <option value="large_format">Large Format / Banner</option>
-                <option value="packaging">Packaging & Cartons</option>
-                <option value="finishing_service">Finishing Services</option>
-                <option value="other">Other Printing</option>
+                <option value="offset_printing">{t('Offset Press Printing')}</option>
+                <option value="digital_printing">{t('Digital Printing')}</option>
+                <option value="large_format">{t('Large Format / Banner')}</option>
+                <option value="packaging">{t('Packaging & Cartons')}</option>
+                <option value="finishing_service">{t('Finishing Services')}</option>
+                <option value="other">{t('Other Printing')}</option>
               </select>
             </div>
 
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Base Unit Price (ETB) *
+                {t('Base Unit Price (ETB) *')}
               </label>
               <input
                 type="number"
@@ -386,27 +386,27 @@ export default function Services() {
 
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Unit of Measurement
+                {t('Unit of Measurement')}
               </label>
               <select
                 value={formData.unitOfMeasurement}
                 onChange={(e) => setFormData({ ...formData, unitOfMeasurement: e.target.value })}
                 className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
               >
-                <option value="copy">Copy</option>
-                <option value="piece">Piece</option>
-                <option value="sqm">Square Meter (sqm)</option>
-                <option value="sheet">Sheet</option>
-                <option value="pack">Pack</option>
-                <option value="box">Box</option>
-                <option value="roll">Roll</option>
+                <option value="copy">{t('Copy')}</option>
+                <option value="piece">{t('Piece')}</option>
+                <option value="sqm">{t('Square Meter (sqm)')}</option>
+                <option value="sheet">{t('Sheet')}</option>
+                <option value="pack">{t('Pack')}</option>
+                <option value="box">{t('Box')}</option>
+                <option value="roll">{t('Roll')}</option>
               </select>
             </div>
           </div>
 
           <div>
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-              Description & Specifications Summary
+              {t('Description & Specifications Summary')}
             </label>
             <textarea
               rows="2"
@@ -422,16 +422,16 @@ export default function Services() {
             <div className="flex items-center justify-between">
               <div>
                 <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
-                  <Workflow className="w-3.5 h-3.5 text-primary-500" /> Default Production Workflow Template
+                  <Workflow className="w-3.5 h-3.5 text-primary-500" /> {t('Default Production Workflow Template')}
                 </h4>
-                <p className="text-[11px] text-slate-400">Stages instantiated when orders of this service are sent to production</p>
+                <p className="text-[11px] text-slate-400">{t('Stages instantiated when orders of this service are sent to production')}</p>
               </div>
               <button
                 type="button"
                 onClick={handleAddWorkflowStep}
                 className="px-2.5 py-1 rounded-lg text-xs font-bold bg-primary-50 text-primary-600 dark:bg-primary-950/60 dark:text-primary-300 hover:bg-primary-100"
               >
-                + Add Stage
+                {t('+ Add Stage')}
               </button>
             </div>
 
@@ -442,7 +442,7 @@ export default function Services() {
                   <input
                     type="text"
                     required
-                    placeholder="Stage Name (e.g. Lamination)"
+                    placeholder={t('Stage Name (e.g. Lamination)')}
                     value={step.stageName}
                     onChange={(e) => handleWorkflowStepChange(idx, 'stageName', e.target.value)}
                     className="flex-1 px-2.5 py-1 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-transparent text-slate-900 dark:text-white"
@@ -450,13 +450,13 @@ export default function Services() {
                   <input
                     type="number"
                     min="1"
-                    title="Estimated minutes"
-                    placeholder="Mins"
+                    title={t('Estimated minutes')}
+                    placeholder={t('Mins')}
                     value={step.estimatedDurationMinutes}
                     onChange={(e) => handleWorkflowStepChange(idx, 'estimatedDurationMinutes', Number(e.target.value))}
                     className="w-16 px-2 py-1 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-transparent text-slate-900 dark:text-white"
                   />
-                  <span className="text-[11px] text-slate-400">min</span>
+                  <span className="text-[11px] text-slate-400">{t('min')}</span>
                   {formData.workflowTemplate.length > 1 && (
                     <button
                       type="button"
@@ -477,14 +477,14 @@ export default function Services() {
               onClick={() => setIsModalOpen(false)}
               className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100"
             >
-              Cancel
+              {t('Cancel')}
             </button>
             <button
               type="submit"
               disabled={submitting}
               className="px-5 py-2 rounded-xl text-xs font-bold bg-primary-600 hover:bg-primary-700 text-white disabled:opacity-50"
             >
-              {submitting ? 'Saving...' : editingService ? 'Update Service' : 'Create Service'}
+              {submitting ? t('Saving...') : editingService ? t('Update Service') : t('Create Service')}
             </button>
           </div>
         </form>
@@ -495,11 +495,11 @@ export default function Services() {
         <Modal
           isOpen={Boolean(viewingWorkflowService)}
           onClose={() => setViewingWorkflowService(null)}
-          title={`Routing Sequence: ${viewingWorkflowService.name}`}
+          title={`${t('Routing Sequence:')} ${viewingWorkflowService.name}`}
         >
           <div className="space-y-4">
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              When an order for this service is approved for press, the following sequential stages will be auto-generated in the Production Job order:
+              {t('When an order for this service is approved for press, the following sequential stages will be auto-generated in the Production Job order:')}
             </p>
 
             <div className="space-y-2.5">
@@ -511,11 +511,11 @@ export default function Services() {
                     </div>
                     <div>
                       <span className="font-bold text-slate-900 dark:text-white">{step.stageName}</span>
-                      <span className="text-[11px] text-slate-400 block capitalize">Machine Type: {step.defaultMachineCategory.replace('_', ' ')}</span>
+                      <span className="text-[11px] text-slate-400 block capitalize">{t('Machine Type:')} {t(step.defaultMachineCategory.replace('_', ' '))}</span>
                     </div>
                   </div>
                   <span className="font-mono text-slate-500 text-xs font-medium">
-                    ~{step.estimatedDurationMinutes} mins
+                    ~{step.estimatedDurationMinutes} {t('mins')}
                   </span>
                 </div>
               ))}

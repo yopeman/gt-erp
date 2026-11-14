@@ -210,10 +210,10 @@ export default function Followups() {
         <div>
           <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2.5">
             <CalendarClock className="w-7 h-7 text-primary-500" />
-            Follow-up Schedule
+            {t('Follow-up Schedule')}
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Track customer communications, scheduled meetings, and pending sales touchpoints.
+            {t('Track customer communications, scheduled meetings, and pending sales touchpoints.')}
           </p>
         </div>
 
@@ -222,7 +222,7 @@ export default function Followups() {
           className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold bg-primary-600 hover:bg-primary-700 text-white shadow-sm transition self-start sm:self-auto"
         >
           <Plus className="w-4 h-4" />
-          Schedule Follow-up
+          {t('Schedule Follow-up')}
         </button>
       </div>
 
@@ -237,10 +237,10 @@ export default function Followups() {
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-2">
         <div className="flex items-center gap-1.5">
           {[
-            { key: 'today', label: "Today's Agenda" },
-            { key: 'upcoming', label: 'Upcoming' },
-            { key: 'overdue', label: 'Overdue' },
-            { key: 'all', label: 'All History' }
+            { key: 'today', label: t("Today's Agenda") },
+            { key: 'upcoming', label: t('Upcoming') },
+            { key: 'overdue', label: t('Overdue') },
+            { key: 'all', label: t('All History') }
           ].map((tab) => (
             <button
               key={tab.key}
@@ -262,8 +262,8 @@ export default function Followups() {
             onChange={(e) => setTypeFilter(e.target.value)}
             className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200"
           >
-            {FOLLOWUP_TYPES.map((t) => (
-              <option key={t.value} value={t.value}>{t.label}</option>
+            {FOLLOWUP_TYPES.map((tItem) => (
+              <option key={tItem.value} value={tItem.value}>{t(tItem.label)}</option>
             ))}
           </select>
         </div>
@@ -273,14 +273,14 @@ export default function Followups() {
       <div className="space-y-3">
         {loading ? (
           <div className="p-12 text-center text-slate-400 text-sm bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
-            Loading follow-up schedule...
+            {t('Loading follow-up schedule...')}
           </div>
         ) : followups.length === 0 ? (
           <EmptyState
             icon={CalendarClock}
-            title="No follow-ups found"
-            description="Schedule a communication touchpoint with a client or prospect."
-            actionLabel="Schedule Follow-up"
+            title={t('No follow-ups found')}
+            description={t('Schedule a communication touchpoint with a client or prospect.')}
+            actionLabel={t('Schedule Follow-up')}
             onAction={handleOpenCreateModal}
           />
         ) : (
@@ -298,11 +298,11 @@ export default function Followups() {
                 <div className="space-y-1.5 min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-mono text-xs font-bold text-slate-400">{flw.followupNumber}</span>
-                    <Badge variant={getPriorityBadgeVariant(flw.priority)}>{flw.priority}</Badge>
+                    <Badge variant={getPriorityBadgeVariant(flw.priority)}>{t(flw.priority)}</Badge>
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 capitalize">
-                      {flw.type.replace('_', ' ')}
+                      {t(flw.type.replace('_', ' '))}
                     </span>
-                    <Badge variant={isCompleted ? 'success' : 'warning'}>{flw.status}</Badge>
+                    <Badge variant={isCompleted ? 'success' : 'warning'}>{t(flw.status)}</Badge>
                   </div>
 
                   <h3 className="font-bold text-base text-slate-900 dark:text-white">{flw.agenda}</h3>
@@ -322,13 +322,13 @@ export default function Followups() {
                       {new Date(flw.scheduledTime).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
                     </span>
                     {flw.assignedTo && (
-                      <span>Rep: {flw.assignedTo.firstName} {flw.assignedTo.lastName}</span>
+                      <span>{t('Rep:')} {flw.assignedTo.firstName} {flw.assignedTo.lastName}</span>
                     )}
                   </div>
 
                   {flw.result && (
                     <div className="mt-2 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 text-xs text-slate-700 dark:text-slate-300 border border-slate-100 dark:border-slate-800">
-                      <strong>Outcome Result:</strong> {flw.result}
+                      <strong>{t('Outcome Result:')}</strong> {flw.result}
                     </div>
                   )}
                 </div>
@@ -341,13 +341,13 @@ export default function Followups() {
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition"
                     >
                       <Check className="w-3.5 h-3.5" />
-                      Mark Done
+                      {t('Mark Done')}
                     </button>
                   )}
 
                   <button
                     onClick={() => handleDeleteFollowup(flw._id)}
-                    title="Delete Follow-up"
+                    title={t('Delete Follow-up')}
                     className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -363,13 +363,13 @@ export default function Followups() {
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title="Schedule Client Follow-up"
+        title={t('Schedule Client Follow-up')}
       >
         <form onSubmit={handleSaveFollowup} className="space-y-4">
           {/* Target Selector */}
           <div>
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-              Select Target Type
+              {t('Select Target Type')}
             </label>
             <div className="grid grid-cols-2 gap-3">
               <button
@@ -381,7 +381,7 @@ export default function Followups() {
                     : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
                 }`}
               >
-                Lead / Prospective Client
+                {t('Lead / Prospective Client')}
               </button>
               <button
                 type="button"
@@ -392,7 +392,7 @@ export default function Followups() {
                     : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
                 }`}
               >
-                Existing Customer
+                {t('Existing Customer')}
               </button>
             </div>
           </div>
@@ -400,7 +400,7 @@ export default function Followups() {
           {formData.targetType === 'lead' ? (
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Select Lead *
+                {t('Select Lead *')}
               </label>
               <select
                 required
@@ -408,7 +408,7 @@ export default function Followups() {
                 onChange={(e) => setFormData({ ...formData, lead: e.target.value })}
                 className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
               >
-                <option value="">-- Choose Lead --</option>
+                <option value="">{t('-- Choose Lead --')}</option>
                 {leads.map((l) => (
                   <option key={l._id} value={l._id}>
                     {l.name} {l.companyName && `(${l.companyName})`} - {l.phone}
@@ -419,7 +419,7 @@ export default function Followups() {
           ) : (
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Select Customer *
+                {t('Select Customer *')}
               </label>
               <select
                 required
@@ -427,7 +427,7 @@ export default function Followups() {
                 onChange={(e) => setFormData({ ...formData, customer: e.target.value })}
                 className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
               >
-                <option value="">-- Choose Customer --</option>
+                <option value="">{t('-- Choose Customer --')}</option>
                 {customers.map((c) => (
                   <option key={c._id} value={c._id}>
                     {c.name} {c.companyName && `(${c.companyName})`} [{c.customerNumber}]
@@ -439,7 +439,7 @@ export default function Followups() {
 
           <div>
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-              Agenda / Purpose *
+              {t('Agenda / Purpose *')}
             </label>
             <input
               type="text"
@@ -454,41 +454,41 @@ export default function Followups() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Interaction Channel
+                {t('Interaction Channel')}
               </label>
               <select
                 value={formData.type}
                 onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                 className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
               >
-                <option value="phone_call">Phone Call</option>
-                <option value="in_person_meeting">In-person Meeting</option>
-                <option value="email">Email</option>
-                <option value="site_visit">Site Visit</option>
-                <option value="quotation_followup">Quotation Follow-up</option>
-                <option value="payment_reminder">Payment Reminder</option>
+                <option value="phone_call">{t('Phone Call')}</option>
+                <option value="in_person_meeting">{t('In-person Meeting')}</option>
+                <option value="email">{t('Email Correspondence')}</option>
+                <option value="site_visit">{t('Client Site Visit')}</option>
+                <option value="quotation_followup">{t('Quotation Follow-up')}</option>
+                <option value="payment_reminder">{t('Payment Reminder')}</option>
               </select>
             </div>
 
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Priority
+                {t('Priority')}
               </label>
               <select
                 value={formData.priority}
                 onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
                 className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
               >
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-                <option value="urgent">Urgent</option>
+                <option value="low">{t('low')}</option>
+                <option value="medium">{t('medium')}</option>
+                <option value="high">{t('high')}</option>
+                <option value="urgent">{t('urgent')}</option>
               </select>
             </div>
 
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Scheduled Date & Time *
+                {t('Scheduled Date & Time *')}
               </label>
               <input
                 type="datetime-local"
@@ -501,7 +501,7 @@ export default function Followups() {
 
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Assigned Employee *
+                {t('Assigned Employee *')}
               </label>
               <select
                 required
@@ -509,9 +509,9 @@ export default function Followups() {
                 onChange={(e) => setFormData({ ...formData, assignedTo: e.target.value })}
                 className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
               >
-                <option value="">-- Choose Sales Rep --</option>
+                <option value="">{t('-- Choose Sales Rep --')}</option>
                 {employees.map((emp) => {
-                  const name = emp.fullName || `${emp.firstName || ''} ${emp.lastName || ''}`.trim() || emp.name || 'Sales Rep';
+                  const name = emp.fullName || `${emp.firstName || ''} ${emp.lastName || ''}`.trim() || emp.name || t('Sales Rep');
                   const code = emp.employeeCode || emp.employeeId || '';
                   return (
                     <option key={emp._id} value={emp._id}>
@@ -529,14 +529,14 @@ export default function Followups() {
               onClick={() => setIsModalOpen(false)}
               className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100"
             >
-              Cancel
+              {t('Cancel')}
             </button>
             <button
               type="submit"
               disabled={submitting}
               className="px-5 py-2 rounded-xl text-xs font-bold bg-primary-600 hover:bg-primary-700 text-white disabled:opacity-50"
             >
-              {submitting ? 'Scheduling...' : 'Save Follow-up'}
+              {submitting ? t('Scheduling...') : t('Save Follow-up')}
             </button>
           </div>
         </form>
@@ -547,17 +547,17 @@ export default function Followups() {
         <Modal
           isOpen={Boolean(completingFollowup)}
           onClose={() => setCompletingFollowup(null)}
-          title={`Log Outcome: ${completingFollowup.agenda}`}
+          title={`${t('Log Outcome:')} ${completingFollowup.agenda}`}
         >
           <form onSubmit={handleSaveCompletion} className="space-y-4">
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Discussion Result & Key Takeaways *
+                {t('Discussion Result & Key Takeaways *')}
               </label>
               <textarea
                 rows="3"
                 required
-                placeholder="What was agreed upon? Did the client request samples or a revised price?"
+                placeholder={t('What was agreed upon? Did the client request samples or a revised price?')}
                 value={completeForm.result}
                 onChange={(e) => setCompleteForm({ ...completeForm, result: e.target.value })}
                 className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
@@ -567,8 +567,8 @@ export default function Followups() {
             <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Schedule Next Follow-up</span>
-                  <p className="text-[11px] text-slate-400">Automatically create subsequent appointment</p>
+                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200">{t('Schedule Next Follow-up')}</span>
+                  <p className="text-[11px] text-slate-400">{t('Automatically create subsequent appointment')}</p>
                 </div>
                 <input
                   type="checkbox"
@@ -581,7 +581,7 @@ export default function Followups() {
               {completeForm.scheduleNextFollowup && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                   <div className="sm:col-span-2">
-                    <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-300 mb-1">Next Agenda</label>
+                    <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-300 mb-1">{t('Next Agenda')}</label>
                     <input
                       type="text"
                       placeholder="e.g. Finalize sample sign-off"
@@ -591,7 +591,7 @@ export default function Followups() {
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-300 mb-1">Next Date & Time</label>
+                    <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-300 mb-1">{t('Next Date & Time')}</label>
                     <input
                       type="datetime-local"
                       value={completeForm.nextScheduledTime}
@@ -609,14 +609,14 @@ export default function Followups() {
                 onClick={() => setCompletingFollowup(null)}
                 className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100"
               >
-                Cancel
+                {t('Cancel')}
               </button>
               <button
                 type="submit"
                 disabled={submitting}
                 className="px-5 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50"
               >
-                {submitting ? 'Saving...' : 'Mark as Completed'}
+                {submitting ? t('Saving...') : t('Mark as Completed')}
               </button>
             </div>
           </form>

@@ -101,7 +101,7 @@ export default function DesignProofing() {
       const res = await crmService.getDesigns(params);
       setDesigns(res.data?.designs || res.designs || []);
     } catch (err) {
-      setError(err?.message || 'Failed to fetch pre-press designs');
+      setError(err?.message || t('Failed to fetch pre-press designs'));
     } finally {
       setLoading(false);
     }
@@ -134,13 +134,13 @@ export default function DesignProofing() {
     const ext = file.name.split('.').pop()?.toLowerCase() || '';
     const isAllowedType = file.type.startsWith('image/') || file.type === 'application/pdf' || ALLOWED_PROOF_EXTENSIONS.has(ext);
     if (!isAllowedType) {
-      setUploadError('Unsupported file format. Please upload a PDF, PNG, JPG, SVG, TIFF, EPS, AI, or PSD file.');
+      setUploadError(t('Unsupported file format. Please upload a PDF, PNG, JPG, SVG, TIFF, EPS, AI, or PSD file.'));
       if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
 
     if (file.size > MAX_PROOF_FILE_SIZE_BYTES) {
-      setUploadError('File size exceeds the 15 MB limit. Please upload a smaller proof file.');
+      setUploadError(t('File size exceeds the 15 MB limit. Please upload a smaller proof file.'));
       if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
@@ -157,7 +157,7 @@ export default function DesignProofing() {
       setUploadError('');
     };
     reader.onerror = () => {
-      setUploadError('Failed to read the selected file. Please try again.');
+      setUploadError(t('Failed to read the selected file. Please try again.'));
     };
     reader.readAsDataURL(file);
   };
@@ -191,7 +191,7 @@ export default function DesignProofing() {
     e.preventDefault();
     if (!uploadModalDesign) return;
     if (!uploadForm.fileData) {
-      setUploadError('Please select a print-ready artwork file to upload.');
+      setUploadError(t('Please select a print-ready artwork file to upload.'));
       return;
     }
     try {
@@ -204,9 +204,9 @@ export default function DesignProofing() {
       });
       handleCloseUploadModal();
       fetchDesigns();
-      alert('New artwork proof version uploaded successfully!');
+      alert(t('New artwork proof version uploaded successfully!'));
     } catch (err) {
-      setUploadError(err?.message || 'Failed to upload version');
+      setUploadError(err?.message || t('Failed to upload version'));
     } finally {
       setSubmitting(false);
     }
@@ -233,9 +233,9 @@ export default function DesignProofing() {
       });
       setReviewModalDesign(null);
       fetchDesigns();
-      alert(reviewForm.status === 'client_approved' ? 'Design approved for production run!' : 'Revision request logged');
+      alert(reviewForm.status === 'client_approved' ? t('Design approved for production run!') : t('Revision request logged'));
     } catch (err) {
-      alert(err?.message || 'Failed to review design version');
+      alert(err?.message || t('Failed to review design version'));
     } finally {
       setSubmitting(false);
     }
@@ -258,10 +258,10 @@ export default function DesignProofing() {
         <div>
           <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2.5">
             <Palette className="w-7 h-7 text-primary-500" />
-            Pre-press Design & Proofing
+            {t('Pre-press Design & Proofing')}
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Manage artwork versions, client proofs, and digital sign-offs before jobs reach the printing press.
+            {t('Manage artwork versions, client proofs, and digital sign-offs before jobs reach the printing press.')}
           </p>
         </div>
       </div>
@@ -282,7 +282,7 @@ export default function DesignProofing() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && fetchDesigns()}
-            placeholder="Search by design # or remarks..."
+            placeholder={t('Search by design # or remarks...')}
             className="w-full pl-9 pr-4 py-2 rounded-xl text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-hidden text-slate-800 dark:text-slate-100"
           />
         </div>
@@ -294,7 +294,7 @@ export default function DesignProofing() {
             className="px-3 py-2 rounded-xl text-xs font-semibold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200"
           >
             {DESIGN_STATUSES.map((s) => (
-              <option key={s.value} value={s.value}>{s.label}</option>
+              <option key={s.value} value={s.value}>{t(s.label)}</option>
             ))}
           </select>
         </div>
@@ -303,13 +303,13 @@ export default function DesignProofing() {
       {/* Designs Grid */}
       {loading ? (
         <div className="p-12 text-center text-slate-400 text-sm bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
-          Loading pre-press proofing records...
+          {t('Loading pre-press proofing records...')}
         </div>
       ) : designs.length === 0 ? (
         <EmptyState
           icon={Palette}
-          title="No design jobs found"
-          description="Design proofing records are automatically initialized when sales orders are created with an assigned designer."
+          title={t('No design jobs found')}
+          description={t('Design proofing records are automatically initialized when sales orders are created with an assigned designer.')}
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -328,12 +328,12 @@ export default function DesignProofing() {
                       {dsg.designNumber}
                     </span>
                     <Badge variant={getDesignStatusVariant(dsg.status)}>
-                      {dsg.status.replace(/_/g, ' ')}
+                      {t(dsg.status.replace(/_/g, ' '))}
                     </Badge>
                   </div>
 
                   <div>
-                    <div className="text-xs text-slate-400 font-medium">Order Reference:</div>
+                    <div className="text-xs text-slate-400 font-medium">{t('Order Reference')}:</div>
                     <div className="font-extrabold text-sm text-slate-900 dark:text-white">
                       {dsg.order?.orderNumber || 'SO-N/A'}
                     </div>
@@ -342,17 +342,17 @@ export default function DesignProofing() {
                   {/* Designer & Specs */}
                   <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 text-xs space-y-1">
                     <div className="flex items-center justify-between text-slate-600 dark:text-slate-300">
-                      <span>Designer:</span>
+                      <span>{t('Designer')}:</span>
                       <span className="font-bold">
-                        {dsg.assignedDesigner ? `${dsg.assignedDesigner.firstName} ${dsg.assignedDesigner.lastName}` : 'Unassigned'}
+                        {dsg.assignedDesigner ? `${dsg.assignedDesigner.firstName} ${dsg.assignedDesigner.lastName}` : t('Unassigned')}
                       </span>
                     </div>
                     <div className="flex items-center justify-between text-slate-500">
-                      <span>Color / Bleed:</span>
+                      <span>{t('Color / Bleed')}:</span>
                       <span>{dsg.specifications?.colorProfile || 'CMYK'} • {dsg.specifications?.bleedMm || 3}mm</span>
                     </div>
                     <div className="flex items-center justify-between text-slate-500">
-                      <span>Resolution:</span>
+                      <span>{t('Resolution')}:</span>
                       <span>{dsg.specifications?.resolutionDpi || 300} DPI</span>
                     </div>
                   </div>
@@ -362,7 +362,7 @@ export default function DesignProofing() {
                     <div className="flex items-center justify-between font-bold">
                       <span className="text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
                         <Layers className="w-3.5 h-3.5 text-primary-500" />
-                        {latestVersion ? `Version v${latestVersion.versionNumber}` : 'No Proof Uploaded'}
+                        {latestVersion ? `${t('Version')} v${latestVersion.versionNumber}` : t('No Proof Uploaded')}
                       </span>
                       {latestVersion && (
                         <a
@@ -371,7 +371,7 @@ export default function DesignProofing() {
                           rel="noreferrer"
                           className="text-primary-600 hover:text-primary-700 flex items-center gap-1 font-semibold text-[11px]"
                         >
-                          View File <ExternalLink className="w-3 h-3" />
+                          {t('View File')} <ExternalLink className="w-3 h-3" />
                         </a>
                       )}
                     </div>
@@ -390,7 +390,7 @@ export default function DesignProofing() {
                     onClick={() => setHistoryModalDesign(dsg)}
                     className="text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-primary-600"
                   >
-                    {dsg.versions?.length || 0} Versions
+                    {dsg.versions?.length || 0} {t('Versions')}
                   </button>
 
                   <div className="flex items-center gap-1.5">
@@ -399,7 +399,7 @@ export default function DesignProofing() {
                       className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 transition"
                     >
                       <Upload className="w-3.5 h-3.5" />
-                      New Proof
+                      {t('New Proof')}
                     </button>
 
                     {latestVersion && !isApproved && (
@@ -408,7 +408,7 @@ export default function DesignProofing() {
                         className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition"
                       >
                         <CheckCircle2 className="w-3.5 h-3.5" />
-                        Client Review
+                        {t('Client Review')}
                       </button>
                     )}
                   </div>
@@ -424,12 +424,12 @@ export default function DesignProofing() {
         <Modal
           isOpen={Boolean(uploadModalDesign)}
           onClose={handleCloseUploadModal}
-          title={`Upload New Proof Version: ${uploadModalDesign.designNumber}`}
+          title={`${t('Upload New Proof Version')}: ${uploadModalDesign.designNumber}`}
         >
           <form onSubmit={handleSaveVersion} className="space-y-4">
             <div>
               <span className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Print-ready Artwork File *
+                {t('Print-ready Artwork File')} *
               </span>
 
               {!uploadForm.fileData ? (
@@ -452,10 +452,10 @@ export default function DesignProofing() {
                 >
                   <Upload className="w-6 h-6 text-primary-500" />
                   <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">
-                    Click to select file or drag and drop
+                    {t('Click to select file or drag and drop')}
                   </span>
                   <span className="text-[11px] text-slate-400">
-                    PDF, PNG, JPG, SVG, TIFF, EPS, AI, or PSD (Max 15 MB)
+                    {t('PDF, PNG, JPG, SVG, TIFF, EPS, AI, or PSD (Max 15 MB)')}
                   </span>
                 </label>
               ) : (
@@ -486,12 +486,12 @@ export default function DesignProofing() {
                       htmlFor="design-proof-file-input"
                       className="cursor-pointer px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition"
                     >
-                      Replace
+                      {t('Replace')}
                     </label>
                     <button
                       type="button"
                       onClick={handleClearSelectedFile}
-                      aria-label="Remove selected file"
+                      aria-label={t('Remove selected file')}
                       className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition"
                     >
                       <X className="w-4 h-4" />
@@ -519,7 +519,7 @@ export default function DesignProofing() {
 
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Designer Notes / Revision Summary
+                {t('Designer Notes / Revision Summary')}
               </label>
               <textarea
                 rows="3"
@@ -536,14 +536,14 @@ export default function DesignProofing() {
                 onClick={handleCloseUploadModal}
                 className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100"
               >
-                Cancel
+                {t('Cancel')}
               </button>
               <button
                 type="submit"
                 disabled={submitting || !uploadForm.fileData}
                 className="px-5 py-2 rounded-xl text-xs font-bold bg-primary-600 hover:bg-primary-700 text-white disabled:opacity-50"
               >
-                {submitting ? 'Uploading...' : 'Submit Proof Version'}
+                {submitting ? t('Uploading...') : t('Submit Proof Version')}
               </button>
             </div>
           </form>
@@ -555,11 +555,11 @@ export default function DesignProofing() {
         <Modal
           isOpen={Boolean(reviewModalDesign)}
           onClose={() => setReviewModalDesign(null)}
-          title={`Client Review Sign-off: ${reviewModalDesign.designNumber}`}
+          title={`${t('Client Review Sign-off')}: ${reviewModalDesign.designNumber}`}
         >
           <form onSubmit={handleSaveReview} className="space-y-4">
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Record the client's confirmation or revision notes for the latest proof version.
+              {t("Record the client's confirmation or revision notes for the latest proof version.")}
             </p>
 
             <div className="grid grid-cols-2 gap-3">
@@ -573,7 +573,7 @@ export default function DesignProofing() {
                 }`}
               >
                 <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-                <span>Approve for Press</span>
+                <span>{t('Approve for Press')}</span>
               </button>
 
               <button
@@ -586,13 +586,13 @@ export default function DesignProofing() {
                 }`}
               >
                 <XCircle className="w-5 h-5 text-rose-500" />
-                <span>Request Revisions</span>
+                <span>{t('Request Revisions')}</span>
               </button>
             </div>
 
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Client Feedback & Comments
+                {t('Client Feedback & Comments')}
               </label>
               <textarea
                 rows="3"
@@ -613,14 +613,14 @@ export default function DesignProofing() {
                 onClick={() => setReviewModalDesign(null)}
                 className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100"
               >
-                Cancel
+                {t('Cancel')}
               </button>
               <button
                 type="submit"
                 disabled={submitting}
                 className="px-5 py-2 rounded-xl text-xs font-bold bg-primary-600 hover:bg-primary-700 text-white disabled:opacity-50"
               >
-                {submitting ? 'Submitting...' : 'Confirm Review'}
+                {submitting ? t('Submitting...') : t('Confirm Review')}
               </button>
             </div>
           </form>
@@ -632,11 +632,11 @@ export default function DesignProofing() {
         <Modal
           isOpen={Boolean(historyModalDesign)}
           onClose={() => setHistoryModalDesign(null)}
-          title={`Version History: ${historyModalDesign.designNumber}`}
+          title={`${t('Version History')}: ${historyModalDesign.designNumber}`}
         >
           <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-1">
             {historyModalDesign.versions?.length === 0 ? (
-              <p className="text-xs text-slate-400 py-4 text-center">No versions uploaded yet.</p>
+              <p className="text-xs text-slate-400 py-4 text-center">{t('No versions uploaded yet.')}</p>
             ) : (
               historyModalDesign.versions.map((ver) => (
                 <div
@@ -645,20 +645,20 @@ export default function DesignProofing() {
                 >
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-slate-900 dark:text-white text-sm">
-                      Version v{ver.versionNumber}
+                      {t('Version')} v{ver.versionNumber}
                     </span>
                     <Badge variant={ver.status === 'client_approved' ? 'success' : ver.status === 'client_rejected' ? 'danger' : 'warning'}>
-                      {ver.status.replace(/_/g, ' ')}
+                      {t(ver.status.replace(/_/g, ' '))}
                     </Badge>
                   </div>
 
                   <div className="text-[11px] text-slate-400">
-                    Uploaded {new Date(ver.uploadedAt).toLocaleString()}
+                    {t('Uploaded')} {new Date(ver.uploadedAt).toLocaleString()}
                   </div>
 
                   {ver.clientFeedback && (
                     <div className="p-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-[11px] text-slate-700 dark:text-slate-300">
-                      <strong>Client Feedback:</strong> {ver.clientFeedback}
+                      <strong>{t('Client Feedback')}:</strong> {ver.clientFeedback}
                     </div>
                   )}
 
@@ -669,7 +669,7 @@ export default function DesignProofing() {
                       rel="noreferrer"
                       className="inline-flex items-center gap-1.5 text-xs font-bold text-primary-600 hover:text-primary-700"
                     >
-                      Download Artwork File <ExternalLink className="w-3.5 h-3.5" />
+                      {t('Download Artwork File')} <ExternalLink className="w-3.5 h-3.5" />
                     </a>
                   </div>
                 </div>

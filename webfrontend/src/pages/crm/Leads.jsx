@@ -109,7 +109,7 @@ export default function Leads() {
       const res = await crmService.getLeads(params);
       setLeads(extractArray(res, 'leads'));
     } catch (err) {
-      setError(err?.message || 'Failed to fetch leads');
+      setError(err?.message || t('Failed to fetch leads'));
     } finally {
       setLoading(false);
     }
@@ -182,19 +182,19 @@ export default function Leads() {
       setIsModalOpen(false);
       fetchLeads();
     } catch (err) {
-      alert(err?.message || 'Error saving lead');
+      alert(err?.message || t('Error saving lead'));
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleDeleteLead = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this lead?')) return;
+    if (!window.confirm(t('Are you sure you want to delete this lead?'))) return;
     try {
       await crmService.deleteLead(id);
       fetchLeads();
     } catch (err) {
-      alert(err?.message || 'Failed to delete lead');
+      alert(err?.message || t('Failed to delete lead'));
     }
   };
 
@@ -219,7 +219,7 @@ export default function Leads() {
       setDiscussionForm({ agenda: '', summary: '', nextFollowupDate: '', newStatus: '' });
       fetchLeads();
     } catch (err) {
-      alert(err?.message || 'Failed to add discussion note');
+      alert(err?.message || t('Failed to add discussion note'));
     } finally {
       setSubmitting(false);
     }
@@ -245,9 +245,9 @@ export default function Leads() {
       await crmService.convertLeadToCustomer(convertingLead._id, convertForm);
       setConvertingLead(null);
       fetchLeads();
-      alert('Lead successfully converted to Customer!');
+      alert(t('Lead successfully converted to Customer!'));
     } catch (err) {
-      alert(err?.message || 'Failed to convert lead');
+      alert(err?.message || t('Failed to convert lead'));
     } finally {
       setSubmitting(false);
     }
@@ -272,10 +272,10 @@ export default function Leads() {
         <div>
           <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2.5">
             <Target className="w-7 h-7 text-primary-500" />
-            Lead Management
+            {t('Lead Management')}
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Capture prospective clients, record sales discussions, and convert qualified leads to customers.
+            {t('Capture prospective clients, record sales discussions, and convert qualified leads to customers.')}
           </p>
         </div>
 
@@ -284,7 +284,7 @@ export default function Leads() {
           className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold bg-primary-600 hover:bg-primary-700 text-white shadow-sm transition self-start sm:self-auto"
         >
           <Plus className="w-4 h-4" />
-          Add Lead
+          {t('Add Lead')}
         </button>
       </div>
 
@@ -303,7 +303,7 @@ export default function Leads() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search leads by name, phone, company..."
+            placeholder={t('Search leads by name, phone, company...')}
             className="w-full pl-9 pr-4 py-2 rounded-xl text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-hidden focus:ring-2 focus:ring-primary-500/20 text-slate-800 dark:text-slate-100"
           />
         </form>
@@ -315,7 +315,7 @@ export default function Leads() {
             className="px-3 py-2 rounded-xl text-xs font-semibold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 focus:outline-hidden"
           >
             {LEAD_STAGES.map((s) => (
-              <option key={s.value} value={s.value}>{s.label}</option>
+              <option key={s.value} value={s.value}>{t(s.label)}</option>
             ))}
           </select>
 
@@ -324,9 +324,9 @@ export default function Leads() {
             onChange={(e) => setSourceFilter(e.target.value)}
             className="px-3 py-2 rounded-xl text-xs font-semibold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 focus:outline-hidden"
           >
-            <option value="all">All Sources</option>
+            <option value="all">{t('All Sources')}</option>
             {LEAD_SOURCES.map((src) => (
-              <option key={src.value} value={src.value}>{src.label}</option>
+              <option key={src.value} value={src.value}>{t(src.label)}</option>
             ))}
           </select>
         </div>
@@ -335,13 +335,13 @@ export default function Leads() {
       {/* Leads Table */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
         {loading ? (
-          <div className="p-12 text-center text-slate-400 text-sm">Loading leads...</div>
+          <div className="p-12 text-center text-slate-400 text-sm">{t('Loading leads...')}</div>
         ) : leads.length === 0 ? (
           <EmptyState
             icon={Target}
-            title="No leads found"
-            description="Start acquiring clients by creating your first sales lead."
-            actionLabel="Add New Lead"
+            title={t('No leads found')}
+            description={t('Start acquiring clients by creating your first sales lead.')}
+            actionLabel={t('Add New Lead')}
             onAction={handleOpenCreateModal}
           />
         ) : (
@@ -349,13 +349,13 @@ export default function Leads() {
             <table className="w-full text-left text-xs text-slate-600 dark:text-slate-300">
               <thead className="bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider text-[11px] border-b border-slate-200 dark:border-slate-800">
                 <tr>
-                  <th className="py-3 px-4">Lead #</th>
-                  <th className="py-3 px-4">Client / Company</th>
-                  <th className="py-3 px-4">Phone & Email</th>
-                  <th className="py-3 px-4">Est. Value</th>
-                  <th className="py-3 px-4">Assigned To</th>
-                  <th className="py-3 px-4">Stage</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
+                  <th className="py-3 px-4">{t('Lead #')}</th>
+                  <th className="py-3 px-4">{t('Client / Company')}</th>
+                  <th className="py-3 px-4">{t('Phone & Email')}</th>
+                  <th className="py-3 px-4">{t('Est. Value')}</th>
+                  <th className="py-3 px-4">{t('Assigned To')}</th>
+                  <th className="py-3 px-4">{t('Stage')}</th>
+                  <th className="py-3 px-4 text-right">{t('Actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -393,19 +393,19 @@ export default function Leads() {
                           {lead.assignedTo.fullName || `${lead.assignedTo.firstName || ''} ${lead.assignedTo.lastName || ''}`.trim() || 'Assigned'}
                         </span>
                       ) : (
-                        <span className="text-slate-400 italic">Unassigned</span>
+                        <span className="text-slate-400 italic">{t('Unassigned')}</span>
                       )}
                     </td>
                     <td className="py-3.5 px-4">
                       <Badge variant={getStageBadgeVariant(lead.status)}>
-                        {lead.status.replace('_', ' ')}
+                        {t(lead.status.replace('_', ' '))}
                       </Badge>
                     </td>
                     <td className="py-3.5 px-4 text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         <button
                           onClick={() => handleOpenDiscussion(lead)}
-                          title="Discussions & Notes"
+                          title={t('Discussions & Notes')}
                           className="p-1.5 rounded-lg text-slate-500 hover:text-primary-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
                         >
                           <MessageSquare className="w-4 h-4" />
@@ -414,20 +414,20 @@ export default function Leads() {
                         {lead.status !== 'converted' ? (
                           <button
                             onClick={() => handleOpenConvert(lead)}
-                            title="Convert to Customer"
+                            title={t('Convert to Customer')}
                             className="p-1.5 rounded-lg text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition"
                           >
                             <UserCheck className="w-4 h-4" />
                           </button>
                         ) : (
-                          <span title="Converted" className="p-1.5 text-emerald-500">
+                          <span title={t('Converted')} className="p-1.5 text-emerald-500">
                             <CheckCircle2 className="w-4 h-4" />
                           </span>
                         )}
 
                         <button
                           onClick={() => handleOpenEditModal(lead)}
-                          title="Edit Lead"
+                          title={t('Edit Lead')}
                           className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
                         >
                           <Edit className="w-4 h-4" />
@@ -435,7 +435,7 @@ export default function Leads() {
 
                         <button
                           onClick={() => handleDeleteLead(lead._id)}
-                          title="Delete Lead"
+                          title={t('Delete Lead')}
                           disabled={lead.status === 'converted'}
                           className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition disabled:opacity-40"
                         >
@@ -455,13 +455,13 @@ export default function Leads() {
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={editingLead ? `Edit Lead: ${editingLead.leadNumber}` : 'Create New Lead'}
+        title={editingLead ? `${t('Edit Lead')}: ${editingLead.leadNumber}` : t('Create New Lead')}
       >
         <form onSubmit={handleSaveLead} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Contact Person Name *
+                {t('Contact Person Name')} *
               </label>
               <input
                 type="text"
@@ -475,7 +475,7 @@ export default function Leads() {
 
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Company Name
+                {t('Company Name')}
               </label>
               <input
                 type="text"
@@ -488,7 +488,7 @@ export default function Leads() {
 
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Phone Number *
+                {t('Phone Number')} *
               </label>
               <input
                 type="text"
@@ -502,7 +502,7 @@ export default function Leads() {
 
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Email Address
+                {t('Email Address')}
               </label>
               <input
                 type="email"
@@ -515,7 +515,7 @@ export default function Leads() {
 
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Lead Source
+                {t('Lead Source')}
               </label>
               <select
                 value={formData.source}
@@ -523,31 +523,31 @@ export default function Leads() {
                 className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary-500"
               >
                 {LEAD_SOURCES.map((src) => (
-                  <option key={src.value} value={src.value}>{src.label}</option>
+                  <option key={src.value} value={src.value}>{t(src.label)}</option>
                 ))}
               </select>
             </div>
 
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Category
+                {t('Category')}
               </label>
               <select
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                 className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary-500"
               >
-                <option value="corporate">Corporate</option>
-                <option value="sme">SME</option>
-                <option value="government">Government</option>
-                <option value="ngo">NGO</option>
-                <option value="individual">Individual</option>
+                <option value="corporate">{t('Corporate')}</option>
+                <option value="sme">{t('SME')}</option>
+                <option value="government">{t('Government')}</option>
+                <option value="ngo">{t('NGO')}</option>
+                <option value="individual">{t('Individual')}</option>
               </select>
             </div>
 
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Estimated Deal Value (ETB)
+                {t('Estimated Deal Value (ETB)')}
               </label>
               <input
                 type="number"
@@ -560,14 +560,14 @@ export default function Leads() {
 
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Assign Sales Representative
+                {t('Assign Sales Representative')}
               </label>
               <select
                 value={formData.assignedTo}
                 onChange={(e) => setFormData({ ...formData, assignedTo: e.target.value })}
                 className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary-500"
               >
-                <option value="">-- Select Sales Rep --</option>
+                <option value="">-- {t('Select Sales Rep')} --</option>
                 {employees.map((emp) => {
                   const name = emp.fullName || `${emp.firstName || ''} ${emp.lastName || ''}`.trim() || emp.name || 'Sales Rep';
                   const code = emp.employeeCode || emp.employeeId || '';
@@ -583,7 +583,7 @@ export default function Leads() {
 
           <div>
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-              Project Requirements & Printing Specs
+              {t('Project Requirements & Printing Specs')}
             </label>
             <textarea
               rows="3"
@@ -600,14 +600,14 @@ export default function Leads() {
               onClick={() => setIsModalOpen(false)}
               className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
             >
-              Cancel
+              {t('Cancel')}
             </button>
             <button
               type="submit"
               disabled={submitting}
               className="px-5 py-2 rounded-xl text-xs font-bold bg-primary-600 hover:bg-primary-700 text-white disabled:opacity-50"
             >
-              {submitting ? 'Saving...' : editingLead ? 'Update Lead' : 'Create Lead'}
+              {submitting ? t('Saving...') : editingLead ? t('Update Lead') : t('Create Lead')}
             </button>
           </div>
         </form>
@@ -618,24 +618,24 @@ export default function Leads() {
         <Modal
           isOpen={Boolean(activeDiscussionLead)}
           onClose={() => setActiveDiscussionLead(null)}
-          title={`Discussions: ${activeDiscussionLead.name} (${activeDiscussionLead.leadNumber})`}
+          title={`${t('Discussions')}: ${activeDiscussionLead.name} (${activeDiscussionLead.leadNumber})`}
         >
           <div className="space-y-5">
             {/* Historical discussions */}
             <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
               {activeDiscussionLead.discussions?.length === 0 ? (
-                <p className="text-xs text-slate-400 py-3 text-center">No discussion notes recorded yet.</p>
+                <p className="text-xs text-slate-400 py-3 text-center">{t('No discussion notes recorded yet.')}</p>
               ) : (
                 activeDiscussionLead.discussions.map((d, idx) => (
                   <div key={idx} className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 space-y-1">
                     <div className="flex items-center justify-between text-[11px] text-slate-400">
-                      <span className="font-semibold text-slate-700 dark:text-slate-300">{d.agenda || 'Discussion'}</span>
+                      <span className="font-semibold text-slate-700 dark:text-slate-300">{d.agenda || t('Discussion')}</span>
                       <span>{new Date(d.date).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</span>
                     </div>
                     <p className="text-xs text-slate-800 dark:text-slate-200">{d.summary}</p>
                     {d.nextFollowupDate && (
                       <div className="text-[10px] text-primary-600 dark:text-primary-400 flex items-center gap-1 mt-1 font-medium">
-                        <Clock className="w-3 h-3" /> Next Follow-up: {new Date(d.nextFollowupDate).toLocaleDateString()}
+                        <Clock className="w-3 h-3" /> {t('Next Follow-up')}: {new Date(d.nextFollowupDate).toLocaleDateString()}
                       </div>
                     )}
                   </div>
@@ -646,13 +646,13 @@ export default function Leads() {
             {/* Add new discussion note */}
             <form onSubmit={handleAddDiscussion} className="space-y-3 pt-3 border-t border-slate-200 dark:border-slate-800">
               <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-                Add Discussion Note
+                {t('Add Discussion Note')}
               </h4>
 
               <div>
                 <input
                   type="text"
-                  placeholder="Discussion Agenda (e.g. Price Negotiation)"
+                  placeholder={t('Discussion Agenda (e.g. Price Negotiation)')}
                   value={discussionForm.agenda}
                   onChange={(e) => setDiscussionForm({ ...discussionForm, agenda: e.target.value })}
                   className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
@@ -663,7 +663,7 @@ export default function Leads() {
                 <textarea
                   required
                   rows="2"
-                  placeholder="Summary of discussion outcome... *"
+                  placeholder={t('Summary of discussion outcome... *')}
                   value={discussionForm.summary}
                   onChange={(e) => setDiscussionForm({ ...discussionForm, summary: e.target.value })}
                   className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
@@ -672,7 +672,7 @@ export default function Leads() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-medium text-slate-500 mb-1">Next Follow-up Date</label>
+                  <label className="block text-[11px] font-medium text-slate-500 mb-1">{t('Next Follow-up Date')}</label>
                   <input
                     type="date"
                     value={discussionForm.nextFollowupDate}
@@ -682,16 +682,16 @@ export default function Leads() {
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-medium text-slate-500 mb-1">Update Lead Status</label>
+                  <label className="block text-[11px] font-medium text-slate-500 mb-1">{t('Update Lead Status')}</label>
                   <select
                     value={discussionForm.newStatus}
                     onChange={(e) => setDiscussionForm({ ...discussionForm, newStatus: e.target.value })}
                     className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                   >
-                    <option value="contacted">Contacted</option>
-                    <option value="qualified">Qualified</option>
-                    <option value="proposal_sent">Proposal Sent</option>
-                    <option value="lost">Lost</option>
+                    <option value="contacted">{t('Contacted')}</option>
+                    <option value="qualified">{t('Qualified')}</option>
+                    <option value="proposal_sent">{t('Proposal Sent')}</option>
+                    <option value="lost">{t('Lost')}</option>
                   </select>
                 </div>
               </div>
@@ -702,7 +702,7 @@ export default function Leads() {
                   disabled={submitting}
                   className="px-4 py-2 rounded-xl text-xs font-bold bg-primary-600 hover:bg-primary-700 text-white disabled:opacity-50"
                 >
-                  {submitting ? 'Saving...' : 'Add Note & Update'}
+                  {submitting ? t('Saving...') : t('Add Note & Update')}
                 </button>
               </div>
             </form>
@@ -715,17 +715,17 @@ export default function Leads() {
         <Modal
           isOpen={Boolean(convertingLead)}
           onClose={() => setConvertingLead(null)}
-          title={`Convert to Formal Customer: ${convertingLead.name}`}
+          title={`${t('Convert to Formal Customer')}: ${convertingLead.name}`}
         >
           <form onSubmit={handleConvertLead} className="space-y-4">
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              This will create a new Customer profile from lead <strong>{convertingLead.leadNumber}</strong>, keeping all contact information and history intact.
+              {t('This will create a new Customer profile from lead')} <strong>{convertingLead.leadNumber}</strong>, {t('keeping all contact information and history intact.')}
             </p>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Tax Identification Number (TIN)
+                  {t('Tax Identification Number (TIN)')}
                 </label>
                 <input
                   type="text"
@@ -738,7 +738,7 @@ export default function Leads() {
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  VAT Registration Number
+                  {t('VAT Registration Number')}
                 </label>
                 <input
                   type="text"
@@ -753,8 +753,8 @@ export default function Leads() {
             <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-xs font-bold text-slate-800 dark:text-slate-200">Enable Credit Sales</div>
-                  <div className="text-[11px] text-slate-400">Allow this customer to purchase on invoice credit terms</div>
+                  <div className="text-xs font-bold text-slate-800 dark:text-slate-200">{t('Enable Credit Sales')}</div>
+                  <div className="text-[11px] text-slate-400">{t('Allow this customer to purchase on invoice credit terms')}</div>
                 </div>
                 <input
                   type="checkbox"
@@ -768,7 +768,7 @@ export default function Leads() {
                 <div className="grid grid-cols-2 gap-3 pt-2">
                   <div>
                     <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-300 mb-1">
-                      Credit Limit (ETB)
+                      {t('Credit Limit')} (ETB)
                     </label>
                     <input
                       type="number"
@@ -780,7 +780,7 @@ export default function Leads() {
                   </div>
                   <div>
                     <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-300 mb-1">
-                      Payment Terms (Days)
+                      {t('Payment Terms (Days)')}
                     </label>
                     <input
                       type="number"
@@ -800,14 +800,14 @@ export default function Leads() {
                 onClick={() => setConvertingLead(null)}
                 className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100"
               >
-                Cancel
+                {t('Cancel')}
               </button>
               <button
                 type="submit"
                 disabled={submitting}
                 className="px-5 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50"
               >
-                {submitting ? 'Converting...' : 'Confirm Conversion'}
+                {submitting ? t('Converting...') : t('Confirm Conversion')}
               </button>
             </div>
           </form>
