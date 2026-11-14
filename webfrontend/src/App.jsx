@@ -93,10 +93,10 @@ import PublicJobDetail from './pages/careers/PublicJobDetail';
 // Public Employee ID Card Verification (accessible via QR code scan)
 import PublicIdCardVerification from './pages/public/PublicIdCardVerification';
 
-// Collaboration & Personal Modules
-import Notifications from './pages/notifications/Notifications';
-import Messages from './pages/messages/Messages';
-import Notes from './pages/notes/Notes';
+// Communication & Collaboration Modules
+import Notifications from './pages/communication/Notifications';
+import Messages from './pages/communication/Messages';
+import Notes from './pages/communication/Notes';
 
 // Future Modules (Sections 1, 3, 4, 5, 6 - non-blocking modular placeholders)
 import UpcomingModule from './pages/modules/UpcomingModule';
