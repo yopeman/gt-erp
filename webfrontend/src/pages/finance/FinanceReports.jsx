@@ -99,7 +99,7 @@ export default function FinanceReports() {
   const handleExportCSV = () => {
     const logs = reportData?.unifiedLog || [];
     if (logs.length === 0) {
-      alert('No data available to export.');
+      alert(t('No data available to export.'));
       return;
     }
     const headers = ['Type', 'Reference #', 'Date', 'Party / Vendor', 'Category / Cost Center', 'Amount (ETB)', 'VAT / Tax', 'Status'];
@@ -126,7 +126,7 @@ export default function FinanceReports() {
   const handleExportPDF = () => {
     const logsToExport = filteredLogs.length > 0 ? filteredLogs : (reportData?.unifiedLog || []);
     if (!reportData || logsToExport.length === 0) {
-      alert('No data available to export.');
+      alert(t('No data available to export.'));
       return;
     }
 
@@ -242,7 +242,7 @@ export default function FinanceReports() {
   const handleAnalyzeWithChatGPT = () => {
     const logsToExport = filteredLogs.length > 0 ? filteredLogs : (reportData?.unifiedLog || []);
     if (!reportData || logsToExport.length === 0) {
-      alert('No data available to analyze.');
+      alert(t('No data available to analyze.'));
       return;
     }
 
@@ -318,7 +318,7 @@ export default function FinanceReports() {
             <span>{t('nav.financeReports') || 'Financial Statements & Reports'}</span>
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            General ledger summaries, profit & loss statement, AP aging, treasury reserves & tax compliance
+            {t('General ledger summaries, profit & loss statement, AP aging, treasury reserves & tax compliance')}
           </p>
         </div>
 
@@ -327,10 +327,10 @@ export default function FinanceReports() {
             onClick={fetchReport}
             disabled={loading}
             className="p-2 sm:px-3 sm:py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition flex items-center gap-1.5"
-            title="Refresh"
+            title={t('Refresh')}
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            <span className="hidden sm:inline">Refresh</span>
+            <span className="hidden sm:inline">{t('Refresh')}</span>
           </button>
 
           <button
@@ -338,25 +338,25 @@ export default function FinanceReports() {
             className="px-3 py-2 rounded-xl text-xs font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition flex items-center gap-1.5 shadow-xs"
           >
             <Download className="w-3.5 h-3.5" />
-            <span>Export CSV</span>
+            <span>{t('Export CSV')}</span>
           </button>
 
           <button
             onClick={handleExportPDF}
             className="px-3 py-2 rounded-xl text-xs font-bold bg-primary-500 hover:bg-primary-600 text-white shadow-xs transition flex items-center gap-1.5"
-            title="Export official PDF report in form format"
+            title={t('Export official PDF report in form format')}
           >
             <FileText className="w-3.5 h-3.5" />
-            <span>Export PDF</span>
+            <span>{t('Export PDF')}</span>
           </button>
 
           <button
             onClick={handleAnalyzeWithChatGPT}
             className="px-3 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition flex items-center gap-1.5"
-            title="Analyze report with ChatGPT"
+            title={t('Analyze report with ChatGPT')}
           >
             <Sparkles className="w-3.5 h-3.5" />
-            <span>AI Analysis</span>
+            <span>{t('AI Analysis')}</span>
           </button>
         </div>
       </div>
@@ -382,7 +382,7 @@ export default function FinanceReports() {
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
                 }`}
               >
-                {tItem.label}
+                {t(tItem.label)}
               </button>
             ))}
           </div>
@@ -404,7 +404,7 @@ export default function FinanceReports() {
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
                 }`}
               >
-                {tab.label}
+                {t(tab.label)}
               </button>
             ))}
           </div>
@@ -414,7 +414,7 @@ export default function FinanceReports() {
         {timeframe === 'custom' && (
           <form onSubmit={handleApplyCustomDate} className="pt-2 border-t border-slate-100 dark:border-slate-700 flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2">
-              <label className="text-xs text-slate-500">From:</label>
+              <label className="text-xs text-slate-500">{t('From')}:</label>
               <input
                 type="date"
                 value={customStartDate}
@@ -423,7 +423,7 @@ export default function FinanceReports() {
               />
             </div>
             <div className="flex items-center gap-2">
-              <label className="text-xs text-slate-500">To:</label>
+              <label className="text-xs text-slate-500">{t('To')}:</label>
               <input
                 type="date"
                 value={customEndDate}
@@ -435,7 +435,7 @@ export default function FinanceReports() {
               type="submit"
               className="px-3 py-1.5 text-xs font-bold rounded-lg bg-primary-500 text-white hover:bg-primary-600 transition"
             >
-              Apply Filter
+              {t('Apply Filter')}
             </button>
           </form>
         )}
@@ -453,31 +453,31 @@ export default function FinanceReports() {
         <StatCard
           title="Gross Invoiced Revenue"
           value={formatCurrency(summary.totalGrossRevenue)}
-          subtitle={`Collected: ${formatCurrency(summary.totalPaymentsReceived)}`}
+          subtitle={`${t('Collected')}: ${formatCurrency(summary.totalPaymentsReceived)}`}
           icon={TrendingUp}
         />
         <StatCard
           title="Accounts Payable Billed"
           value={formatCurrency(summary.totalBillsAmount)}
-          subtitle={`Outstanding: ${formatCurrency(summary.totalBillsOutstanding)}`}
+          subtitle={`${t('Outstanding')}: ${formatCurrency(summary.totalBillsOutstanding)}`}
           icon={Receipt}
         />
         <StatCard
           title="Operating Expenses"
           value={formatCurrency(summary.totalOperatingExpenses)}
-          subtitle="Administrative & Floor Overhead"
+          subtitle={t('Administrative & Floor Overhead')}
           icon={CreditCard}
         />
         <StatCard
           title="Net Operating Profit"
           value={formatCurrency(summary.netOperatingProfit)}
-          subtitle={`Gross Margin: ${formatCurrency(summary.grossProfit)}`}
+          subtitle={`${t('Gross Margin')}: ${formatCurrency(summary.grossProfit)}`}
           icon={DollarSign}
         />
         <StatCard
           title="Bank & Cash Reserves"
           value={formatCurrency(summary.totalBankReserves)}
-          subtitle="Available Liquid Treasury"
+          subtitle={t('Available Liquid Treasury')}
           icon={Landmark}
         />
       </div>
@@ -487,29 +487,29 @@ export default function FinanceReports() {
         <div className="p-5 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xs space-y-4">
           <h2 className="text-base font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
             <FileCheck2 className="w-5 h-5 text-primary-500" />
-            <span>Profit & Loss Statement (Income Statement)</span>
+            <span>{t('Profit & Loss Statement (Income Statement)')}</span>
           </h2>
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                 <tr className="font-bold bg-slate-50 dark:bg-slate-900/60">
-                  <td className="p-3">Operating Revenue (Invoices & Sales)</td>
+                  <td className="p-3">{t('Operating Revenue (Invoices & Sales)')}</td>
                   <td className="p-3 text-right text-emerald-600 font-black">{formatCurrency(summary.totalGrossRevenue)}</td>
                 </tr>
                 <tr>
-                  <td className="p-3 pl-6 text-slate-500">Less: Cost of Materials & Procurement (AP Bills)</td>
+                  <td className="p-3 pl-6 text-slate-500">{t('Less: Cost of Materials & Procurement (AP Bills)')}</td>
                   <td className="p-3 text-right text-rose-500">({formatCurrency(summary.totalBillsAmount)})</td>
                 </tr>
                 <tr className="font-bold bg-slate-50/50 dark:bg-slate-800/50">
-                  <td className="p-3">Gross Operating Margin</td>
+                  <td className="p-3">{t('Gross Operating Margin')}</td>
                   <td className="p-3 text-right font-black">{formatCurrency(summary.grossProfit)}</td>
                 </tr>
                 <tr>
-                  <td className="p-3 pl-6 text-slate-500">Less: Total Operating Overhead (Vouchers)</td>
+                  <td className="p-3 pl-6 text-slate-500">{t('Less: Total Operating Overhead (Vouchers)')}</td>
                   <td className="p-3 text-right text-rose-500">({formatCurrency(summary.totalOperatingExpenses)})</td>
                 </tr>
                 <tr className="font-black text-sm bg-primary-50/50 dark:bg-primary-950/30 text-slate-900 dark:text-slate-100 border-t-2 border-primary-500">
-                  <td className="p-3">Net Operating Income / (Loss)</td>
+                  <td className="p-3">{t('Net Operating Income / (Loss)')}</td>
                   <td className="p-3 text-right text-primary-600 dark:text-primary-400">{formatCurrency(summary.netOperatingProfit)}</td>
                 </tr>
               </tbody>
@@ -524,7 +524,7 @@ export default function FinanceReports() {
         <div className="p-5 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xs space-y-4">
           <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
             <CreditCard className="w-4 h-4 text-primary-500" />
-            <span>Operating Expenses by Cost Center</span>
+            <span>{t('Operating Expenses by Cost Center')}</span>
           </h2>
           <div className="h-64">
             {analytics.expensesByCostCenter && analytics.expensesByCostCenter.length > 0 ? (
@@ -534,12 +534,12 @@ export default function FinanceReports() {
                   <XAxis dataKey="name" angle={-25} textAnchor="end" interval={0} tick={{ fontSize: 10 }} />
                   <YAxis tick={{ fontSize: 11 }} />
                   <Tooltip formatter={(value) => formatCurrency(value)} />
-                  <Bar dataKey="amount" fill="#da1f26" radius={[4, 4, 0, 0]} name="Expense (ETB)" />
+                  <Bar dataKey="amount" fill="#da1f26" radius={[4, 4, 0, 0]} name={t('Expense (ETB)')} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
               <div className="h-full flex items-center justify-center text-xs text-slate-400">
-                No expense vouchers in this period
+                {t('No expense vouchers in this period')}
               </div>
             )}
           </div>
@@ -549,7 +549,7 @@ export default function FinanceReports() {
         <div className="p-5 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xs space-y-4">
           <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
             <Receipt className="w-4 h-4 text-primary-500" />
-            <span>Accounts Payable Aging Profile</span>
+            <span>{t('Accounts Payable Aging Profile')}</span>
           </h2>
           <div className="h-64">
             {apAgingData.some((d) => d.value > 0) ? (
@@ -562,7 +562,7 @@ export default function FinanceReports() {
                     cx="50%"
                     cy="50%"
                     outerRadius={80}
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    label={({ name, percent }) => `${t(name)} ${(percent * 100).toFixed(0)}%`}
                   >
                     {apAgingData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
@@ -573,7 +573,7 @@ export default function FinanceReports() {
               </ResponsiveContainer>
             ) : (
               <div className="h-full flex items-center justify-center text-xs text-slate-400">
-                No outstanding vendor payables
+                {t('No outstanding vendor payables')}
               </div>
             )}
           </div>
@@ -585,10 +585,10 @@ export default function FinanceReports() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100">
-              General Ledger Transactions & AP/AR Audit Log
+              {t('General Ledger Transactions & AP/AR Audit Log')}
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Unified financial audit trail of supplier bills, operational expense vouchers, and invoices
+              {t('Unified financial audit trail of supplier bills, operational expense vouchers, and invoices')}
             </p>
           </div>
 
@@ -596,7 +596,7 @@ export default function FinanceReports() {
             <Search className="w-3.5 h-3.5 absolute left-3 top-3 text-slate-400" />
             <input
               type="text"
-              placeholder="Search reference, party, account..."
+              placeholder={t('Search reference, party, account...')}
               value={searchTable}
               onChange={(e) => setSearchTable(e.target.value)}
               className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
@@ -608,14 +608,14 @@ export default function FinanceReports() {
           <table className="w-full text-left text-xs text-slate-600 dark:text-slate-300">
             <thead className="bg-slate-50 dark:bg-slate-900/60 uppercase text-[10px] font-bold text-slate-500 dark:text-slate-400 tracking-wider">
               <tr>
-                <th className="p-3">Type</th>
-                <th className="p-3">Reference #</th>
-                <th className="p-3">Party / Vendor</th>
-                <th className="p-3">Date</th>
-                <th className="p-3">Category</th>
-                <th className="p-3">Amount</th>
-                <th className="p-3">VAT</th>
-                <th className="p-3">Status</th>
+                <th className="p-3">{t('Type')}</th>
+                <th className="p-3">{t('Reference #')}</th>
+                <th className="p-3">{t('Party / Vendor')}</th>
+                <th className="p-3">{t('Date')}</th>
+                <th className="p-3">{t('Category')}</th>
+                <th className="p-3">{t('Amount')}</th>
+                <th className="p-3">{t('VAT')}</th>
+                <th className="p-3">{t('Status')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60 font-medium">
@@ -623,7 +623,7 @@ export default function FinanceReports() {
                 filteredLogs.map((item, idx) => (
                   <tr key={item.id || idx} className="hover:bg-slate-50/60 dark:hover:bg-slate-700/30 transition">
                     <td className="p-3 font-bold text-slate-900 dark:text-slate-100">
-                      {item.type}
+                      {t(item.type)}
                     </td>
                     <td className="p-3 font-semibold text-primary-600 dark:text-primary-400">
                       {item.referenceNumber}
@@ -651,7 +651,7 @@ export default function FinanceReports() {
               ) : (
                 <tr>
                   <td colSpan="8" className="p-6 text-center text-xs text-slate-400">
-                    No financial records matched your active filters
+                    {t('No financial records matched your active filters')}
                   </td>
                 </tr>
               )}

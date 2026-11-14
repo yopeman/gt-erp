@@ -133,7 +133,7 @@ export default function StoreReports() {
   const handleExportCSV = () => {
     const logs = reportData?.unifiedLog || [];
     if (logs.length === 0) {
-      alert('No data available to export.');
+      alert(t('No data available to export.'));
       return;
     }
     const headers = ['Type', 'Reference #', 'Date', 'Party / Requestor', 'Department', 'Warehouse', 'Details', 'Status'];
@@ -160,7 +160,7 @@ export default function StoreReports() {
   const handleExportPDF = () => {
     const logsToExport = filteredLogs.length > 0 ? filteredLogs : storeLogs;
     if (!reportData || logsToExport.length === 0) {
-      alert('No data available to export.');
+      alert(t('No data available to export.'));
       return;
     }
 
@@ -289,7 +289,7 @@ export default function StoreReports() {
   const handleAnalyzeWithChatGPT = () => {
     const logsToExport = filteredLogs.length > 0 ? filteredLogs : (storeLogs.length > 0 ? storeLogs : (reportData?.unifiedLog || []));
     if (!reportData || logsToExport.length === 0) {
-      alert('No data available to analyze.');
+      alert(t('No data available to analyze.'));
       return;
     }
 
@@ -369,10 +369,10 @@ export default function StoreReports() {
         <div>
           <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-2">
             <Package className="w-6 h-6 text-primary-500" />
-            <span>{t('nav.storeReports') || 'Store & Stock Inventory Reports'}</span>
+            <span>{t('Store & Stock Inventory Reports')}</span>
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Real-time inventory valuation, stock movements ledger, material issues (SIV) and returns (SRV)
+            {t('Real-time inventory valuation, stock movements ledger, material issues (SIV) and returns (SRV)')}
           </p>
         </div>
 
@@ -381,10 +381,10 @@ export default function StoreReports() {
             onClick={fetchReport}
             disabled={loading}
             className="p-2 sm:px-3 sm:py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition flex items-center gap-1.5"
-            title="Refresh analytics"
+            title={t('Refresh')}
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            <span className="hidden sm:inline">Refresh</span>
+            <span className="hidden sm:inline">{t('Refresh')}</span>
           </button>
 
           <button
@@ -392,25 +392,25 @@ export default function StoreReports() {
             className="px-3 py-2 rounded-xl text-xs font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition flex items-center gap-1.5 shadow-xs"
           >
             <Download className="w-3.5 h-3.5" />
-            <span>Export CSV</span>
+            <span>{t('Export CSV')}</span>
           </button>
 
           <button
             onClick={handleExportPDF}
             className="px-3 py-2 rounded-xl text-xs font-bold bg-primary-500 hover:bg-primary-600 text-white shadow-xs transition flex items-center gap-1.5"
-            title="Export official PDF report in form format"
+            title={t('Export official PDF report in form format')}
           >
             <FileText className="w-3.5 h-3.5" />
-            <span>Export PDF</span>
+            <span>{t('Export PDF')}</span>
           </button>
 
           <button
             onClick={handleAnalyzeWithChatGPT}
             className="px-3 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition flex items-center gap-1.5"
-            title="Analyze report with ChatGPT"
+            title={t('Analyze report with ChatGPT')}
           >
             <Sparkles className="w-3.5 h-3.5" />
-            <span>AI Analysis</span>
+            <span>{t('AI Analysis')}</span>
           </button>
         </div>
       </div>
@@ -436,7 +436,7 @@ export default function StoreReports() {
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
                 }`}
               >
-                {tItem.label}
+                {t(tItem.label)}
               </button>
             ))}
           </div>
@@ -444,13 +444,13 @@ export default function StoreReports() {
           <div className="flex flex-wrap items-center gap-3">
             {/* Warehouse Filter */}
             <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Warehouse:</span>
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">{t('Warehouse')}:</span>
               <select
                 value={warehouseFilter}
                 onChange={(e) => setWarehouseFilter(e.target.value)}
                 className="px-3 py-1.5 text-xs rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-medium text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500"
               >
-                <option value="">All Warehouses</option>
+                <option value="">{t('All Warehouses')}</option>
                 {warehouses.map((wh) => (
                   <option key={wh._id} value={wh._id}>{wh.warehouseName}</option>
                 ))}
@@ -459,15 +459,15 @@ export default function StoreReports() {
 
             {/* Department Filter */}
             <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Department:</span>
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">{t('Department')}:</span>
               <select
                 value={departmentFilter}
                 onChange={(e) => setDepartmentFilter(e.target.value)}
                 className="px-3 py-1.5 text-xs rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-medium text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500"
               >
-                <option value="">All Departments</option>
+                <option value="">{t('All Departments')}</option>
                 {DEPARTMENTS.map((dept) => (
-                  <option key={dept} value={dept}>{dept}</option>
+                  <option key={dept} value={dept}>{t(dept)}</option>
                 ))}
               </select>
             </div>
@@ -478,7 +478,7 @@ export default function StoreReports() {
         {timeframe === 'custom' && (
           <form onSubmit={handleApplyCustomDate} className="pt-2 border-t border-slate-100 dark:border-slate-700 flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2">
-              <label className="text-xs text-slate-500">From:</label>
+              <label className="text-xs text-slate-500">{t('From')}:</label>
               <input
                 type="date"
                 value={customStartDate}
@@ -487,7 +487,7 @@ export default function StoreReports() {
               />
             </div>
             <div className="flex items-center gap-2">
-              <label className="text-xs text-slate-500">To:</label>
+              <label className="text-xs text-slate-500">{t('To')}:</label>
               <input
                 type="date"
                 value={customEndDate}
@@ -499,7 +499,7 @@ export default function StoreReports() {
               type="submit"
               className="px-3 py-1.5 text-xs font-bold rounded-lg bg-primary-500 text-white hover:bg-primary-600 transition"
             >
-              Apply Filter
+              {t('Apply Filter')}
             </button>
           </form>
         )}
@@ -517,31 +517,31 @@ export default function StoreReports() {
         <StatCard
           title="Stock Valuation"
           value={formatCurrency(summary.totalValuation)}
-          subtitle="On-hand physical assets"
+          subtitle={t('On-hand physical assets')}
           icon={Boxes}
         />
         <StatCard
           title="Low Stock Warning"
           value={summary.lowStockCount || 0}
-          subtitle="Items below min safe level"
+          subtitle={t('Items below min safe level')}
           icon={ShieldAlert}
         />
         <StatCard
           title="Requisitions Issued"
           value={`${summary.completedRequestsCount || 0} SIV`}
-          subtitle={`${summary.totalIssuedItemsQty || 0} units released`}
+          subtitle={`${summary.totalIssuedItemsQty || 0} ${t('units released')}`}
           icon={Package}
         />
         <StatCard
           title="Staff Returns"
           value={`${summary.totalReturnsCount || 0} SRV`}
-          subtitle={`Restocked: ${summary.goodReturnedQty || 0} items`}
+          subtitle={`${t('Restocked')}: ${summary.goodReturnedQty || 0} ${t('items')}`}
           icon={RotateCcw}
         />
         <StatCard
           title="Stock Movements"
           value={summary.movementsCount || 0}
-          subtitle="Audit ledger entries"
+          subtitle={t('Audit ledger entries')}
           icon={History}
         />
       </div>
@@ -552,7 +552,7 @@ export default function StoreReports() {
         <div className="p-5 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xs space-y-4">
           <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
             <Package className="w-4 h-4 text-primary-500" />
-            <span>Material Consumption by Department (Qty)</span>
+            <span>{t('Material Consumption by Department (Qty)')}</span>
           </h2>
           <div className="h-64">
             {analytics.consumptionByDept && analytics.consumptionByDept.length > 0 ? (
@@ -562,12 +562,12 @@ export default function StoreReports() {
                   <XAxis dataKey="name" angle={-25} textAnchor="end" interval={0} tick={{ fontSize: 10 }} />
                   <YAxis tick={{ fontSize: 11 }} />
                   <Tooltip />
-                  <Bar dataKey="quantity" fill="#da1f26" radius={[4, 4, 0, 0]} name="Units Issued" />
+                  <Bar dataKey="quantity" fill="#da1f26" radius={[4, 4, 0, 0]} name={t('Units Issued')} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
               <div className="h-full flex items-center justify-center text-xs text-slate-400">
-                No consumption records in this period
+                {t('No consumption records in this period')}
               </div>
             )}
           </div>
@@ -577,7 +577,7 @@ export default function StoreReports() {
         <div className="p-5 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xs space-y-4">
           <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
             <Boxes className="w-4 h-4 text-primary-500" />
-            <span>Most Consumed Inventory Materials</span>
+            <span>{t('Most Consumed Inventory Materials')}</span>
           </h2>
           <div className="h-64">
             {analytics.topConsumedItems && analytics.topConsumedItems.length > 0 ? (
@@ -587,12 +587,12 @@ export default function StoreReports() {
                   <XAxis dataKey="name" angle={-25} textAnchor="end" interval={0} tick={{ fontSize: 10 }} />
                   <YAxis tick={{ fontSize: 11 }} />
                   <Tooltip />
-                  <Bar dataKey="quantity" fill="#3b82f6" radius={[4, 4, 0, 0]} name="Units Issued" />
+                  <Bar dataKey="quantity" fill="#3b82f6" radius={[4, 4, 0, 0]} name={t('Units Issued')} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
               <div className="h-full flex items-center justify-center text-xs text-slate-400">
-                No material issues recorded
+                {t('No material issues recorded')}
               </div>
             )}
           </div>
@@ -604,10 +604,10 @@ export default function StoreReports() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100">
-              Material Requisitions & Staff Return Ledger
+              {t('Material Requisitions & Staff Return Ledger')}
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Audit log of approved material requisitions (SIV) and return vouchers (SRV)
+              {t('Audit log of approved material requisitions (SIV) and return vouchers (SRV)')}
             </p>
           </div>
 
@@ -615,7 +615,7 @@ export default function StoreReports() {
             <Search className="w-3.5 h-3.5 absolute left-3 top-3 text-slate-400" />
             <input
               type="text"
-              placeholder="Search reference, party, item..."
+              placeholder={t('Search reference, party, item...')}
               value={searchTable}
               onChange={(e) => setSearchTable(e.target.value)}
               className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
@@ -627,14 +627,14 @@ export default function StoreReports() {
           <table className="w-full text-left text-xs text-slate-600 dark:text-slate-300">
             <thead className="bg-slate-50 dark:bg-slate-900/60 uppercase text-[10px] font-bold text-slate-500 dark:text-slate-400 tracking-wider">
               <tr>
-                <th className="p-3">Type</th>
-                <th className="p-3">Reference #</th>
-                <th className="p-3">Date</th>
-                <th className="p-3">Requestor / Party</th>
-                <th className="p-3">Department</th>
-                <th className="p-3">Warehouse</th>
-                <th className="p-3">Details</th>
-                <th className="p-3">Status</th>
+                <th className="p-3">{t('Type')}</th>
+                <th className="p-3">{t('Reference #')}</th>
+                <th className="p-3">{t('Date')}</th>
+                <th className="p-3">{t('Requestor / Party')}</th>
+                <th className="p-3">{t('Department')}</th>
+                <th className="p-3">{t('Warehouse')}</th>
+                <th className="p-3">{t('Details')}</th>
+                <th className="p-3">{t('Status')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60 font-medium">
@@ -642,7 +642,7 @@ export default function StoreReports() {
                 filteredLogs.map((item, idx) => (
                   <tr key={item.id || idx} className="hover:bg-slate-50/60 dark:hover:bg-slate-700/30 transition">
                     <td className="p-3 font-bold text-slate-900 dark:text-slate-100">
-                      {item.type}
+                      {t(item.type)}
                     </td>
                     <td className="p-3 font-semibold text-primary-600 dark:text-primary-400">
                       {item.referenceNumber}
@@ -654,7 +654,7 @@ export default function StoreReports() {
                       {item.actor}
                     </td>
                     <td className="p-3 text-slate-500">
-                      {item.department}
+                      {t(item.department)}
                     </td>
                     <td className="p-3 text-slate-500">
                       {item.warehouse}
@@ -670,7 +670,7 @@ export default function StoreReports() {
               ) : (
                 <tr>
                   <td colSpan="8" className="p-6 text-center text-xs text-slate-400">
-                    No store records found matching your filters
+                    {t('No store records found matching your filters')}
                   </td>
                 </tr>
               )}

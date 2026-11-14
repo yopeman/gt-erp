@@ -64,10 +64,10 @@ export default function ReportsCenter() {
         <div>
           <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-2">
             <FileText className="w-6 h-6 text-primary-500" />
-            <span>Enterprise Reports Center</span>
+            <span>{t('Enterprise Reports Center')}</span>
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Centralized multi-domain analytics, cross-departmental auditing, and modular reporting
+            {t('Centralized multi-domain analytics, cross-departmental auditing, and modular reporting')}
           </p>
         </div>
       </div>
@@ -82,29 +82,26 @@ export default function ReportsCenter() {
               key={mod.id}
               type="button"
               onClick={() => handleSelectTab(mod.id)}
-              className={`p-3 rounded-2xl border text-left transition flex flex-col justify-between items-center group cursor-pointer ${
-                isCurrent
+              className={`p-3 rounded-2xl border text-left transition flex flex-col justify-between items-center group cursor-pointer ${isCurrent
                   ? 'bg-primary-500 text-white border-primary-500 shadow-md ring-2 ring-primary-500/30'
                   : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-primary-500/60 hover:shadow-xs text-slate-800 dark:text-slate-100'
-              }`}
+                }`}
             >
               <div className="flex items-center justify-between">
                 <div
-                  className={`p-1.5 rounded-lg ${
-                    isCurrent ? 'bg-white/20 text-white' : 'bg-primary-50 dark:bg-primary-950/60 text-primary-500'
-                  }`}
+                  className={`p-1.5 rounded-lg ${isCurrent ? 'bg-white/20 text-white' : 'bg-primary-50 dark:bg-primary-950/60 text-primary-500'
+                    }`}
                 >
                   <ModIcon className="w-4 h-4" />
                 </div>
               </div>
               <div className="mt-2.5">
-                <div className="text-xs font-bold leading-tight">{mod.title}</div>
+                <div className="text-xs font-bold leading-tight">{t(mod.title)}</div>
                 <div
-                  className={`text-[10px] truncate mt-0.5 ${
-                    isCurrent ? 'text-primary-100 font-medium' : 'text-slate-400'
-                  }`}
+                  className={`text-[10px] truncate mt-0.5 ${isCurrent ? 'text-primary-100 font-medium' : 'text-slate-400'
+                    }`}
                 >
-                  {mod.desc}
+                  {t(mod.desc)}
                 </div>
               </div>
             </button>

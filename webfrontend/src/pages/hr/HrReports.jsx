@@ -115,7 +115,7 @@ export default function HrReports() {
   const handleExportCSV = () => {
     const logs = reportData?.unifiedLog || [];
     if (logs.length === 0) {
-      alert('No data available to export.');
+      alert(t('No data available to export.'));
       return;
     }
     const headers = ['Type', 'Employee / Reference', 'Date', 'Department', 'Details', 'Metric / Value', 'Status'];
@@ -141,7 +141,7 @@ export default function HrReports() {
   const handleExportPDF = () => {
     const logsToExport = filteredLogs.length > 0 ? filteredLogs : (reportData?.unifiedLog || []);
     if (!reportData || logsToExport.length === 0) {
-      alert('No data available to export.');
+      alert(t('No data available to export.'));
       return;
     }
 
@@ -246,7 +246,7 @@ export default function HrReports() {
   const handleAnalyzeWithChatGPT = () => {
     const logsToExport = filteredLogs.length > 0 ? filteredLogs : (reportData?.unifiedLog || []);
     if (!reportData || logsToExport.length === 0) {
-      alert('No data available to analyze.');
+      alert(t('No data available to analyze.'));
       return;
     }
 
@@ -318,10 +318,10 @@ export default function HrReports() {
         <div>
           <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-2">
             <Users className="w-6 h-6 text-primary-500" />
-            <span>{t('nav.hrReports') || 'HR & Workforce Analytics Report'}</span>
+            <span>{t('HR & Workforce Analytics Report')}</span>
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Workforce headcount, attendance metrics, overtime hours, leave records & payroll expenditures
+            {t('Workforce headcount, attendance metrics, overtime hours, leave records & payroll expenditures')}
           </p>
         </div>
 
@@ -330,10 +330,10 @@ export default function HrReports() {
             onClick={fetchReport}
             disabled={loading}
             className="p-2 sm:px-3 sm:py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition flex items-center gap-1.5"
-            title="Refresh"
+            title={t('Refresh')}
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            <span className="hidden sm:inline">Refresh</span>
+            <span className="hidden sm:inline">{t('Refresh')}</span>
           </button>
 
           <button
@@ -341,25 +341,25 @@ export default function HrReports() {
             className="px-3 py-2 rounded-xl text-xs font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition flex items-center gap-1.5 shadow-xs"
           >
             <Download className="w-3.5 h-3.5" />
-            <span>Export CSV</span>
+            <span>{t('Export CSV')}</span>
           </button>
 
           <button
             onClick={handleExportPDF}
             className="px-3 py-2 rounded-xl text-xs font-bold bg-primary-500 hover:bg-primary-600 text-white shadow-xs transition flex items-center gap-1.5"
-            title="Export official PDF report in form format"
+            title={t('Export official PDF report in form format')}
           >
             <FileText className="w-3.5 h-3.5" />
-            <span>Export PDF</span>
+            <span>{t('Export PDF')}</span>
           </button>
 
           <button
             onClick={handleAnalyzeWithChatGPT}
             className="px-3 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition flex items-center gap-1.5"
-            title="Analyze report with ChatGPT"
+            title={t('Analyze report with ChatGPT')}
           >
             <Sparkles className="w-3.5 h-3.5" />
-            <span>AI Analysis</span>
+            <span>{t('AI Analysis')}</span>
           </button>
         </div>
       </div>
@@ -385,22 +385,22 @@ export default function HrReports() {
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
                 }`}
               >
-                {tItem.label}
+                {t(tItem.label)}
               </button>
             ))}
           </div>
 
           {/* Department Filter */}
           <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Department:</span>
+            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">{t('Department')}:</span>
             <select
               value={departmentFilter}
               onChange={(e) => setDepartmentFilter(e.target.value)}
               className="px-3 py-1.5 text-xs rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-medium text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500"
             >
-              <option value="">All Departments</option>
+              <option value="">{t('All Departments')}</option>
               {DEPARTMENTS.map((dept) => (
-                <option key={dept} value={dept}>{dept}</option>
+                <option key={dept} value={dept}>{t(dept)}</option>
               ))}
             </select>
           </div>
@@ -410,7 +410,7 @@ export default function HrReports() {
         {timeframe === 'custom' && (
           <form onSubmit={handleApplyCustomDate} className="pt-2 border-t border-slate-100 dark:border-slate-700 flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2">
-              <label className="text-xs text-slate-500">From:</label>
+              <label className="text-xs text-slate-500">{t('From')}:</label>
               <input
                 type="date"
                 value={customStartDate}
@@ -419,7 +419,7 @@ export default function HrReports() {
               />
             </div>
             <div className="flex items-center gap-2">
-              <label className="text-xs text-slate-500">To:</label>
+              <label className="text-xs text-slate-500">{t('To')}:</label>
               <input
                 type="date"
                 value={customEndDate}
@@ -431,7 +431,7 @@ export default function HrReports() {
               type="submit"
               className="px-3 py-1.5 text-xs font-bold rounded-lg bg-primary-500 text-white hover:bg-primary-600 transition"
             >
-              Apply Filter
+              {t('Apply Filter')}
             </button>
           </form>
         )}
@@ -449,31 +449,31 @@ export default function HrReports() {
         <StatCard
           title="Total Workforce"
           value={summary.totalHeadcount || 0}
-          subtitle={`${summary.activeHeadcount || 0} active employees`}
+          subtitle={`${summary.activeHeadcount || 0} ${t('active employees')}`}
           icon={Users}
         />
         <StatCard
           title="Attendance Rate"
           value={`${summary.attendanceRate || 100}%`}
-          subtitle={`${summary.presentCount || 0} on-time • ${summary.lateCount || 0} late`}
+          subtitle={`${summary.presentCount || 0} ${t('on-time')} • ${summary.lateCount || 0} ${t('late')}`}
           icon={Clock}
         />
         <StatCard
           title="Approved Overtime"
-          value={`${summary.totalApprovedOtHours || 0} hrs`}
-          subtitle={`Cost: ${formatCurrency(summary.totalOtCost)}`}
+          value={`${summary.totalApprovedOtHours || 0} ${t('hrs')}`}
+          subtitle={`${t('Cost')}: ${formatCurrency(summary.totalOtCost)}`}
           icon={Timer}
         />
         <StatCard
           title="Leave Days Taken"
-          value={`${summary.totalLeaveDays || 0} days`}
-          subtitle={`${summary.approvedLeavesCount || 0} approved • ${summary.pendingLeavesCount || 0} pending`}
+          value={`${summary.totalLeaveDays || 0} ${t('days')}`}
+          subtitle={`${summary.approvedLeavesCount || 0} ${t('approved')} • ${summary.pendingLeavesCount || 0} ${t('pending')}`}
           icon={CalendarDays}
         />
         <StatCard
           title="Total Net Payroll"
           value={formatCurrency(summary.totalNetPayroll)}
-          subtitle={`Gross: ${formatCurrency(summary.totalGrossPayroll)}`}
+          subtitle={`${t('Gross')}: ${formatCurrency(summary.totalGrossPayroll)}`}
           icon={CreditCard}
         />
       </div>
@@ -484,7 +484,7 @@ export default function HrReports() {
         <div className="p-5 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xs space-y-4">
           <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
             <Building2 className="w-4 h-4 text-primary-500" />
-            <span>Staff Headcount by Department</span>
+            <span>{t('Staff Headcount by Department')}</span>
           </h2>
           <div className="h-64">
             {analytics.headcountByDept && analytics.headcountByDept.length > 0 ? (
@@ -494,12 +494,12 @@ export default function HrReports() {
                   <XAxis dataKey="name" angle={-25} textAnchor="end" interval={0} tick={{ fontSize: 10 }} />
                   <YAxis tick={{ fontSize: 11 }} />
                   <Tooltip />
-                  <Bar dataKey="count" fill="#da1f26" radius={[4, 4, 0, 0]} name="Employees" />
+                  <Bar dataKey="count" fill="#da1f26" radius={[4, 4, 0, 0]} name={t('Employees')} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
               <div className="h-full flex items-center justify-center text-xs text-slate-400">
-                No department data available
+                {t('No department data available')}
               </div>
             )}
           </div>
@@ -509,7 +509,7 @@ export default function HrReports() {
         <div className="p-5 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xs space-y-4">
           <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
             <CalendarDays className="w-4 h-4 text-primary-500" />
-            <span>Leave Days Taken by Type</span>
+            <span>{t('Leave Days Taken by Type')}</span>
           </h2>
           <div className="h-64">
             {analytics.leaveByType && analytics.leaveByType.length > 0 ? (
@@ -522,7 +522,7 @@ export default function HrReports() {
                     cx="50%"
                     cy="50%"
                     outerRadius={80}
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    label={({ name, percent }) => `${t(name)} ${(percent * 100).toFixed(0)}%`}
                   >
                     {analytics.leaveByType.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
@@ -533,7 +533,7 @@ export default function HrReports() {
               </ResponsiveContainer>
             ) : (
               <div className="h-full flex items-center justify-center text-xs text-slate-400">
-                No leave records for this period
+                {t('No leave records for this period')}
               </div>
             )}
           </div>
@@ -545,10 +545,10 @@ export default function HrReports() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100">
-              Workforce Operations & Audit Trail
+              {t('Workforce Operations & Audit Trail')}
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Showing recent attendance, overtime authorizations, and approved leaves
+              {t('Showing recent attendance, overtime authorizations, and approved leaves')}
             </p>
           </div>
 
@@ -556,7 +556,7 @@ export default function HrReports() {
             <Search className="w-3.5 h-3.5 absolute left-3 top-3 text-slate-400" />
             <input
               type="text"
-              placeholder="Search staff, department..."
+              placeholder={t('Search staff, department...')}
               value={searchTable}
               onChange={(e) => setSearchTable(e.target.value)}
               className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
@@ -568,13 +568,13 @@ export default function HrReports() {
           <table className="w-full text-left text-xs text-slate-600 dark:text-slate-300">
             <thead className="bg-slate-50 dark:bg-slate-900/60 uppercase text-[10px] font-bold text-slate-500 dark:text-slate-400 tracking-wider">
               <tr>
-                <th className="p-3">Type</th>
-                <th className="p-3">Employee</th>
-                <th className="p-3">Department</th>
-                <th className="p-3">Date</th>
-                <th className="p-3">Details</th>
-                <th className="p-3">Metric</th>
-                <th className="p-3">Status</th>
+                <th className="p-3">{t('Type')}</th>
+                <th className="p-3">{t('Employee')}</th>
+                <th className="p-3">{t('Department')}</th>
+                <th className="p-3">{t('Date')}</th>
+                <th className="p-3">{t('Details')}</th>
+                <th className="p-3">{t('Metric')}</th>
+                <th className="p-3">{t('Status')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60 font-medium">
@@ -582,13 +582,13 @@ export default function HrReports() {
                 filteredLogs.map((item, idx) => (
                   <tr key={item.id || idx} className="hover:bg-slate-50/60 dark:hover:bg-slate-700/30 transition">
                     <td className="p-3 font-bold text-slate-900 dark:text-slate-100">
-                      {item.type}
+                      {t(item.type)}
                     </td>
                     <td className="p-3 font-semibold text-primary-600 dark:text-primary-400">
                       {item.referenceNumber}
                     </td>
                     <td className="p-3 text-slate-500 dark:text-slate-400">
-                      {item.department}
+                      {t(item.department)}
                     </td>
                     <td className="p-3 text-slate-500">
                       {item.date ? new Date(item.date).toLocaleDateString() : '-'}
@@ -607,7 +607,7 @@ export default function HrReports() {
               ) : (
                 <tr>
                   <td colSpan="7" className="p-6 text-center text-xs text-slate-400">
-                    No HR records matched your filters
+                    {t('No HR records matched your filters')}
                   </td>
                 </tr>
               )}

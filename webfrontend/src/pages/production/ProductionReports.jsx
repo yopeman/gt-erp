@@ -100,7 +100,7 @@ export default function ProductionReports() {
   const handleExportCSV = () => {
     const logs = reportData?.unifiedLog || [];
     if (logs.length === 0) {
-      alert('No data available to export.');
+      alert(t('No data available to export.'));
       return;
     }
     const headers = ['Type', 'Reference #', 'Date', 'Machine / Entity', 'Stage / Details', 'Quantity', 'Cost (ETB)', 'Status'];
@@ -127,7 +127,7 @@ export default function ProductionReports() {
   const handleExportPDF = () => {
     const logsToExport = filteredLogs.length > 0 ? filteredLogs : (reportData?.unifiedLog || []);
     if (!reportData || logsToExport.length === 0) {
-      alert('No data available to export.');
+      alert(t('No data available to export.'));
       return;
     }
 
@@ -237,7 +237,7 @@ export default function ProductionReports() {
   const handleAnalyzeWithChatGPT = () => {
     const logsToExport = filteredLogs.length > 0 ? filteredLogs : (reportData?.unifiedLog || []);
     if (!reportData || logsToExport.length === 0) {
-      alert('No data available to analyze.');
+      alert(t('No data available to analyze.'));
       return;
     }
 
@@ -314,7 +314,7 @@ export default function ProductionReports() {
             <span>{t('nav.productionReports') || 'Production & Machine Operations Reports'}</span>
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Floor run throughput, machine fleet uptime, maintenance expenditures & spoilage wastage analysis
+            {t('Floor run throughput, machine fleet uptime, maintenance expenditures & spoilage wastage analysis')}
           </p>
         </div>
 
@@ -323,10 +323,10 @@ export default function ProductionReports() {
             onClick={fetchReport}
             disabled={loading}
             className="p-2 sm:px-3 sm:py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition flex items-center gap-1.5"
-            title="Refresh"
+            title={t('Refresh')}
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            <span className="hidden sm:inline">Refresh</span>
+            <span className="hidden sm:inline">{t('Refresh')}</span>
           </button>
 
           <button
@@ -334,25 +334,25 @@ export default function ProductionReports() {
             className="px-3 py-2 rounded-xl text-xs font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition flex items-center gap-1.5 shadow-xs"
           >
             <Download className="w-3.5 h-3.5" />
-            <span>Export CSV</span>
+            <span>{t('Export CSV')}</span>
           </button>
 
           <button
             onClick={handleExportPDF}
             className="px-3 py-2 rounded-xl text-xs font-bold bg-primary-500 hover:bg-primary-600 text-white shadow-xs transition flex items-center gap-1.5"
-            title="Export official PDF report in form format"
+            title={t('Export official PDF report in form format')}
           >
             <FileText className="w-3.5 h-3.5" />
-            <span>Export PDF</span>
+            <span>{t('Export PDF')}</span>
           </button>
 
           <button
             onClick={handleAnalyzeWithChatGPT}
             className="px-3 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition flex items-center gap-1.5"
-            title="Analyze report with ChatGPT"
+            title={t('Analyze report with ChatGPT')}
           >
             <Sparkles className="w-3.5 h-3.5" />
-            <span>AI Analysis</span>
+            <span>{t('AI Analysis')}</span>
           </button>
         </div>
       </div>
@@ -378,20 +378,20 @@ export default function ProductionReports() {
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
                 }`}
               >
-                {tItem.label}
+                {t(tItem.label)}
               </button>
             ))}
           </div>
 
           {/* Machine Filter */}
           <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Machine:</span>
+            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">{t('Machine')}:</span>
             <select
               value={machineFilter}
               onChange={(e) => setMachineFilter(e.target.value)}
               className="px-3 py-1.5 text-xs rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-medium text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500"
             >
-              <option value="">All Machines</option>
+              <option value="">{t('All Machines')}</option>
               {machines.map((m) => (
                 <option key={m.id} value={m.id}>{m.name} ({m.code})</option>
               ))}
@@ -403,7 +403,7 @@ export default function ProductionReports() {
         {timeframe === 'custom' && (
           <form onSubmit={handleApplyCustomDate} className="pt-2 border-t border-slate-100 dark:border-slate-700 flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2">
-              <label className="text-xs text-slate-500">From:</label>
+              <label className="text-xs text-slate-500">{t('From')}:</label>
               <input
                 type="date"
                 value={customStartDate}
@@ -412,7 +412,7 @@ export default function ProductionReports() {
               />
             </div>
             <div className="flex items-center gap-2">
-              <label className="text-xs text-slate-500">To:</label>
+              <label className="text-xs text-slate-500">{t('To')}:</label>
               <input
                 type="date"
                 value={customEndDate}
@@ -424,7 +424,7 @@ export default function ProductionReports() {
               type="submit"
               className="px-3 py-1.5 text-xs font-bold rounded-lg bg-primary-500 text-white hover:bg-primary-600 transition"
             >
-              Apply Filter
+              {t('Apply Filter')}
             </button>
           </form>
         )}
@@ -442,31 +442,31 @@ export default function ProductionReports() {
         <StatCard
           title="Completed Jobs"
           value={summary.completedJobsCount || 0}
-          subtitle={`${summary.inProgressJobsCount || 0} active in floor`}
+          subtitle={`${summary.inProgressJobsCount || 0} ${t('active on floor')}`}
           icon={Workflow}
         />
         <StatCard
           title="Machine Fleet Uptime"
           value={`${summary.machineUptimePercent || 100}%`}
-          subtitle={`${summary.totalMachines || 0} units active`}
+          subtitle={`${summary.totalMachines || 0} ${t('units active')}`}
           icon={Activity}
         />
         <StatCard
           title="Total Spoilage Cost"
           value={formatCurrency(summary.totalWastageCost)}
-          subtitle={`${summary.totalWastageRecords || 0} scrap logs`}
+          subtitle={`${summary.totalWastageRecords || 0} ${t('scrap logs')}`}
           icon={Trash2}
         />
         <StatCard
           title="Wasted Material Qty"
-          value={`${Number(summary.totalWastedQuantity || 0).toLocaleString()} units`}
-          subtitle="Spoiled raw sheets & materials"
+          value={`${Number(summary.totalWastedQuantity || 0).toLocaleString()} ${t('units')}`}
+          subtitle={t('Spoiled raw sheets & materials')}
           icon={SlidersHorizontal}
         />
         <StatCard
           title="Maintenance Cost"
           value={formatCurrency(summary.totalMaintenanceCost)}
-          subtitle={`${summary.activeMaintenanceCount || 0} active tickets`}
+          subtitle={`${summary.activeMaintenanceCount || 0} ${t('active tickets')}`}
           icon={Wrench}
         />
       </div>
@@ -477,7 +477,7 @@ export default function ProductionReports() {
         <div className="p-5 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xs space-y-4">
           <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
             <Trash2 className="w-4 h-4 text-primary-500" />
-            <span>Spoilage Cost by Failure Reason</span>
+            <span>{t('Spoilage Cost by Failure Reason')}</span>
           </h2>
           <div className="h-64">
             {analytics.wastageByReason && analytics.wastageByReason.length > 0 ? (
@@ -487,12 +487,12 @@ export default function ProductionReports() {
                   <XAxis dataKey="name" angle={-25} textAnchor="end" interval={0} tick={{ fontSize: 10 }} />
                   <YAxis tick={{ fontSize: 11 }} />
                   <Tooltip formatter={(value) => formatCurrency(value)} />
-                  <Bar dataKey="cost" fill="#da1f26" radius={[4, 4, 0, 0]} name="Wastage Cost (ETB)" />
+                  <Bar dataKey="cost" fill="#da1f26" radius={[4, 4, 0, 0]} name={t('Wastage Cost (ETB)')} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
               <div className="h-full flex items-center justify-center text-xs text-slate-400">
-                No recorded wastage in this timeframe
+                {t('No recorded wastage in this timeframe')}
               </div>
             )}
           </div>
@@ -502,7 +502,7 @@ export default function ProductionReports() {
         <div className="p-5 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xs space-y-4">
           <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
             <Workflow className="w-4 h-4 text-primary-500" />
-            <span>Jobs Across Production Stages</span>
+            <span>{t('Jobs Across Production Stages')}</span>
           </h2>
           <div className="h-64">
             {analytics.jobsByStage && analytics.jobsByStage.length > 0 ? (
@@ -512,12 +512,12 @@ export default function ProductionReports() {
                   <XAxis dataKey="name" angle={-25} textAnchor="end" interval={0} tick={{ fontSize: 10 }} />
                   <YAxis tick={{ fontSize: 11 }} />
                   <Tooltip />
-                  <Bar dataKey="count" fill="#3b82f6" radius={[4, 4, 0, 0]} name="Jobs Count" />
+                  <Bar dataKey="count" fill="#3b82f6" radius={[4, 4, 0, 0]} name={t('Jobs Count')} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
               <div className="h-full flex items-center justify-center text-xs text-slate-400">
-                No active stages recorded
+                {t('No active stages recorded')}
               </div>
             )}
           </div>
@@ -529,10 +529,10 @@ export default function ProductionReports() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100">
-              Floor Operations & Wastage Audit Log
+              {t('Floor Operations & Wastage Audit Log')}
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Live audit trail of job executions, maintenance repairs, and recorded material spoilage
+              {t('Live audit trail of job executions, maintenance repairs, and recorded material spoilage')}
             </p>
           </div>
 
@@ -540,7 +540,7 @@ export default function ProductionReports() {
             <Search className="w-3.5 h-3.5 absolute left-3 top-3 text-slate-400" />
             <input
               type="text"
-              placeholder="Search job, machine, ticket..."
+              placeholder={t('Search job, machine, ticket...')}
               value={searchTable}
               onChange={(e) => setSearchTable(e.target.value)}
               className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
@@ -552,14 +552,14 @@ export default function ProductionReports() {
           <table className="w-full text-left text-xs text-slate-600 dark:text-slate-300">
             <thead className="bg-slate-50 dark:bg-slate-900/60 uppercase text-[10px] font-bold text-slate-500 dark:text-slate-400 tracking-wider">
               <tr>
-                <th className="p-3">Type</th>
-                <th className="p-3">Reference #</th>
-                <th className="p-3">Machine / Line</th>
-                <th className="p-3">Date</th>
-                <th className="p-3">Details / Stage</th>
-                <th className="p-3">Quantity</th>
-                <th className="p-3">Cost</th>
-                <th className="p-3">Status</th>
+                <th className="p-3">{t('Type')}</th>
+                <th className="p-3">{t('Reference #')}</th>
+                <th className="p-3">{t('Machine / Line')}</th>
+                <th className="p-3">{t('Date')}</th>
+                <th className="p-3">{t('Details / Stage')}</th>
+                <th className="p-3">{t('Quantity')}</th>
+                <th className="p-3">{t('Cost')}</th>
+                <th className="p-3">{t('Status')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60 font-medium">
@@ -567,7 +567,7 @@ export default function ProductionReports() {
                 filteredLogs.map((item, idx) => (
                   <tr key={item.id || idx} className="hover:bg-slate-50/60 dark:hover:bg-slate-700/30 transition">
                     <td className="p-3 font-bold text-slate-900 dark:text-slate-100">
-                      {item.type}
+                      {t(item.type)}
                     </td>
                     <td className="p-3 font-semibold text-primary-600 dark:text-primary-400">
                       {item.referenceNumber}
@@ -595,7 +595,7 @@ export default function ProductionReports() {
               ) : (
                 <tr>
                   <td colSpan="8" className="p-6 text-center text-xs text-slate-400">
-                    No production events matched the filter criteria
+                    {t('No production events matched the filter criteria')}
                   </td>
                 </tr>
               )}
