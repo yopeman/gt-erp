@@ -1,6 +1,4 @@
 # Database Schema (MongoDB / Mongoose) for GT ERP
-## Phase 3: CRM, Order & Sales Management
-## Phase 4: Machine & Production Operations
 
 ---
 
