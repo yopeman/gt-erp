@@ -203,7 +203,7 @@ export default function UsersPage() {
         }
       }
     } catch (err) {
-      setFormError(err.message || 'Operation failed');
+      setFormError(err.message || t('Operation failed'));
     } finally {
       setSubmitting(false);
     }
@@ -211,16 +211,16 @@ export default function UsersPage() {
 
   const handleDeleteUser = async (id) => {
     if (id === currentUser?._id) {
-      alert('You cannot delete your own account.');
+      alert(t('You cannot delete your own account.'));
       return;
     }
-    if (!window.confirm('Are you sure you want to deactivate this system user?')) return;
+    if (!window.confirm(t('Are you sure you want to deactivate this system user?'))) return;
     try {
       await api.delete(`/users/${id}`);
       setUsers((prev) => prev.filter((u) => u._id !== id));
       await fetchEmployees();
     } catch (err) {
-      alert(err.message || 'Failed to delete user');
+      alert(err.message || t('Failed to delete user'));
     }
   };
 
@@ -246,10 +246,10 @@ export default function UsersPage() {
         <div>
           <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
             <Shield className="w-6 h-6 text-primary-500" />
-            <span>{t('nav.users')}</span>
+            <span>{t('nav.users', 'System Users & Roles')}</span>
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Central administration, user logins, and Role-Based Access Control (RBAC) linked to employee profiles.
+            {t('Central administration, user logins, and Role-Based Access Control (RBAC) linked to employee profiles.')}
           </p>
         </div>
 
@@ -261,7 +261,7 @@ export default function UsersPage() {
             }}
             disabled={loading}
             className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition"
-            title="Refresh"
+            title={t('Refresh')}
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
@@ -271,7 +271,7 @@ export default function UsersPage() {
             className="px-4 py-2.5 bg-primary-500 hover:bg-primary-600 text-white font-bold text-xs rounded-xl shadow-md transition active:scale-95 flex items-center gap-2"
           >
             <UserPlus className="w-4 h-4" />
-            <span>{t('actions.createUser')}</span>
+            <span>{t('actions.createUser', 'Create User')}</span>
           </button>
         </div>
       </div>
@@ -284,7 +284,7 @@ export default function UsersPage() {
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder={t('search...')}
+            placeholder={t('Search users...', 'Search by name, email, department or role...')}
             className="w-full pl-9 pr-4 py-2 text-xs sm:text-sm rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-500/30 transition"
           />
         </div>
@@ -297,12 +297,12 @@ export default function UsersPage() {
               onChange={(e) => setRoleFilter(e.target.value)}
               className="w-full pl-9 pr-8 py-2 text-xs sm:text-sm rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-500/30 text-slate-700 dark:text-slate-200 appearance-none cursor-pointer"
             >
-              <option value="">{t('all')} {t('roles')} ({users.length})</option>
+              <option value="">{t('All Roles')} ({users.length})</option>
               {AVAILABLE_ROLES.map((r) => {
                 const count = users.filter((u) => u.roles?.includes(r.id)).length;
                 return (
                   <option key={r.id} value={r.id}>
-                    {t(r.id)} ({count})
+                    {t(r.label)} ({count})
                   </option>
                 );
               })}
@@ -313,17 +313,17 @@ export default function UsersPage() {
 
       {loading ? (
         <div className="p-12 text-center text-xs text-slate-400 animate-pulse">
-          Loading system users and employee links from live API...
+          {t('Loading system users and employee links from live API...')}
         </div>
       ) : filteredUsers.length === 0 ? (
         <EmptyState
-          title={searchTerm || roleFilter ? "No matching users found" : "No system users found"}
+          title={searchTerm || roleFilter ? t('No matching users found') : t('No system users found')}
           message={
             searchTerm || roleFilter
-              ? "Try adjusting your search query or role filter criteria."
-              : "No user accounts retrieved from backend."
+              ? t('Try adjusting your search query or role filter criteria.')
+              : t('No user accounts retrieved from backend.')
           }
-          actionText={searchTerm || roleFilter ? "Clear Filters" : t('actions.createUser')}
+          actionText={searchTerm || roleFilter ? t('Clear Filters') : t('actions.createUser', 'Create User')}
           onAction={
             searchTerm || roleFilter
               ? () => {
@@ -360,19 +360,19 @@ export default function UsersPage() {
                       <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
                         {u.fullName}
                         {u._id === currentUser?._id && (
-                          <span className="text-[10px] font-bold text-primary-500 uppercase">(You)</span>
+                          <span className="text-[10px] font-bold text-primary-500 uppercase">{t('(You)')}</span>
                         )}
                       </h3>
                       <p className="text-xs text-slate-400">{u.email}</p>
                     </div>
                   </div>
-                  <Badge status={u.isDeleted ? 'inactive' : 'active'} text={u.isDeleted ? 'Deactivated' : 'Active'} />
+                  <Badge status={u.isDeleted ? 'inactive' : 'active'} text={u.isDeleted ? t('Deactivated') : t('Active')} />
                 </div>
 
                 {/* Linked Employee Info */}
                 <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-700/60 text-xs">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
-                    Linked HR Employee
+                    {t('Linked HR Employee')}
                   </span>
                   {u.employee ? (
                     <div className="flex items-center justify-between text-slate-700 dark:text-slate-300">
@@ -382,7 +382,7 @@ export default function UsersPage() {
                       </span>
                     </div>
                   ) : (
-                    <span className="text-slate-400 italic">No employee profile linked</span>
+                    <span className="text-slate-400 italic">{t('No employee profile linked')}</span>
                   )}
                 </div>
 
@@ -396,7 +396,7 @@ export default function UsersPage() {
                       )}`}
                     >
                       {role === 'storekeeper' && <Boxes className="w-3 h-3 text-amber-600 dark:text-amber-400" />}
-                      <span>{role}</span>
+                      <span>{t(role, role)}</span>
                     </span>
                   ))}
                 </div>
@@ -408,7 +408,7 @@ export default function UsersPage() {
                     className="px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded-lg flex items-center gap-1.5 transition"
                   >
                     <Edit className="w-3.5 h-3.5 text-primary-500" />
-                    <span>Edit Roles & Link</span>
+                    <span>{t('Edit Roles & Link')}</span>
                   </button>
 
                   {u._id !== currentUser?._id && (
@@ -417,7 +417,7 @@ export default function UsersPage() {
                       className="px-3 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg flex items-center gap-1 transition"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
-                      <span>{t('actions.delete')}</span>
+                      <span>{t('actions.delete', 'Delete')}</span>
                     </button>
                   )}
                 </div>
@@ -430,11 +430,11 @@ export default function UsersPage() {
             <table className="w-full text-left text-xs sm:text-sm">
               <thead className="bg-slate-50 dark:bg-slate-900/60 text-xs uppercase font-bold text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700 sticky top-0">
                 <tr>
-                  <th className="px-4 py-3">{t('user')} & {t('email')}</th>
-                  <th className="px-4 py-3">{t('employee')} {t('profile')}</th>
-                  <th className="px-4 py-3">{t('roles')}</th>
-                  <th className="px-4 py-3">{t('status')}</th>
-                  <th className="px-4 py-3 text-right">{t('actions')}</th>
+                  <th className="px-4 py-3">{t('User & Email')}</th>
+                  <th className="px-4 py-3">{t('Employee Profile')}</th>
+                  <th className="px-4 py-3">{t('Roles')}</th>
+                  <th className="px-4 py-3">{t('Status')}</th>
+                  <th className="px-4 py-3 text-right">{t('Actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60">
@@ -457,7 +457,7 @@ export default function UsersPage() {
                           <div className="font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
                             {u.fullName}
                             {u._id === currentUser?._id && (
-                              <span className="text-[10px] font-bold text-primary-500 uppercase">(You)</span>
+                              <span className="text-[10px] font-bold text-primary-500 uppercase">{t('(You)')}</span>
                             )}
                           </div>
                           <div className="text-slate-500 dark:text-slate-400 text-xs">{u.email}</div>
@@ -481,7 +481,7 @@ export default function UsersPage() {
                       ) : (
                         <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-400 dark:text-slate-500 italic">
                           <User className="w-3.5 h-3.5 text-slate-400" />
-                          Standalone User
+                          {t('Standalone User')}
                         </span>
                       )}
                     </td>
@@ -498,7 +498,7 @@ export default function UsersPage() {
                             {role === 'storekeeper' && (
                               <Boxes className="w-3 h-3 text-amber-600 dark:text-amber-400" />
                             )}
-                            <span>{role}</span>
+                            <span>{t(role, role)}</span>
                           </span>
                         ))}
                       </div>
@@ -507,7 +507,7 @@ export default function UsersPage() {
                     <td className="px-4 py-3">
                       <Badge
                         status={u.isDeleted ? 'inactive' : 'active'}
-                        text={u.isDeleted ? 'Deactivated' : 'Active'}
+                        text={u.isDeleted ? t('Deactivated') : t('Active')}
                       />
                     </td>
 
@@ -516,7 +516,7 @@ export default function UsersPage() {
                         <button
                           onClick={() => handleOpenEditModal(u)}
                           className="p-1.5 text-slate-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-950/40 rounded-lg transition"
-                          title="Edit Roles & Employee Link"
+                          title={t('Edit Roles & Employee Link')}
                         >
                           <Edit className="w-4 h-4" />
                         </button>
@@ -525,7 +525,7 @@ export default function UsersPage() {
                           <button
                             onClick={() => handleDeleteUser(u._id)}
                             className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition"
-                            title="Deactivate User"
+                            title={t('Deactivate User')}
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -544,7 +544,7 @@ export default function UsersPage() {
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={modalMode === 'create' ? t('actions.createUser') : 'Edit User & Roles'}
+        title={modalMode === 'create' ? t('actions.createUser', 'Create User') : t('Edit User & Roles')}
         maxWidth="max-w-lg"
       >
         {formError && (
@@ -557,17 +557,17 @@ export default function UsersPage() {
           {/* Link to Employee Profile */}
           <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-2">
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-              Connect to Employee Profile (Optional)
+              {t('Connect to Employee Profile (Optional)')}
             </label>
             <p className="text-[11px] text-slate-500 dark:text-slate-400">
-              Links this login credentials to an Employee record for self-service, clock-in, and department routing.
+              {t('Links this login credentials to an Employee record for self-service, clock-in, and department routing.')}
             </p>
             <select
               value={formData.employee}
               onChange={(e) => handleEmployeeSelect(e.target.value)}
               className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs sm:text-sm focus:ring-2 focus:ring-primary-500"
             >
-              <option value="">-- No Linked Employee (Standalone Account) --</option>
+              <option value="">-- {t('No Linked Employee (Standalone Account)')} --</option>
               {employees
                 .filter((emp) => {
                   const linkedUserId = emp.user?._id || emp.user;
@@ -584,7 +584,7 @@ export default function UsersPage() {
 
           <div>
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-              Full Name *
+              {t('Full Name *')}
             </label>
             <input
               type="text"
@@ -598,7 +598,7 @@ export default function UsersPage() {
 
           <div>
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-              Email Address *
+              {t('Email Address *')}
             </label>
             <input
               type="email"
@@ -612,21 +612,21 @@ export default function UsersPage() {
 
           <div>
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-              {modalMode === 'create' ? 'Password *' : 'Password (leave blank to keep unchanged)'}
+              {modalMode === 'create' ? t('Password *') : t('Password (leave blank to keep unchanged)')}
             </label>
             <input
               type="password"
               required={modalMode === 'create'}
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              placeholder={modalMode === 'create' ? '••••••••••••' : 'Unchanged'}
+              placeholder={modalMode === 'create' ? '••••••••••••' : t('Unchanged')}
               className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs sm:text-sm focus:ring-2 focus:ring-primary-500"
             />
           </div>
 
           <div>
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">
-              Assign System Roles (RBAC Permissions)
+              {t('Assign System Roles (RBAC Permissions)')}
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
               {AVAILABLE_ROLES.map((r) => {
@@ -651,10 +651,10 @@ export default function UsersPage() {
                         {r.id === 'storekeeper' && (
                           <Boxes className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
                         )}
-                        <span>{r.label}</span>
+                        <span>{t(r.label)}</span>
                       </div>
                       <p className="text-[11px] font-normal text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
-                        {r.desc}
+                        {t(r.desc)}
                       </p>
                     </div>
                   </label>
@@ -669,7 +669,7 @@ export default function UsersPage() {
               onClick={() => setIsModalOpen(false)}
               className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
             >
-              {t('actions.cancel')}
+              {t('actions.cancel', 'Cancel')}
             </button>
             <button
               type="submit"
@@ -677,10 +677,10 @@ export default function UsersPage() {
               className="px-5 py-2 rounded-xl bg-primary-500 hover:bg-primary-600 text-white font-bold text-xs shadow-md transition disabled:opacity-50"
             >
               {submitting
-                ? 'Saving...'
+                ? t('Saving...')
                 : modalMode === 'create'
-                ? t('actions.createUser')
-                : 'Save Changes'}
+                ? t('actions.createUser', 'Create User')
+                : t('Save Changes')}
             </button>
           </div>
         </form>
