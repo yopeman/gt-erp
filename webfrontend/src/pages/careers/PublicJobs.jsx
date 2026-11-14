@@ -71,7 +71,7 @@ export default function PublicJobs() {
                 GT-ERP
               </span>
               <span className="text-[10px] uppercase font-bold tracking-widest text-primary-600 dark:text-primary-400">
-                Careers Portal
+                {t('Careers Portal')}
               </span>
             </div>
           </Link>
@@ -81,7 +81,7 @@ export default function PublicJobs() {
             <button
               onClick={() => setLanguage(lang === 'en' ? 'am' : 'en')}
               className="px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-1.5 transition active:scale-95"
-              title="Switch Language"
+              title={t('Switch Language')}
             >
               <span>{lang === 'en' ? '🇪🇹' : '🇬🇧'}</span>
               <span className="font-bold">{lang === 'en' ? 'አማርኛ' : 'EN'}</span>
@@ -100,15 +100,15 @@ export default function PublicJobs() {
         <div className="max-w-4xl mx-auto text-center space-y-4">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary-100 dark:bg-primary-950/60 text-primary-700 dark:text-primary-300 text-xs font-bold shadow-xs">
             <Sparkles className="w-3.5 h-3.5 text-primary-500" />
-            <span>We are hiring talented minds</span>
+            <span>{t('We are hiring talented minds')}</span>
           </div>
 
           <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-slate-900 dark:text-white">
-            Build Your Career With <span className="text-primary-500">Golden Tech</span>
+            {t('Build Your Career With')} <span className="text-primary-500">{t('Golden Tech')}</span>
           </h1>
 
           <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 max-w-2xl mx-auto leading-relaxed">
-            Join an agile, innovative technology and operations team. Explore our current open vacancies below and apply online in minutes.
+            {t('Join an agile, innovative technology and operations team. Explore our current open vacancies below and apply online in minutes.')}
           </p>
 
           {/* Search & Filter Bar */}
@@ -118,7 +118,7 @@ export default function PublicJobs() {
                 <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
                 <input
                   type="text"
-                  placeholder="Search by job title or keyword..."
+                  placeholder={t('Search by job title or keyword...')}
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="w-full pl-9 pr-3 py-2 text-xs sm:text-sm bg-transparent rounded-xl focus:outline-none text-slate-900 dark:text-white placeholder:text-slate-400"
@@ -131,10 +131,10 @@ export default function PublicJobs() {
                   onChange={(e) => setTypeFilter(e.target.value)}
                   className="w-full sm:w-auto px-3 py-2 text-xs font-semibold rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none"
                 >
-                  <option value="all">All Job Types</option>
-                  {jobTypes.map((t) => (
-                    <option key={t} value={t}>
-                      {t}
+                  <option value="all">{t('All Job Types')}</option>
+                  {jobTypes.map((type) => (
+                    <option key={type} value={type}>
+                      {t(type, type)}
                     </option>
                   ))}
                 </select>
@@ -150,17 +150,17 @@ export default function PublicJobs() {
           <div>
             <h2 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-2">
               <Briefcase className="w-5 h-5 text-primary-500" />
-              <span>Available Positions</span>
+              <span>{t('Available Positions')}</span>
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Showing {filteredPositions.length} open position{filteredPositions.length === 1 ? '' : 's'}
+              {t('Showing')} {filteredPositions.length} {t('open positions')}
             </p>
           </div>
         </div>
 
         {loading ? (
           <div className="py-20 text-center text-xs text-slate-400 animate-pulse">
-            Loading open vacancies...
+            {t('Loading open vacancies...')}
           </div>
         ) : filteredPositions.length === 0 ? (
           <div className="p-12 text-center rounded-3xl border border-dashed border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-3">
@@ -168,10 +168,10 @@ export default function PublicJobs() {
               <Briefcase className="w-6 h-6" />
             </div>
             <h3 className="font-bold text-slate-800 dark:text-slate-200 text-sm">
-              No matching vacancies found
+              {t('No matching vacancies found')}
             </h3>
             <p className="text-xs text-slate-400 max-w-sm mx-auto">
-              We couldn't find any positions matching your search. Try resetting your filters or check back later!
+              {t("We couldn't find any positions matching your search. Try resetting your filters or check back later!")}
             </p>
             {(search || typeFilter !== 'all') && (
               <button
@@ -181,7 +181,7 @@ export default function PublicJobs() {
                 }}
                 className="px-4 py-2 text-xs font-bold text-primary-600 hover:underline"
               >
-                Clear all filters
+                {t('Clear all filters')}
               </button>
             )}
           </div>
@@ -196,7 +196,7 @@ export default function PublicJobs() {
                 <div className="space-y-3">
                   <div className="flex items-start justify-between gap-2">
                     <span className="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-primary-50 text-primary-700 dark:bg-primary-950/60 dark:text-primary-300 border border-primary-200 dark:border-primary-900">
-                      {pos.type || 'Full Time'}
+                      {t(pos.type || 'Full Time')}
                     </span>
                     <span className="text-[11px] text-slate-400 flex items-center gap-1">
                       <Clock className="w-3 h-3" />
@@ -209,7 +209,7 @@ export default function PublicJobs() {
                       {pos.title}
                     </h3>
                     <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mt-1">
-                      {pos.description || 'Join our team for this critical vacancy. Click to view detailed responsibilities.'}
+                      {pos.description || t('Join our team for this critical vacancy. Click to view detailed responsibilities.')}
                     </p>
                   </div>
 
@@ -225,7 +225,7 @@ export default function PublicJobs() {
                       ))}
                       {pos.requirements.length > 3 && (
                         <span className="text-[10px] text-slate-400 self-center">
-                          +{pos.requirements.length - 3} more
+                          +{pos.requirements.length - 3} {t('more')}
                         </span>
                       )}
                     </div>
@@ -233,7 +233,7 @@ export default function PublicJobs() {
                 </div>
 
                 <div className="pt-4 mt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs font-bold text-primary-600 dark:text-primary-400 group-hover:translate-x-0.5 transition">
-                  <span>View Details & Apply</span>
+                  <span>{t('View Details & Apply')}</span>
                   <ArrowRight className="w-4 h-4" />
                 </div>
               </Link>
@@ -246,9 +246,9 @@ export default function PublicJobs() {
       <footer className="mt-auto border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 py-8 text-center text-xs text-slate-400">
         <div className="max-w-6xl mx-auto px-4 space-y-2">
           <p className="font-semibold text-slate-600 dark:text-slate-300">
-            GT-ERP Systems • Human Capital Management
+            {t('GT-ERP Systems • Human Capital Management')}
           </p>
-          <p>© {new Date().getFullYear()} Golden Technology Systems. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} Golden Technology Systems. {t('All rights reserved.')}</p>
         </div>
       </footer>
     </div>

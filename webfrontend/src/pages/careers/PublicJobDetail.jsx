@@ -56,10 +56,10 @@ export default function PublicJobDetail() {
         } else if (res.title) {
           setPosition(res);
         } else {
-          setError('Job position not found or no longer available.');
+          setError(t('Job position not found or no longer available.'));
         }
       } catch (err) {
-        setError(err.message || 'Failed to load job details.');
+        setError(err.message ? t(err.message) : t('Failed to load job details.'));
       } finally {
         setLoading(false);
       }
@@ -72,7 +72,7 @@ export default function PublicJobDetail() {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
-        alert('File size exceeds 5MB limit.');
+        alert(t('File size exceeds 5MB limit.'));
         return;
       }
       setResumeFileName(file.name);
@@ -89,7 +89,7 @@ export default function PublicJobDetail() {
     setSubmitError('');
 
     if (!candidate.name.trim() || !candidate.email.trim()) {
-      setSubmitError('Name and email are required to submit an application.');
+      setSubmitError(t('Name and email are required to submit an application.'));
       return;
     }
 
@@ -107,10 +107,10 @@ export default function PublicJobDetail() {
       if (res.success) {
         setSubmitSuccess(true);
       } else {
-        setSubmitError(res.message || 'Failed to submit application.');
+        setSubmitError(res.message ? t(res.message) : t('Failed to submit application.'));
       }
     } catch (err) {
-      setSubmitError(err.message || 'Failed to submit application. Please check your information.');
+      setSubmitError(err.message ? t(err.message) : t('Failed to submit application. Please check your information.'));
     } finally {
       setSubmitting(false);
     }
@@ -125,7 +125,7 @@ export default function PublicJobDetail() {
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-6 text-xs text-slate-400 animate-pulse">
-        Loading job vacancy details...
+        {t('Loading job vacancy details...')}
       </div>
     );
   }
@@ -136,15 +136,15 @@ export default function PublicJobDetail() {
         <div className="w-16 h-16 rounded-2xl bg-rose-50 dark:bg-rose-950/40 text-rose-500 flex items-center justify-center mx-auto">
           <AlertCircle className="w-8 h-8" />
         </div>
-        <h2 className="text-xl font-bold text-slate-900 dark:text-white">Job Position Unavailable</h2>
+        <h2 className="text-xl font-bold text-slate-900 dark:text-white">{t('Job Position Unavailable')}</h2>
         <p className="text-xs text-slate-400 max-w-sm">
-          {error || 'This job vacancy has expired or is no longer accepting public applications.'}
+          {error ? t(error) : t('This job vacancy has expired or is no longer accepting public applications.')}
         </p>
         <Link
           to="/careers"
           className="px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white font-bold text-xs rounded-xl shadow-md transition"
         >
-          Browse All Vacancies
+          {t('Browse All Vacancies')}
         </Link>
       </div>
     );
@@ -165,7 +165,7 @@ export default function PublicJobDetail() {
                   GT-ERP
                 </span>
                 <span className="text-[9px] uppercase font-bold tracking-widest text-primary-600 dark:text-primary-400">
-                  Careers Portal
+                  {t('Careers Portal')}
                 </span>
               </div>
             </Link>
@@ -177,7 +177,7 @@ export default function PublicJobDetail() {
               className="flex items-center gap-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-primary-600 transition"
             >
               <ArrowLeft className="w-4 h-4" />
-              <span>Back to Vacancies</span>
+              <span>{t('Back to Vacancies')}</span>
             </Link>
           </div>
 
@@ -185,7 +185,7 @@ export default function PublicJobDetail() {
             <button
               onClick={() => setLanguage(lang === 'en' ? 'am' : 'en')}
               className="px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-1.5 transition active:scale-95"
-              title="Switch Language"
+              title={t('Switch Language')}
             >
               <span>{lang === 'en' ? '🇪🇹' : '🇬🇧'}</span>
               <span className="font-bold">{lang === 'en' ? 'አማርኛ' : 'EN'}</span>
@@ -208,14 +208,14 @@ export default function PublicJobDetail() {
         <div className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
           <div className="flex flex-wrap items-center gap-2">
             <span className="px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-primary-100 dark:bg-primary-950 text-primary-700 dark:text-primary-300 border border-primary-200 dark:border-primary-900">
-              {position.type || 'Full Time'}
+              {t(position.type || 'Full Time')}
             </span>
             <span className="px-3 py-1 rounded-full text-xs font-bold capitalize bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900">
-              Status: {position.status || 'Open'}
+              {t('Status:')} {t(position.status || 'Open')}
             </span>
             <span className="text-xs text-slate-400 flex items-center gap-1 ml-auto">
               <Clock className="w-3.5 h-3.5" />
-              Posted on {new Date(position.postedAt || position.createdAt).toLocaleDateString()}
+              {t('Posted on')} {new Date(position.postedAt || position.createdAt).toLocaleDateString()}
             </span>
           </div>
 
@@ -226,7 +226,7 @@ export default function PublicJobDetail() {
           {position.closingTime && (
             <p className="text-xs font-medium text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5" />
-              <span>Application Deadline: {new Date(position.closingTime).toLocaleDateString()}</span>
+              <span>{t('Application Deadline:')} {new Date(position.closingTime).toLocaleDateString()}</span>
             </p>
           )}
         </div>
@@ -239,9 +239,9 @@ export default function PublicJobDetail() {
             <div className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
               <h2 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
                 <Briefcase className="w-5 h-5 text-primary-500" />
-                <span>About the Role</span>
+                <span>{t('About the Role')}</span>
               </h2>
-              <MarkdownRenderer content={position.description || 'No detailed description provided for this opening.'} />
+              <MarkdownRenderer content={position.description || t('No detailed description provided for this opening.')} />
             </div>
 
             {/* Requirements Card */}
@@ -249,7 +249,7 @@ export default function PublicJobDetail() {
               <div className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
                 <h2 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
                   <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-                  <span>Requirements & Qualifications</span>
+                  <span>{t('Requirements & Qualifications')}</span>
                 </h2>
                 <div className="space-y-2.5">
                   {position.requirements.map((req, idx) => (
@@ -272,13 +272,13 @@ export default function PublicJobDetail() {
             <div className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-lg shadow-slate-200/50 dark:shadow-none space-y-5">
               <div>
                 <span className="text-[10px] uppercase font-bold tracking-widest text-primary-600 dark:text-primary-400 block mb-1">
-                  Fast Track Application
+                  {t('Fast Track Application')}
                 </span>
                 <h3 className="text-xl font-black text-slate-900 dark:text-white">
-                  Apply for this Opening
+                  {t('Apply for this Opening')}
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                  Submit your details below. Our HR recruitment team will review your CV.
+                  {t('Submit your details below. Our HR recruitment team will review your CV.')}
                 </p>
               </div>
 
@@ -288,18 +288,18 @@ export default function PublicJobDetail() {
                     <CheckCircle2 className="w-6 h-6" />
                   </div>
                   <h4 className="font-black text-base text-emerald-900 dark:text-emerald-200">
-                    Application Submitted!
+                    {t('Application Submitted!')}
                   </h4>
                   <p className="text-xs text-emerald-700 dark:text-emerald-300 leading-relaxed">
-                    Thank you, <strong className="font-bold">{candidate.name}</strong>. Your application for{' '}
-                    <strong className="font-bold">{position.title}</strong> has been successfully received. We will get in touch with you via email or phone!
+                    {t('Thank you,')} <strong className="font-bold">{candidate.name}</strong>. {t('Your application for')}{' '}
+                    <strong className="font-bold">{position.title}</strong> {t('has been successfully received. We will get in touch with you via email or phone!')}
                   </p>
                   <div className="pt-2">
                     <Link
                       to="/careers"
                       className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition inline-block"
                     >
-                      Browse More Openings
+                      {t('Browse More Openings')}
                     </Link>
                   </div>
                 </div>
@@ -314,7 +314,7 @@ export default function PublicJobDetail() {
 
                   <div>
                     <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      Full Name <span className="text-rose-500">*</span>
+                      {t('Full Name')} <span className="text-rose-500">*</span>
                     </label>
                     <div className="relative">
                       <User className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
@@ -331,7 +331,7 @@ export default function PublicJobDetail() {
 
                   <div>
                     <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      Email Address <span className="text-rose-500">*</span>
+                      {t('Email Address')} <span className="text-rose-500">*</span>
                     </label>
                     <div className="relative">
                       <Mail className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
@@ -349,7 +349,7 @@ export default function PublicJobDetail() {
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                        Phone Number <span className="text-rose-500">*</span>
+                        {t('Phone Number')} <span className="text-rose-500">*</span>
                       </label>
                       <div className="relative">
                         <Phone className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
@@ -366,7 +366,7 @@ export default function PublicJobDetail() {
 
                     <div>
                       <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                        Telegram Username
+                        {t('Telegram Username')}
                       </label>
                       <input
                         type="text"
@@ -381,14 +381,14 @@ export default function PublicJobDetail() {
                   {/* Resume / CV Document Upload */}
                   <div>
                     <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      Upload Resume / CV (PDF, DOCX)
+                      {t('Upload Resume / CV (PDF, DOCX)')}
                     </label>
                     <label className="border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-primary-500 rounded-xl p-3 text-center cursor-pointer block transition bg-slate-50/50 dark:bg-slate-800/50">
                       <Upload className="w-5 h-5 text-slate-400 mx-auto mb-1" />
                       <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 block">
-                        {resumeFileName || 'Choose File or Drag & Drop'}
+                        {resumeFileName || t('Choose File or Drag & Drop')}
                       </span>
-                      <span className="text-[10px] text-slate-400">Max size: 5MB</span>
+                      <span className="text-[10px] text-slate-400">{t('Max size: 5MB')}</span>
                       <input
                         type="file"
                         accept=".pdf,.doc,.docx"
@@ -401,13 +401,13 @@ export default function PublicJobDetail() {
                   {/* Or Portfolio / Resume Link */}
                   <div>
                     <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      Or Portfolio / Google Drive / LinkedIn Link
+                      {t('Or Portfolio / Google Drive / LinkedIn Link')}
                     </label>
                     <div className="relative">
                       <LinkIcon className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
                       <input
                         type="url"
-                        placeholder="https://linkedin.com/in/... or drive link"
+                        placeholder={t('https://linkedin.com/in/... or drive link')}
                         value={resumeUrl}
                         onChange={(e) => setResumeUrl(e.target.value)}
                         className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs sm:text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none"
@@ -421,7 +421,7 @@ export default function PublicJobDetail() {
                     className="w-full py-3 bg-primary-500 hover:bg-primary-600 disabled:opacity-50 text-white font-bold text-xs sm:text-sm rounded-xl shadow-md shadow-primary-500/20 transition flex items-center justify-center gap-2"
                   >
                     <Send className="w-4 h-4" />
-                    <span>{submitting ? 'Submitting Application...' : 'Submit Application'}</span>
+                    <span>{submitting ? t('Submitting Application...') : t('Submit Application')}</span>
                   </button>
                 </form>
               )}
