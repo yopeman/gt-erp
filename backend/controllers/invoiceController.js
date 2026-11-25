@@ -33,7 +33,7 @@ export const createInvoiceFromOrder = async (req, res) => {
     const items = order.items.map((it) => {
       const quantity = it.quantity;
       const unitPrice = it.unitPrice;
-      const taxRate = order.financials.vatRate || 15;
+      const taxRate = order.financials.vatRate !== undefined ? order.financials.vatRate : 15;
       const taxable = quantity * unitPrice;
       const taxAmount = (taxable * taxRate) / 100;
 
@@ -50,7 +50,7 @@ export const createInvoiceFromOrder = async (req, res) => {
 
     const subtotal = order.financials.subtotal;
     const discountAmount = order.financials.discountAmount || 0;
-    const vatRate = order.financials.vatRate || 15;
+    const vatRate = order.financials.vatRate !== undefined ? order.financials.vatRate : 15;
     const vatAmount = order.financials.vatAmount;
     const grandTotal = order.financials.grandTotal;
 

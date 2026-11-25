@@ -43,8 +43,31 @@ export const createOrder = async (req, res) => {
       calculatedSubtotal += subtotal;
 
       const estimated = item.estimatedCost || {};
+
+      const materials = Array.isArray(item.materials)
+        ? item.materials.map((m) => {
+            const mQty = Number(m.quantity || 0);
+            const mUnitCost = Number(m.unitCost || 0);
+            const mTotal = Number(m.totalCost !== undefined && m.totalCost !== null ? m.totalCost : mQty * mUnitCost);
+            return {
+              item: m.item || m.inventoryItem || null,
+              itemName: (m.itemName || m.name || '').trim(),
+              itemCode: (m.itemCode || '').trim(),
+              category: m.category || 'paper',
+              quantity: mQty,
+              unitOfMeasurement: m.unitOfMeasurement || 'sheet',
+              unitCost: mUnitCost,
+              totalCost: mTotal
+            };
+          })
+        : [];
+
+      const calcMaterialCost = materials.length > 0
+        ? materials.reduce((acc, m) => acc + (Number(m.totalCost) || 0), 0)
+        : Number(estimated.materialCost || 0);
+
       const totalEstimatedCost =
-        Number(estimated.materialCost || 0) +
+        calcMaterialCost +
         Number(estimated.machineCost || 0) +
         Number(estimated.laborCost || 0) +
         Number(estimated.finishingCost || 0) +
@@ -56,10 +79,12 @@ export const createOrder = async (req, res) => {
         quantity,
         unitOfMeasurement: item.unitOfMeasurement || 'copy',
         specifications: item.specifications || {},
+        materials,
+        profitMargin: Number(item.profitMargin !== undefined ? item.profitMargin : 30),
         unitPrice,
         subtotal,
         estimatedCost: {
-          materialCost: Number(estimated.materialCost || 0),
+          materialCost: calcMaterialCost,
           machineCost: Number(estimated.machineCost || 0),
           laborCost: Number(estimated.laborCost || 0),
           finishingCost: Number(estimated.finishingCost || 0),
@@ -71,9 +96,22 @@ export const createOrder = async (req, res) => {
 
     const discountAmount = Number(req.body.financials?.discountAmount || 0);
     const vatRate = Number(req.body.financials?.vatRate !== undefined ? req.body.financials.vatRate : 15);
+    const isVatInclusive = Boolean(req.body.financials?.isVatInclusive);
     const taxableAmount = Math.max(0, calculatedSubtotal - discountAmount);
-    const vatAmount = (taxableAmount * vatRate) / 100;
-    const grandTotal = taxableAmount + vatAmount;
+
+    let vatAmount = 0;
+    let grandTotal = taxableAmount;
+
+    if (vatRate > 0) {
+      if (isVatInclusive) {
+        grandTotal = taxableAmount;
+        const netBase = Math.round((taxableAmount / (1 + vatRate / 100)) * 100) / 100;
+        vatAmount = Math.round((taxableAmount - netBase) * 100) / 100;
+      } else {
+        vatAmount = Math.round(((taxableAmount * vatRate) / 100) * 100) / 100;
+        grandTotal = Math.round((taxableAmount + vatAmount) * 100) / 100;
+      }
+    }
 
     const order = await Order.create({
       orderNumber,
@@ -90,6 +128,7 @@ export const createOrder = async (req, res) => {
         vatRate,
         vatAmount,
         grandTotal,
+        isVatInclusive,
         currency: 'ETB'
       },
       status: status || 'confirmed',
@@ -121,6 +160,7 @@ export const createOrder = async (req, res) => {
       .populate('customer', 'customerNumber name companyName tinNumber creditTerms')
       .populate('salesRepresentative', 'firstName lastName employeeId position department')
       .populate('items.service', 'name serviceCode category')
+      .populate('items.materials.item', 'itemName itemCode unitCost unitOfMeasurement category')
       .populate('design');
 
     return sendSuccess(res, 'Order created successfully', populated, 201);
@@ -173,6 +213,7 @@ export const getOrders = async (req, res) => {
         .populate('customer', 'customerNumber name companyName tinNumber creditTerms')
         .populate('salesRepresentative', 'firstName lastName employeeId position department')
         .populate('items.service', 'name serviceCode category')
+        .populate('items.materials.item', 'itemName itemCode unitCost unitOfMeasurement category')
         .populate('design')
         .sort(sortOptions)
         .skip(skip)
@@ -203,6 +244,7 @@ export const getOrderById = async (req, res) => {
       .populate('customer', 'customerNumber name companyName tinNumber vatNumber billingAddress shippingAddress creditTerms')
       .populate('salesRepresentative', 'firstName lastName employeeId position department email phone')
       .populate('items.service', 'name serviceCode category standardSpecifications workflowTemplate')
+      .populate('items.materials.item', 'itemName itemCode unitCost unitOfMeasurement category')
       .populate('design')
       .populate('productionJob')
       .populate('invoice')

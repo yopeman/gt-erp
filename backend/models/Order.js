@@ -34,6 +34,28 @@ const estimatedCostSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const orderItemMaterialSchema = new mongoose.Schema(
+  {
+    item: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'InventoryItem',
+      default: null
+    },
+    itemName: { type: String, trim: true, default: '' },
+    itemCode: { type: String, trim: true, default: '' },
+    category: {
+      type: String,
+      trim: true,
+      default: 'paper'
+    },
+    quantity: { type: Number, default: 1, min: 0 },
+    unitOfMeasurement: { type: String, default: 'sheet' },
+    unitCost: { type: Number, default: 0, min: 0 },
+    totalCost: { type: Number, default: 0, min: 0 }
+  },
+  { _id: false }
+);
+
 const orderItemSchema = new mongoose.Schema(
   {
     service: {
@@ -56,10 +78,18 @@ const orderItemSchema = new mongoose.Schema(
       default: 'copy'
     },
     specifications: orderItemSpecSchema,
+    materials: {
+      type: [orderItemMaterialSchema],
+      default: []
+    },
     unitPrice: {
       type: Number,
       required: [true, 'Unit price is required'],
       min: [0, 'Unit price cannot be negative']
+    },
+    profitMargin: {
+      type: Number,
+      default: 30
     },
     subtotal: {
       type: Number,
@@ -150,6 +180,10 @@ const orderSchema = new mongoose.Schema(
         type: Number,
         default: 0,
         min: 0
+      },
+      isVatInclusive: {
+        type: Boolean,
+        default: false
       },
       grandTotal: {
         type: Number,

@@ -102,7 +102,7 @@ export const createProformaFromOrder = async (req, res) => {
     const items = order.items.map((it) => {
       const quantity = it.quantity;
       const unitPrice = it.unitPrice;
-      const taxRate = order.financials.vatRate || 15;
+      const taxRate = order.financials.vatRate !== undefined ? order.financials.vatRate : 15;
       const taxable = quantity * unitPrice;
       const taxAmount = (taxable * taxRate) / 100;
 
@@ -126,7 +126,7 @@ export const createProformaFromOrder = async (req, res) => {
       items,
       subtotal: order.financials.subtotal,
       discountAmount: order.financials.discountAmount || 0,
-      vatRate: order.financials.vatRate || 15,
+      vatRate: order.financials.vatRate !== undefined ? order.financials.vatRate : 15,
       vatAmount: order.financials.vatAmount,
       grandTotal: order.financials.grandTotal,
       status: 'sent_to_customer',

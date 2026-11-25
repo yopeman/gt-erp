@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from '../../i18n';
 import crmService from '../../services/crmService';
+import storeService from '../../services/storeService';
 import { extractArray, extractData } from '../../services/api';
 import Modal from '../../components/common/Modal';
 import Badge from '../../components/common/Badge';
@@ -24,7 +25,12 @@ import {
   Palette,
   FileCheck,
   Truck,
-  RotateCcw
+  RotateCcw,
+  Layers,
+  Box,
+  Calculator,
+  Sparkles,
+  Package
 } from 'lucide-react';
 
 const ORDER_STATUSES = [
@@ -48,6 +54,7 @@ export default function Orders() {
   const [customers, setCustomers] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [services, setServices] = useState([]);
+  const [inventoryItems, setInventoryItems] = useState([]);
   const [stats, setStats] = useState(null);
 
   const [loading, setLoading] = useState(true);
@@ -65,6 +72,65 @@ export default function Orders() {
   const [statusModalOrder, setStatusModalOrder] = useState(null);
   const [newStatus, setNewStatus] = useState('');
 
+  // Helper to generate default materials for a service
+  const createDefaultMaterials = (quantity = 1000) => [];
+
+  // Core calculation engine: computes materials total, cost per unit, unit price (materials + user profit margin % vs catalog base price), and line subtotal
+  const recalculateItem = (item, matchedService) => {
+    const qty = Math.max(1, Number(item.quantity) || 1);
+    const materials = Array.isArray(item.materials) ? item.materials : [];
+    const profitMargin = item.profitMargin !== undefined && item.profitMargin !== null && item.profitMargin !== ''
+      ? Math.max(0, Number(item.profitMargin))
+      : 30;
+
+    const updatedMaterials = materials.map((m) => {
+      const mQty = Number(m.quantity) || 0;
+      const mCost = Number(m.unitCost) || 0;
+      return {
+        ...m,
+        quantity: mQty,
+        unitCost: mCost,
+        totalCost: Math.round(mQty * mCost * 100) / 100
+      };
+    });
+
+    const totalMaterialCost = updatedMaterials.reduce((acc, m) => acc + (Number(m.totalCost) || 0), 0);
+    const costPerUnit = totalMaterialCost > 0 ? totalMaterialCost / qty : 0;
+    const basePrice = Number(matchedService?.pricingModel?.basePrice || 0);
+
+    // Rule: Materials cost with user-specified profit margin %, floored at catalog base price
+    let calculatedUnitPrice = 0;
+    if (totalMaterialCost > 0) {
+      const marginFactor = 1 + (profitMargin / 100);
+      const priceWithMargin = Math.round(costPerUnit * marginFactor * 100) / 100;
+      calculatedUnitPrice = Math.max(basePrice, priceWithMargin);
+    } else {
+      calculatedUnitPrice = basePrice;
+    }
+
+    if (calculatedUnitPrice === 0 && Number(item.unitPrice) > 0 && materials.length === 0) {
+      calculatedUnitPrice = Number(item.unitPrice);
+    }
+
+    const subtotal = Math.round(qty * calculatedUnitPrice * 100) / 100;
+
+    return {
+      ...item,
+      quantity: qty,
+      profitMargin,
+      materials: updatedMaterials,
+      unitPrice: calculatedUnitPrice,
+      subtotal
+    };
+  };
+
+  // Initial materials & item pricing
+  const defaultInitMaterials = createDefaultMaterials(1000);
+  const defaultInitCost = defaultInitMaterials.reduce((acc, m) => acc + (Number(m.totalCost) || 0), 0);
+  const defaultInitUnitCost = defaultInitCost / 1000;
+  const defaultInitMargin = 30;
+  const defaultInitUnitPrice = Math.max(25, Math.round(defaultInitUnitCost * (1 + defaultInitMargin / 100) * 100) / 100);
+
   // New Order Form State
   const [formData, setFormData] = useState({
     customer: '',
@@ -73,6 +139,8 @@ export default function Orders() {
     deliveryDeadline: '',
     assignedDesigner: '',
     discountAmount: 0,
+    vatMode: 'add_15', // 'add_15' | 'exclude' | 'inclusive' | 'custom'
+    customVatRate: 15,
     notes: '',
     items: [
       {
@@ -80,16 +148,18 @@ export default function Orders() {
         productTitle: '',
         quantity: 1000,
         unitOfMeasurement: 'copy',
-        unitPrice: 15,
-        subtotal: 15000,
+        profitMargin: defaultInitMargin,
+        unitPrice: defaultInitUnitPrice,
+        subtotal: 1000 * defaultInitUnitPrice,
         specifications: {
           dimensions: { width: 210, height: 297, unit: 'mm' }, // A4
           pages: 16,
-          paperType: '150 GSM Art Paper',
+          paperType: '150 GSM Art Paper, 300 GSM Art Card',
           colorFormat: '4/4 CMYK',
           finishingOptions: ['gloss_lamination'],
           bindingType: 'saddle_stitch'
-        }
+        },
+        materials: defaultInitMaterials
       }
     ]
   });
@@ -127,14 +197,19 @@ export default function Orders() {
 
   const fetchLookups = async () => {
     try {
-      const [custsRes, empsRes, srvsRes] = await Promise.allSettled([
+      const [custsRes, empsRes, srvsRes, itemsRes] = await Promise.allSettled([
         crmService.getCustomers({ limit: 100 }),
         crmService.getEmployees({ limit: 100 }),
-        crmService.getServices({ limit: 100 })
+        crmService.getServices({ limit: 100 }),
+        storeService.getItems({ limit: 200 })
       ]);
       if (custsRes.status === 'fulfilled') setCustomers(extractArray(custsRes.value, 'customers'));
       if (empsRes.status === 'fulfilled') setEmployees(extractArray(empsRes.value, 'employees'));
       if (srvsRes.status === 'fulfilled') setServices(extractArray(srvsRes.value, 'services'));
+      if (itemsRes.status === 'fulfilled') {
+        const list = extractArray(itemsRes.value, 'items') || itemsRes.value?.data || [];
+        setInventoryItems(Array.isArray(list) ? list : []);
+      }
     } catch {
       // Non-blocking lookup
     }
@@ -155,6 +230,29 @@ export default function Orders() {
     const deadlineStr = d.toISOString().slice(0, 10);
 
     const firstService = services[0];
+    const initialQty = firstService?.pricingModel?.minimumOrderQuantity || 1000;
+    const initialMaterials = createDefaultMaterials(initialQty);
+
+    const rawItem = {
+      service: firstService?._id || '',
+      productTitle: firstService ? `${firstService.name} Print Run` : 'Printing Service Job',
+      quantity: initialQty,
+      unitOfMeasurement: firstService?.pricingModel?.unitOfMeasurement || 'copy',
+      profitMargin: 30,
+      unitPrice: 0,
+      subtotal: 0,
+      specifications: {
+        dimensions: { width: 210, height: 297, unit: 'mm' }, // A4
+        pages: 16,
+        paperType: '150 GSM Art Paper, 300 GSM Art Card',
+        colorFormat: '4/4 CMYK',
+        finishingOptions: ['gloss_lamination'],
+        bindingType: 'saddle_stitch'
+      },
+      materials: initialMaterials
+    };
+
+    const computedItem = recalculateItem(rawItem, firstService);
 
     setFormData({
       customer: customers[0]?._id || '',
@@ -163,68 +261,216 @@ export default function Orders() {
       deliveryDeadline: deadlineStr,
       assignedDesigner: '',
       discountAmount: 0,
+      vatMode: 'add_15',
+      customVatRate: 15,
       notes: '',
-      items: [
-        {
-          service: firstService?._id || '',
-          productTitle: firstService ? `${firstService.name} Print Run` : 'Printing Job',
-          quantity: firstService?.pricingModel?.minimumOrderQuantity || 1000,
-          unitOfMeasurement: firstService?.pricingModel?.unitOfMeasurement || 'copy',
-          unitPrice: firstService?.pricingModel?.basePrice || 25,
-          subtotal: (firstService?.pricingModel?.minimumOrderQuantity || 1000) * (firstService?.pricingModel?.basePrice || 25),
-          specifications: {
-            dimensions: { width: 210, height: 297, unit: 'mm' },
-            pages: 16,
-            paperType: '150 GSM Art Paper',
-            colorFormat: '4/4 CMYK',
-            finishingOptions: ['gloss_lamination'],
-            bindingType: 'saddle_stitch'
-          }
-        }
-      ]
+      items: [computedItem]
     });
     setIsCreateModalOpen(true);
   };
 
-  const handleAddItem = () => {
+  // Add a Service from Service Catalog
+  const handleAddService = () => {
     const firstService = services[0];
+    const qty = firstService?.pricingModel?.minimumOrderQuantity || 500;
+    const newMaterials = createDefaultMaterials(qty);
+
+    const rawItem = {
+      service: firstService?._id || '',
+      productTitle: firstService ? `${firstService.name} Run` : 'Additional Service Job',
+      quantity: qty,
+      unitOfMeasurement: firstService?.pricingModel?.unitOfMeasurement || 'copy',
+      profitMargin: 30,
+      unitPrice: 0,
+      subtotal: 0,
+      specifications: {
+        dimensions: { width: 210, height: 297, unit: 'mm' },
+        pages: 8,
+        paperType: '150 GSM Art Paper, 300 GSM Art Card',
+        colorFormat: '4/4 CMYK',
+        finishingOptions: [],
+        bindingType: 'saddle_stitch'
+      },
+      materials: newMaterials
+    };
+
+    const computedItem = recalculateItem(rawItem, firstService);
+
     setFormData({
       ...formData,
-      items: [
-        ...formData.items,
-        {
-          service: firstService?._id || '',
-          productTitle: 'Additional Item',
-          quantity: 500,
-          unitOfMeasurement: 'copy',
-          unitPrice: 10,
-          subtotal: 5000,
-          specifications: {
-            dimensions: { width: 210, height: 297, unit: 'mm' },
-            pages: 4,
-            paperType: '120 GSM Woodfree',
-            colorFormat: '4/4 CMYK',
-            finishingOptions: [],
-            bindingType: 'none'
-          }
-        }
-      ]
+      items: [...formData.items, computedItem]
     });
   };
 
-  const handleRemoveItem = (idx) => {
+  // Backwards compatibility alias
+  const handleAddItem = handleAddService;
+
+  const handleRemoveService = (idx) => {
     const updated = formData.items.filter((_, i) => i !== idx);
+    setFormData({ ...formData, items: updated });
+  };
+
+  const handleRemoveItem = handleRemoveService;
+
+  // Add Item / Material (Paper, Cover, Plate, Ink, etc.) within a specific Service
+  const handleAddItemToService = (serviceIdx, category = 'paper') => {
+    const updated = [...formData.items];
+    const srv = updated[serviceIdx];
+    const currentMaterials = srv.materials || [];
+
+    let defaultName = '150 GSM Art Paper';
+    let defaultUnit = 'sheet';
+    let defaultCost = 15;
+    let defaultQty = 100;
+
+    if (category === 'cover') {
+      defaultName = '300 GSM Art Card Cover';
+      defaultUnit = 'sheet';
+      defaultCost = 25;
+      defaultQty = 50;
+    } else if (category === 'ink') {
+      defaultName = 'Process CMYK Offset Ink';
+      defaultUnit = 'kg';
+      defaultCost = 450;
+      defaultQty = 2;
+    } else if (category === 'plate') {
+      defaultName = 'Thermal CTP Aluminum Plate';
+      defaultUnit = 'piece';
+      defaultCost = 350;
+      defaultQty = 4;
+    } else if (category === 'finishing') {
+      defaultName = 'Thermal Gloss Lamination Film';
+      defaultUnit = 'meter';
+      defaultCost = 8;
+      defaultQty = 150;
+    } else if (category === 'board') {
+      defaultName = '2mm Greyboard Strawboard';
+      defaultUnit = 'sheet';
+      defaultCost = 65;
+      defaultQty = 25;
+    }
+
+    srv.materials = [
+      ...currentMaterials,
+      {
+        item: '',
+        itemName: defaultName,
+        category,
+        quantity: defaultQty,
+        unitOfMeasurement: defaultUnit,
+        unitCost: defaultCost,
+        totalCost: Math.round(defaultQty * defaultCost * 100) / 100
+      }
+    ];
+
+    const matchedService = services.find((s) => s._id === srv.service);
+    updated[serviceIdx] = recalculateItem(srv, matchedService);
+
+    // Update specifications paperType if paper/cover items exist
+    const paperCoverNames = updated[serviceIdx].materials
+      .filter((m) => m.category === 'paper' || m.category === 'cover')
+      .map((m) => m.itemName)
+      .filter(Boolean);
+
+    if (paperCoverNames.length > 0) {
+      updated[serviceIdx].specifications = {
+        ...updated[serviceIdx].specifications,
+        paperType: paperCoverNames.join(', ')
+      };
+    }
+
+    setFormData({ ...formData, items: updated });
+  };
+
+  const handleRemoveItemFromService = (serviceIdx, materialIdx) => {
+    const updated = [...formData.items];
+    const srv = updated[serviceIdx];
+    srv.materials = (srv.materials || []).filter((_, mIdx) => mIdx !== materialIdx);
+    const matchedService = services.find((s) => s._id === srv.service);
+    updated[serviceIdx] = recalculateItem(srv, matchedService);
+    setFormData({ ...formData, items: updated });
+  };
+
+  const handleMaterialChange = (serviceIdx, materialIdx, field, value) => {
+    const updated = [...formData.items];
+    const srv = updated[serviceIdx];
+    const materials = [...(srv.materials || [])];
+    const mat = { ...materials[materialIdx] };
+
+    if (field === 'item') {
+      mat.item = value;
+      if (value) {
+        const found = inventoryItems.find((inv) => inv._id === value);
+        if (found) {
+          mat.itemName = found.itemName || mat.itemName;
+          mat.unitCost = Number(found.unitCost || 0);
+          mat.unitOfMeasurement = found.unitOfMeasurement || mat.unitOfMeasurement;
+          mat.itemCode = found.itemCode || '';
+
+          const itemNameLower = (found.itemName || '').toLowerCase();
+          const catNameLower = (found.category?.name || found.itemType || '').toLowerCase();
+          if (catNameLower.includes('cover') || itemNameLower.includes('cover')) {
+            mat.category = 'cover';
+          } else if (catNameLower.includes('paper') || itemNameLower.includes('paper')) {
+            mat.category = 'paper';
+          } else if (catNameLower.includes('ink') || itemNameLower.includes('ink')) {
+            mat.category = 'ink';
+          } else if (catNameLower.includes('plate') || itemNameLower.includes('plate')) {
+            mat.category = 'plate';
+          } else if (catNameLower.includes('board') || itemNameLower.includes('board')) {
+            mat.category = 'board';
+          }
+        }
+      }
+    } else if (field === 'quantity' || field === 'unitCost') {
+      mat[field] = Number(value);
+    } else {
+      mat[field] = value;
+    }
+
+    materials[materialIdx] = mat;
+    srv.materials = materials;
+
+    const matchedService = services.find((s) => s._id === srv.service);
+    updated[serviceIdx] = recalculateItem(srv, matchedService);
+    setFormData({ ...formData, items: updated });
+  };
+
+  // Re-sync service price directly based on materials used
+  const handleEstimateServicePrice = (serviceIdx) => {
+    const updated = [...formData.items];
+    const srv = updated[serviceIdx];
+    const matchedService = services.find((s) => s._id === srv.service);
+    updated[serviceIdx] = recalculateItem(srv, matchedService);
     setFormData({ ...formData, items: updated });
   };
 
   const handleItemChange = (idx, field, value) => {
     const updated = [...formData.items];
-    updated[idx][field] = value;
-    if (field === 'quantity' || field === 'unitPrice') {
-      const qty = Number(field === 'quantity' ? value : updated[idx].quantity);
-      const price = Number(field === 'unitPrice' ? value : updated[idx].unitPrice);
-      updated[idx].subtotal = qty * price;
+    const it = { ...updated[idx], [field]: value };
+
+    if (field === 'service') {
+      const srv = services.find((s) => s._id === value);
+      if (srv) {
+        if (!it.productTitle || it.productTitle.includes('Run') || it.productTitle === 'Printing Job') {
+          it.productTitle = `${srv.name} Run`;
+        }
+        if (srv.pricingModel?.unitOfMeasurement) {
+          it.unitOfMeasurement = srv.pricingModel.unitOfMeasurement;
+        }
+        if (!it.quantity) {
+          it.quantity = Number(srv.pricingModel?.minimumOrderQuantity || 1000);
+        }
+      }
+      const matchedSrv = srv || services.find((s) => s._id === it.service);
+      updated[idx] = recalculateItem(it, matchedSrv);
+    } else if (field === 'quantity' || field === 'profitMargin') {
+      const matchedSrv = services.find((s) => s._id === it.service);
+      updated[idx] = recalculateItem(it, matchedSrv);
+    } else {
+      updated[idx] = it;
     }
+
     setFormData({ ...formData, items: updated });
   };
 
@@ -240,18 +486,100 @@ export default function Orders() {
   // Financial calculations
   const calculateTotals = () => {
     const subtotal = formData.items.reduce((acc, item) => acc + (Number(item.subtotal) || 0), 0);
-    const discount = Number(formData.discountAmount || 0);
-    const taxable = Math.max(0, subtotal - discount);
-    const vat = (taxable * 15) / 100;
-    const grandTotal = taxable + vat;
-    return { subtotal, discount, vat, grandTotal };
+    const roundedSubtotal = Math.round(subtotal * 100) / 100;
+    const discount = Math.max(0, Number(formData.discountAmount || 0));
+    const taxable = Math.max(0, roundedSubtotal - discount);
+
+    const mode = formData.vatMode || 'add_15';
+    let vatRate = 15;
+    let isVatInclusive = false;
+
+    if (mode === 'exclude') {
+      vatRate = 0;
+    } else if (mode === 'add_15') {
+      vatRate = 15;
+    } else if (mode === 'inclusive') {
+      vatRate = 15;
+      isVatInclusive = true;
+    } else if (mode === 'custom') {
+      vatRate = Number(formData.customVatRate !== undefined ? formData.customVatRate : 15);
+    }
+
+    let vat = 0;
+    let grandTotal = taxable;
+
+    if (vatRate > 0) {
+      if (isVatInclusive) {
+        grandTotal = taxable;
+        const netBase = Math.round((taxable / (1 + vatRate / 100)) * 100) / 100;
+        vat = Math.round((taxable - netBase) * 100) / 100;
+      } else {
+        vat = Math.round(((taxable * vatRate) / 100) * 100) / 100;
+        grandTotal = Math.round((taxable + vat) * 100) / 100;
+      }
+    }
+
+    return {
+      subtotal: roundedSubtotal,
+      discount,
+      taxable,
+      vatRate,
+      vat,
+      grandTotal,
+      isVatInclusive
+    };
   };
 
   const handleSaveOrder = async (e) => {
     e.preventDefault();
     try {
       setSubmitting(true);
-      const { subtotal, discount, vat, grandTotal } = calculateTotals();
+      const { subtotal, discount, vatRate, vat, grandTotal, isVatInclusive } = calculateTotals();
+
+      const processedItems = formData.items.map((it) => {
+        const qty = Number(it.quantity || 1);
+        const unitPrice = Number(it.unitPrice || 0);
+        const lineSubtotal = qty * unitPrice;
+
+        const materials = Array.isArray(it.materials)
+          ? it.materials.map((m) => {
+              const mQty = Number(m.quantity || 0);
+              const mCost = Number(m.unitCost || 0);
+              return {
+                item: m.item || undefined,
+                itemName: (m.itemName || 'Material').trim(),
+                itemCode: m.itemCode || '',
+                category: m.category || 'paper',
+                quantity: mQty,
+                unitOfMeasurement: m.unitOfMeasurement || 'sheet',
+                unitCost: mCost,
+                totalCost: Number(m.totalCost !== undefined && m.totalCost !== null ? m.totalCost : mQty * mCost)
+              };
+            })
+          : [];
+
+        const totalMatCost = materials.reduce((acc, m) => acc + (Number(m.totalCost) || 0), 0);
+
+        return {
+          service: it.service,
+          productTitle: it.productTitle?.trim() || 'Printing Job',
+          quantity: qty,
+          unitOfMeasurement: it.unitOfMeasurement || 'copy',
+          profitMargin: Number(it.profitMargin !== undefined ? it.profitMargin : 30),
+          specifications: it.specifications || {},
+          materials,
+          unitPrice,
+          subtotal: lineSubtotal,
+          estimatedCost: {
+            materialCost: totalMatCost,
+            machineCost: 0,
+            laborCost: 0,
+            finishingCost: 0,
+            overheadCost: 0,
+            totalEstimatedCost: totalMatCost
+          }
+        };
+      });
 
       const payload = {
         customer: formData.customer,
@@ -260,13 +588,14 @@ export default function Orders() {
         deliveryDeadline: formData.deliveryDeadline,
         assignedDesigner: formData.assignedDesigner || undefined,
         notes: formData.notes,
-        items: formData.items,
+        items: processedItems,
         financials: {
           subtotal,
           discountAmount: discount,
-          vatRate: 15,
+          vatRate,
           vatAmount: vat,
           grandTotal,
+          isVatInclusive,
           currency: 'ETB'
         }
       };
@@ -524,6 +853,7 @@ export default function Orders() {
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         title={t('Create New Printing Sales Order')}
+        maxWidth="max-w-5xl"
       >
         <form onSubmit={handleSaveOrder} className="space-y-4 max-h-[75vh] overflow-y-auto pr-1">
           {/* Header row: Customer & Rep & Deadline */}
@@ -577,72 +907,105 @@ export default function Orders() {
             </div>
           </div>
 
-          {/* Line Items Builder */}
-          <div className="space-y-3 pt-2">
-            <div className="flex items-center justify-between">
-              <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-                {t('Order Line Items & Printing Specifications')}
-              </h4>
+          {/* Services & Line Items Builder */}
+          <div className="space-y-4 pt-2">
+            <div className="flex items-center justify-between pb-1 border-b border-slate-200 dark:border-slate-800">
+              <div>
+                <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+                  <Layers className="w-4 h-4 text-primary-500" />
+                  {t('Printing Services & Order Line Items')}
+                </h4>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  {t('Select services and add items (paper, cover, ink, etc.) to estimate accurate pricing.')}
+                </p>
+              </div>
               <button
                 type="button"
-                onClick={handleAddItem}
-                className="text-xs font-bold text-primary-600 hover:text-primary-700 px-2 py-1 rounded-md bg-primary-50 dark:bg-primary-950/60"
+                onClick={handleAddService}
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-primary-600 hover:bg-primary-700 px-3 py-1.5 rounded-lg shadow-xs transition"
               >
-                + {t('Add Item')}
+                <Plus className="w-3.5 h-3.5" />
+                {t('Add Service')}
               </button>
             </div>
 
-            {formData.items.map((item, idx) => (
-              <div
-                key={idx}
-                className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 space-y-3"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{t('Item')} #{idx + 1}</span>
-                  {formData.items.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveItem(idx)}
-                      className="text-rose-500 text-xs font-semibold hover:underline"
-                    >
-                      {t('Remove Item')}
-                    </button>
-                  )}
-                </div>
+            {formData.items.map((item, idx) => {
+              const matchedService = services.find((s) => s._id === item.service);
+              const materials = item.materials || [];
+              const totalMaterialCost = materials.reduce((acc, m) => acc + (Number(m.totalCost) || 0), 0);
+              const costPerUnit = Number(item.quantity) > 0 ? totalMaterialCost / Number(item.quantity) : 0;
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-[11px] font-medium text-slate-500 mb-1">{t('Service')} *</label>
-                    <select
-                      required
-                      value={item.service}
-                      onChange={(e) => handleItemChange(idx, 'service', e.target.value)}
-                      className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
-                    >
-                      <option value="">-- {t('Select Service')} --</option>
-                      {services.map((s) => (
-                        <option key={s._id} value={s._id}>
-                          {s.name} ({s.category.replace('_', ' ')})
-                        </option>
-                      ))}
-                    </select>
+              return (
+                <div
+                  key={idx}
+                  className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 space-y-3.5 shadow-xs"
+                >
+                  {/* Service Header Row */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-lg bg-primary-100 dark:bg-primary-950 text-primary-700 dark:text-primary-300 font-bold text-xs">
+                        #{idx + 1}
+                      </span>
+                      <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                        {t('Service')}: <span className="text-primary-600 dark:text-primary-400">{matchedService?.name || t('Select a Service')}</span>
+                      </span>
+                      {matchedService?.category && (
+                        <span className="text-[10px] uppercase font-semibold px-2 py-0.5 rounded-md bg-slate-200/70 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+                          {matchedService.category.replace(/_/g, ' ')}
+                        </span>
+                      )}
+                    </div>
+                    {formData.items.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveService(idx)}
+                        className="inline-flex items-center gap-1 text-rose-500 hover:text-rose-600 text-xs font-semibold hover:underline"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        {t('Remove Service')}
+                      </button>
+                    )}
                   </div>
 
-                  <div>
-                    <label className="block text-[11px] font-medium text-slate-500 mb-1">{t('Product Title')} *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. 2026 Annual Calendar"
-                      value={item.productTitle}
-                      onChange={(e) => handleItemChange(idx, 'productTitle', e.target.value)}
-                      className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
-                    />
-                  </div>
+                  {/* Primary Service Configuration */}
+                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                    <div className="sm:col-span-4">
+                      <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                        {t('Printing Service Catalog')} *
+                      </label>
+                      <select
+                        required
+                        value={item.service}
+                        onChange={(e) => handleItemChange(idx, 'service', e.target.value)}
+                        className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-medium"
+                      >
+                        <option value="">-- {t('Select Printing Service')} --</option>
+                        {services.map((s) => (
+                          <option key={s._id} value={s._id}>
+                            {s.name} ({s.category?.replace(/_/g, ' ')})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="block text-[11px] font-medium text-slate-500 mb-1">{t('Quantity')}</label>
+                    <div className="sm:col-span-4">
+                      <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                        {t('Product Title / Job Name')} *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. 2026 Annual Calendar"
+                        value={item.productTitle}
+                        onChange={(e) => handleItemChange(idx, 'productTitle', e.target.value)}
+                        className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                      />
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                        {t('Quantity')} ({item.unitOfMeasurement || 'copy'}) *
+                      </label>
                       <input
                         type="number"
                         min="1"
@@ -652,74 +1015,281 @@ export default function Orders() {
                         className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                       />
                     </div>
+
+                    <div className="sm:col-span-2">
+                      <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                        {t('Unit Price')} ({t('Calculated')})
+                      </label>
+                      <div className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-bold font-mono flex items-center justify-between">
+                        <span>{formatCurrency(item.unitPrice)}</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-semibold uppercase">
+                          {materials.length > 0 ? `${t('Auto')} (+${item.profitMargin ?? 30}%)` : t('Base')}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Printing Specifications Row */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2 border-t border-slate-200/80 dark:border-slate-700/80">
                     <div>
-                      <label className="block text-[11px] font-medium text-slate-500 mb-1">{t('Unit Price')} (ETB)</label>
+                      <label className="block text-[10px] font-medium text-slate-500 mb-1">{t('Paper Type / GSM')}</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 150 GSM Art Paper"
+                        value={item.specifications?.paperType || ''}
+                        onChange={(e) => handleItemSpecChange(idx, 'paperType', e.target.value)}
+                        className="w-full px-2 py-1 text-xs rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-medium text-slate-500 mb-1">{t('Color Format')}</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 4/4 CMYK"
+                        value={item.specifications?.colorFormat || ''}
+                        onChange={(e) => handleItemSpecChange(idx, 'colorFormat', e.target.value)}
+                        className="w-full px-2 py-1 text-xs rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-medium text-slate-500 mb-1">{t('Page Count')}</label>
                       <input
                         type="number"
-                        step="0.01"
-                        min="0"
-                        required
-                        value={item.unitPrice}
-                        onChange={(e) => handleItemChange(idx, 'unitPrice', e.target.value)}
-                        className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                        min="1"
+                        value={item.specifications?.pages || 1}
+                        onChange={(e) => handleItemSpecChange(idx, 'pages', Number(e.target.value))}
+                        className="w-full px-2 py-1 text-xs rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-medium text-slate-500 mb-1">{t('Binding Type')}</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Saddle Stitch"
+                        value={item.specifications?.bindingType || ''}
+                        onChange={(e) => handleItemSpecChange(idx, 'bindingType', e.target.value)}
+                        className="w-full px-2 py-1 text-xs rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                       />
                     </div>
                   </div>
-                </div>
 
-                {/* Printing Specs Row */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2 border-t border-slate-200 dark:border-slate-700">
-                  <div>
-                    <label className="block text-[10px] font-semibold text-slate-500 mb-1">{t('Paper Type / GSM')}</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 150 GSM Art Paper"
-                      value={item.specifications?.paperType || ''}
-                      onChange={(e) => handleItemSpecChange(idx, 'paperType', e.target.value)}
-                      className="w-full px-2 py-1 text-xs rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-semibold text-slate-500 mb-1">{t('Color Format')}</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 4/4 CMYK"
-                      value={item.specifications?.colorFormat || ''}
-                      onChange={(e) => handleItemSpecChange(idx, 'colorFormat', e.target.value)}
-                      className="w-full px-2 py-1 text-xs rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-semibold text-slate-500 mb-1">{t('Page Count')}</label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={item.specifications?.pages || 1}
-                      onChange={(e) => handleItemSpecChange(idx, 'pages', Number(e.target.value))}
-                      className="w-full px-2 py-1 text-xs rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-semibold text-slate-500 mb-1">{t('Binding Type')}</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Saddle Stitch"
-                      value={item.specifications?.bindingType || ''}
-                      onChange={(e) => handleItemSpecChange(idx, 'bindingType', e.target.value)}
-                      className="w-full px-2 py-1 text-xs rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
-                    />
-                  </div>
-                </div>
+                  {/* SUB-SECTION: Used Items & Materials (Paper, Cover, Ink, etc.) */}
+                  <div className="p-3 rounded-xl bg-white dark:bg-slate-900/70 border border-slate-200 dark:border-slate-700/70 space-y-2.5">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
+                      <div className="flex items-center gap-2">
+                        <Box className="w-4 h-4 text-amber-500" />
+                        <div>
+                          <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                            {t('Used Items & Materials')}
+                          </span>
+                          <span className="ml-2 text-[10px] text-slate-400">
+                            ({t('Paper, Cover, Plates, Ink, Board, etc.')})
+                          </span>
+                        </div>
+                      </div>
 
-                <div className="text-right text-xs font-bold text-slate-800 dark:text-slate-200">
-                  {t('Item Subtotal')}: {formatCurrency(item.subtotal)}
+                      {/* Add Item Action */}
+                      <div>
+                        <button
+                          type="button"
+                          onClick={() => handleAddItemToService(idx, 'paper')}
+                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary-700 dark:text-primary-300 bg-primary-50 dark:bg-primary-950/60 hover:bg-primary-100 dark:hover:bg-primary-900/40 px-2.5 py-1 rounded-lg border border-primary-200 dark:border-primary-800 transition"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          {t('Add Item')}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Material Items List */}
+                    {materials.length === 0 ? (
+                      <div className="py-3 text-center text-xs text-slate-400">
+                        {t('No materials attached yet. Click "+ Add Item" above.')}
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="hidden sm:grid sm:grid-cols-12 gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 px-1">
+                          <span className="col-span-3">{t('Item / Material')}</span>
+                          <span className="col-span-2">{t('Category / Role')}</span>
+                          <span className="col-span-2">{t('Quantity')}</span>
+                          <span className="col-span-1">{t('Unit')}</span>
+                          <span className="col-span-2">{t('Unit Cost (ETB)')}</span>
+                          <span className="col-span-1 text-right">{t('Total')}</span>
+                          <span className="col-span-1 text-right"></span>
+                        </div>
+
+                        {materials.map((mat, mIdx) => (
+                          <div
+                            key={mIdx}
+                            className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-200/70 dark:border-slate-800 text-xs"
+                          >
+                            {/* Inventory Item Selection or Manual Title */}
+                            <div className="sm:col-span-3">
+                              <select
+                                value={mat.item || ''}
+                                onChange={(e) => handleMaterialChange(idx, mIdx, 'item', e.target.value)}
+                                className="w-full px-2 py-1 text-xs rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 mb-1"
+                              >
+                                <option value="">-- {t('Inventory Item / Custom')} --</option>
+                                {inventoryItems.map((inv) => (
+                                  <option key={inv._id} value={inv._id}>
+                                    {inv.itemName} [{inv.itemCode || ''}] ({inv.unitCost} ETB)
+                                  </option>
+                                ))}
+                              </select>
+                              <input
+                                type="text"
+                                placeholder={t('Material / Item name')}
+                                value={mat.itemName || ''}
+                                onChange={(e) => handleMaterialChange(idx, mIdx, 'itemName', e.target.value)}
+                                className="w-full px-2 py-0.5 text-[11px] rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200"
+                              />
+                            </div>
+
+                            {/* Category / Role */}
+                            <div className="sm:col-span-2">
+                              <select
+                                value={mat.category || 'paper'}
+                                onChange={(e) => handleMaterialChange(idx, mIdx, 'category', e.target.value)}
+                                className="w-full px-2 py-1 text-xs rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 font-medium"
+                              >
+                                <option value="paper">{t('Paper (Inner)')}</option>
+                                <option value="cover">{t('Cover / Card')}</option>
+                                <option value="plate">{t('CTP Plate')}</option>
+                                <option value="ink">{t('Printing Ink')}</option>
+                                <option value="finishing">{t('Lamination / Foil')}</option>
+                                <option value="board">{t('Greyboard / Binding')}</option>
+                                <option value="other">{t('Other Material')}</option>
+                              </select>
+                            </div>
+
+                            {/* Quantity */}
+                            <div className="sm:col-span-2">
+                              <input
+                                type="number"
+                                min="0"
+                                step="any"
+                                value={mat.quantity}
+                                onChange={(e) => handleMaterialChange(idx, mIdx, 'quantity', e.target.value)}
+                                className="w-full px-2 py-1 text-xs rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                              />
+                            </div>
+
+                            {/* Unit of Measurement */}
+                            <div className="sm:col-span-1">
+                              <input
+                                type="text"
+                                placeholder="sheet"
+                                value={mat.unitOfMeasurement || 'sheet'}
+                                onChange={(e) => handleMaterialChange(idx, mIdx, 'unitOfMeasurement', e.target.value)}
+                                className="w-full px-1.5 py-1 text-xs rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200"
+                              />
+                            </div>
+
+                            {/* Unit Cost */}
+                            <div className="sm:col-span-2">
+                              <input
+                                type="number"
+                                min="0"
+                                step="any"
+                                value={mat.unitCost}
+                                onChange={(e) => handleMaterialChange(idx, mIdx, 'unitCost', e.target.value)}
+                                className="w-full px-2 py-1 text-xs rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono"
+                              />
+                            </div>
+
+                            {/* Total Cost */}
+                            <div className="sm:col-span-1 text-right font-mono font-bold text-slate-800 dark:text-slate-200 text-xs">
+                              {formatCurrency(mat.totalCost)}
+                            </div>
+
+                            {/* Remove Material */}
+                            <div className="sm:col-span-1 text-right">
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveItemFromService(idx, mIdx)}
+                                className="p-1 rounded text-rose-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition"
+                                title={t('Remove this material')}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Price Estimation Bar from Items & Profit Margin */}
+                    <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
+                      <div className="flex items-center gap-3 text-slate-600 dark:text-slate-300 flex-wrap">
+                        <span className="text-[11px] font-semibold">
+                          {t('Materials Total')}: <span className="font-bold text-slate-900 dark:text-white">{formatCurrency(totalMaterialCost)}</span>
+                        </span>
+                        <span className="text-slate-300 dark:text-slate-600">|</span>
+                        <span className="text-[11px]">
+                          {t('Per Unit Material Cost')}: <span className="font-semibold text-slate-800 dark:text-slate-200">{formatCurrency(costPerUnit)}</span>
+                        </span>
+                        <span className="text-slate-300 dark:text-slate-600">|</span>
+                        <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                          <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                            {t('Profit Margin')}:
+                          </label>
+                          <div className="flex items-center">
+                            <input
+                              type="number"
+                              min="0"
+                              max="1000"
+                              step="1"
+                              value={item.profitMargin ?? 30}
+                              onChange={(e) => handleItemChange(idx, 'profitMargin', e.target.value)}
+                              className="w-14 px-1.5 py-0.5 text-xs text-right font-bold rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+                            />
+                            <span className="ml-1 text-[11px] font-bold text-slate-500">%</span>
+                          </div>
+                        </div>
+                        <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                          <Sparkles className="w-3.5 h-3.5" />
+                          {materials.length > 0
+                            ? `${formatCurrency(item.unitPrice)}/${item.unitOfMeasurement || 'copy'} (+${item.profitMargin ?? 30}%)`
+                            : `${formatCurrency(item.unitPrice)}/${item.unitOfMeasurement || 'copy'}`}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {matchedService?.pricingModel?.basePrice > 0 && (
+                          <span className="text-[11px] text-slate-400 font-medium">
+                            {t('Catalog Base Price')}: {formatCurrency(matchedService.pricingModel.basePrice)}
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleEstimateServicePrice(idx)}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 border border-emerald-200 dark:border-emerald-800 transition"
+                          title={t('Calculates unit price from materials used with profit margin or service base rate')}
+                        >
+                          <Calculator className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                          {t('Recalculate')}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Service Subtotal */}
+                  <div className="flex items-center justify-between pt-1 text-xs">
+                    <span className="text-slate-500 font-medium">
+                      {item.quantity?.toLocaleString()} {item.unitOfMeasurement || 'copies'} × {formatCurrency(item.unitPrice)}
+                    </span>
+                    <span className="font-extrabold text-sm text-slate-900 dark:text-white">
+                      {t('Service Subtotal')}: {formatCurrency(item.subtotal)}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
-          {/* Designer Assignment & Notes */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+          {/* Designer Assignment, Discount & VAT Settings */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                 {t('Assign Pre-press Graphic Designer')}
@@ -751,11 +1321,43 @@ export default function Orders() {
                 className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
               />
             </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                {t('VAT Option')}
+              </label>
+              <div className="flex gap-1.5">
+                <select
+                  value={formData.vatMode || 'add_15'}
+                  onChange={(e) => setFormData({ ...formData, vatMode: e.target.value })}
+                  className="w-full px-2.5 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                >
+                  <option value="add_15">{t('Include 15% VAT (+15%)')}</option>
+                  <option value="exclude">{t('Exclude VAT (0% / Exempt)')}</option>
+                  <option value="inclusive">{t('VAT Included in Price (15%)')}</option>
+                  <option value="custom">{t('Custom VAT %')}</option>
+                </select>
+                {formData.vatMode === 'custom' && (
+                  <div className="flex items-center w-20 relative">
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.5"
+                      value={formData.customVatRate ?? 15}
+                      onChange={(e) => setFormData({ ...formData, customVatRate: Math.max(0, Number(e.target.value)) })}
+                      className="w-full px-2 py-2 text-xs font-bold text-right rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white pr-5"
+                    />
+                    <span className="absolute right-2 text-xs font-bold text-slate-400 pointer-events-none">%</span>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Automated Financial Summary Box */}
           {(() => {
-            const { subtotal, discount, vat, grandTotal } = calculateTotals();
+            const { subtotal, discount, vatRate, vat, grandTotal, isVatInclusive } = calculateTotals();
             return (
               <div className="p-4 rounded-xl bg-slate-900 text-white space-y-1.5 text-xs">
                 <div className="flex justify-between text-slate-400">
@@ -769,8 +1371,20 @@ export default function Orders() {
                   </div>
                 )}
                 <div className="flex justify-between text-slate-400">
-                  <span>{t('15% Ethiopian VAT')}:</span>
-                  <span>{formatCurrency(vat)}</span>
+                  <span>
+                    {vatRate === 0
+                      ? t('VAT (Excluded / 0% Exempt)')
+                      : isVatInclusive
+                      ? `${vatRate}% ${t('VAT (Included in Price)')}`
+                      : `${vatRate}% ${t('Ethiopian VAT (Added)')}`}:
+                  </span>
+                  <span>
+                    {vatRate === 0
+                      ? t('0.00 ETB (Exempt)')
+                      : isVatInclusive
+                      ? `${formatCurrency(vat)}`
+                      : `+${formatCurrency(vat)}`}
+                  </span>
                 </div>
                 <div className="flex justify-between text-sm font-black pt-1 border-t border-slate-800 text-emerald-400">
                   <span>{t('Grand Total')}:</span>
@@ -855,6 +1469,7 @@ export default function Orders() {
           isOpen={Boolean(viewingOrder)}
           onClose={() => setViewingOrder(null)}
           title={`${t('Order Dossier')}: ${viewingOrder.orderNumber}`}
+          maxWidth="max-w-4xl"
         >
           <div className="space-y-4 max-h-[75vh] overflow-y-auto pr-1 text-xs">
             {/* Header overview */}
@@ -868,25 +1483,76 @@ export default function Orders() {
               </Badge>
             </div>
 
-            {/* Line Items & Specifications */}
-            <div className="space-y-2.5">
-              <h4 className="font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider text-[11px]">
-                {t('Product Specifications')}
+            {/* Services, Specifications & Used Materials */}
+            <div className="space-y-3">
+              <h4 className="font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                <Layers className="w-3.5 h-3.5 text-primary-500" />
+                {t('Services & Materials Specifications')}
               </h4>
-              {viewingOrder.items?.map((it, idx) => (
-                <div key={idx} className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 space-y-1.5">
-                  <div className="flex items-center justify-between font-bold text-slate-900 dark:text-white">
-                    <span>{it.productTitle}</span>
-                    <span>{formatCurrency(it.subtotal)}</span>
+              {viewingOrder.items?.map((it, idx) => {
+                const materials = it.materials || [];
+                const matCostTotal = it.estimatedCost?.materialCost || materials.reduce((acc, m) => acc + (Number(m.totalCost) || 0), 0);
+
+                return (
+                  <div key={idx} className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 space-y-2.5">
+                    <div className="flex items-center justify-between font-bold text-slate-900 dark:text-white">
+                      <div>
+                        <span>{it.productTitle}</span>
+                        {it.service?.name && (
+                          <span className="ml-2 text-xs font-normal text-primary-600 dark:text-primary-400">
+                            ({it.service.name})
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-sm font-black">{formatCurrency(it.subtotal)}</span>
+                    </div>
+
+                    <div className="text-[11px] text-slate-500 grid grid-cols-2 sm:grid-cols-5 gap-2 pb-1">
+                      <span>{t('Quantity')}: <strong className="text-slate-700 dark:text-slate-300">{it.quantity?.toLocaleString()} {it.unitOfMeasurement}</strong></span>
+                      <span>{t('Unit Price')}: <strong className="text-slate-700 dark:text-slate-300">{formatCurrency(it.unitPrice)}</strong></span>
+                      <span>{t('Margin')}: <strong className="text-slate-700 dark:text-slate-300">{it.profitMargin ?? 30}%</strong></span>
+                      <span>{t('Colors')}: <strong className="text-slate-700 dark:text-slate-300">{it.specifications?.colorFormat || '4/4 CMYK'}</strong></span>
+                      <span>{t('Binding')}: <strong className="text-slate-700 dark:text-slate-300">{it.specifications?.bindingType || 'None'}</strong></span>
+                    </div>
+
+                    {/* Used Items / Materials Breakdown */}
+                    {materials.length > 0 && (
+                      <div className="pt-2 border-t border-slate-200/60 dark:border-slate-700/60 space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                            <Box className="w-3 h-3 text-amber-500" />
+                            {t('Used Items & Materials')} ({materials.length})
+                          </span>
+                          <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400">
+                            {t('Total Material Cost')}: {formatCurrency(matCostTotal)}
+                          </span>
+                        </div>
+                        <div className="space-y-1 bg-white dark:bg-slate-900/60 p-2 rounded-lg border border-slate-200/50 dark:border-slate-800">
+                          {materials.map((mat, mIdx) => (
+                            <div key={mIdx} className="flex justify-between items-center text-[11px] text-slate-600 dark:text-slate-300">
+                              <div className="flex items-center gap-1.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-primary-500"></span>
+                                <span className="font-semibold text-slate-800 dark:text-slate-200">{mat.itemName || 'Material'}</span>
+                                <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 uppercase">
+                                  {mat.category || 'paper'}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-slate-400">
+                                  {mat.quantity} {mat.unitOfMeasurement || 'sheet'} × {formatCurrency(mat.unitCost)}
+                                </span>
+                                <span className="font-mono font-semibold text-slate-900 dark:text-white">
+                                  {formatCurrency(mat.totalCost)}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <div className="text-[11px] text-slate-500 grid grid-cols-2 gap-2">
-                    <span>{t('Quantity')}: {it.quantity?.toLocaleString()} {it.unitOfMeasurement}</span>
-                    <span>{t('Paper')}: {it.specifications?.paperType || 'Standard'}</span>
-                    <span>{t('Colors')}: {it.specifications?.colorFormat || '4/4 CMYK'}</span>
-                    <span>{t('Binding')}: {it.specifications?.bindingType || 'None'}</span>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Financial Summary */}
@@ -895,9 +1561,21 @@ export default function Orders() {
                 <span>{t('Subtotal')}:</span>
                 <span>{formatCurrency(viewingOrder.financials?.subtotal)}</span>
               </div>
+              {Number(viewingOrder.financials?.discountAmount) > 0 && (
+                <div className="flex justify-between text-rose-400">
+                  <span>{t('Discount')}:</span>
+                  <span>-{formatCurrency(viewingOrder.financials?.discountAmount)}</span>
+                </div>
+              )}
               <div className="flex justify-between text-slate-400">
-                <span>{t('15% VAT')}:</span>
-                <span>{formatCurrency(viewingOrder.financials?.vatAmount)}</span>
+                <span>{t('VAT')}:</span>
+                <span>
+                  {Number(viewingOrder.financials?.vatRate) === 0
+                    ? t('Excluded (0% / Exempt)')
+                    : viewingOrder.financials?.isVatInclusive
+                    ? `${viewingOrder.financials?.vatRate || 15}% ${t('Included in Price')} (${formatCurrency(viewingOrder.financials?.vatAmount)})`
+                    : `${viewingOrder.financials?.vatRate || 15}% (+${formatCurrency(viewingOrder.financials?.vatAmount)})`}
+                </span>
               </div>
               <div className="flex justify-between font-extrabold text-sm text-emerald-400 pt-1 border-t border-slate-800">
                 <span>{t('Grand Total')}:</span>
